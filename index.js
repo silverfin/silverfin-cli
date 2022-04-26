@@ -60,7 +60,6 @@ importNewTemplateFolder = async function (handle) {
       "text": "text.liquid",
       "text_parts": configTextParts,
       "tests": ["test.yml"],
-      "name_en": ""
     }
     writeConfig(relativePath, config)
   })
@@ -68,7 +67,7 @@ importNewTemplateFolder = async function (handle) {
 
 constructReconciliationText = function (handle) {
   const relativePath = `./${handle}`
-  const config = { "text_parts": { 'variables': 'text_parts/variables.liquid' }}
+  const config = fsUtils.readConfig()
 
   const attributes = ["name", "name_nl", "name_fr", "name_en", "auto_hide_formula", "text_configuration"].reduce((acc, attribute) => {
     acc[attribute] = config[attribute]
@@ -93,7 +92,7 @@ persistReconciliationText = async function (handle) {
     reconciliations = response.data
     reconciliationText = reconciliations.find((element) => element['handle'] === handle)
     if (reconciliationText) {
-      api.updateReconciliationText(reconciliationText.id, constructReconciliationText(handle))
+      api.updateReconciliationText(reconciliationText.id, {...constructReconciliationText(handle), "version_comment": "Testing Cli"})
     } else {
       throw("Creation of reconcilaition texts isn't yet support by API")
     }
