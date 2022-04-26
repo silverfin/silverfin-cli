@@ -1,0 +1,15 @@
+{
+  "name": "sf_toolkit",
+  "version": "1.0.0",
+  "description": "Node package that let's you externally manage Silverfin templates",
+  "main": "index.js",
+  "license": "MIT",
+  "private": false,
+  "bin": "./bin/sf_toolkit.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "dependencies": {
+    "axios": "^0.26.1"
+  }
+}

@@ -1,0 +1,103 @@
+const api = require('./sf_api')
+const fsUtils = require('./fs_utils')
+const fs = require('fs');
+
+createNewTemplateFolder = async function (handle) {
+  const relativePath = `./${handle}`
+  const emptyCallback = () => {}
+
+  fsUtils.createFolders(relativePath)
+  testFiles = { "test": "" }
+  textParts = { "part_1": "" }
+  text = ""
+  fsUtils.createFiles({ relativePath, testFiles, textParts, text })
+
+  config = {
+    "text": "text.liquid",
+    "text_parts": {
+      "part_1": "text_parts/part_1.liquid"
+    },
+    "tests": ["test.yml"],
+    "name_en": ""
+  }
+  writeConfig(relativePath, config)
+}
+
+importNewTemplateFolder = async function (handle) {
+  await api.fetchReconciliationTexts().then((response) => {
+    reconciliations = response.data
+    reconciliationText = reconciliations.find((element) => element['handle'] === handle)
+    if (!reconciliationText) {
+      throw(`${handle} wasn't found`)
+    }
+
+    const relativePath = `./${handle}`
+    fsUtils.createFolders(relativePath)
+    testFiles = { "test": "" }
+    textPartsReducer = (acc, part) => {
+      acc[part.name] = part.content
+      return acc
+    }
+
+    textParts = reconciliationText.text_parts.reduce(textPartsReducer, {})
+    fsUtils.createFiles({ relativePath, testFiles, textParts, text: reconciliationText.text })
+
+    attributes = ["name", "name_nl", "name_fr", "name_en", "auto_hide_formula", "text_configuration"].reduce((acc, attribute) => {
+      acc[attribute] = reconciliationText[attribute]
+      return acc
+    }, {})
+
+    configTextParts = Object.keys(textParts).reduce((acc, name) => {
+      if (name) {
+        acc[name] = `text_parts/${name}.liquid`
+      }
+
+      return acc
+    }, {})
+
+    config = {
+      ...attributes,
+      "text": "text.liquid",
+      "text_parts": configTextParts,
+      "tests": ["test.yml"],
+      "name_en": ""
+    }
+    writeConfig(relativePath, config)
+  })
+}
+
+constructReconciliationText = function (handle) {
+  const relativePath = `./${handle}`
+  const config = { "text_parts": { 'variables': 'text_parts/variables.liquid' }}
+
+  const attributes = ["name", "name_nl", "name_fr", "name_en", "auto_hide_formula", "text_configuration"].reduce((acc, attribute) => {
+    acc[attribute] = config[attribute]
+    return acc
+  }, {})
+
+  const textParts = Object.keys(config.text_parts).reduce((array, name) => {
+    let path = `${relativePath}/${config.text_parts[name]}`
+    let content = fs.readFileSync(path, 'utf-8')
+
+    array.push({ name, content })
+    return array
+  }, [])
+
+  attributes.text_parts = textParts
+
+  return attributes
+}
+
+persistReconciliationText = async function (handle) {
+  await api.fetchReconciliationTexts().then(response => {
+    reconciliations = response.data
+    reconciliationText = reconciliations.find((element) => element['handle'] === handle)
+    if (reconciliationText) {
+      api.updateReconciliationText(reconciliationText.id, constructReconciliationText(handle))
+    } else {
+      throw("Creation of reconcilaition texts isn't yet support by API")
+    }
+  })
+}
+
+module.exports = { createNewTemplateFolder, importNewTemplateFolder, constructReconciliationText, persistReconciliationText }
