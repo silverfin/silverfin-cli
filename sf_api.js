@@ -7,12 +7,28 @@ axiosConfig = function() {
   }
 }
 
-fetchReconciliationTexts = function() {
-  return axios.get(`reconciliations`, axiosConfig())
+fetchReconciliationTexts = function(page = 1) {
+  return axios.get(`reconciliations`, { params: { page: page, per_page: 200 }, ...axiosConfig() })
+}
+
+findReconciliationText = async function (handle, page = 1) {
+  return fetchReconciliationTexts(page).then((response) => {
+    reconciliations = response.data
+    if (reconciliations.length == 0) {
+      return;
+    }
+
+    reconciliationText = reconciliations.find((element) => element['handle'] === handle)
+    if (reconciliationText) {
+      return reconciliationText;
+    } else {
+      return findReconciliationText(handle, page + 1);
+    }
+  })
 }
 
 updateReconciliationText = function(id, attributes) {
-  return axios.post(`reconciliations`, attributes, axiosConfig())
+  return axios.post(`reconciliations/${id}`, attributes, axiosConfig())
 }
 
-module.exports = { fetchReconciliationTexts, updateReconciliationText }
+module.exports = { fetchReconciliationTexts, updateReconciliationText, findReconciliationText }
