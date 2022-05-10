@@ -7,17 +7,17 @@ createNewTemplateFolder = async function (handle) {
   const emptyCallback = () => {}
 
   fsUtils.createFolders(relativePath)
-  testFiles = { "test": "" }
+  testFile = { name: "test", content: "" }
   textParts = { "part_1": "" }
   text = ""
-  fsUtils.createFiles({ relativePath, testFiles, textParts, text })
+  fsUtils.createFiles({ relativePath, testFile, textParts, text })
 
   config = {
     "text": "text.liquid",
     "text_parts": {
       "part_1": "text_parts/part_1.liquid"
     },
-    "tests": ["test.yml"],
+    "test": "tests/test.yml",
     "name_en": ""
   }
   writeConfig(relativePath, config)
@@ -31,7 +31,7 @@ importNewTemplateFolder = async function (handle) {
 
   const relativePath = `./${handle}`
   fsUtils.createFolders(relativePath)
-  testFiles = { "test": "" }
+  testFile = { name: "test", content: "" }
   textPartsReducer = (acc, part) => {
     acc[part.name] = part.content
     return acc
@@ -39,7 +39,7 @@ importNewTemplateFolder = async function (handle) {
 
 
   textParts = reconciliationText.text_parts.reduce(textPartsReducer, {})
-  fsUtils.createFiles({ relativePath, testFiles, textParts, text: reconciliationText.text })
+  fsUtils.createFiles({ relativePath, testFile, textParts, text: reconciliationText.text })
 
   attributes = ["name", "name_nl", "name_fr", "name_en", "auto_hide_formula", "text_configuration"].reduce((acc, attribute) => {
     acc[attribute] = reconciliationText[attribute]
@@ -58,7 +58,7 @@ importNewTemplateFolder = async function (handle) {
     ...attributes,
     "text": "text.liquid",
     "text_parts": configTextParts,
-    "tests": ["test.yml"],
+    "test": "tests/test.yml",
   }
   writeConfig(relativePath, config)
 }

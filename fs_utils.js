@@ -12,12 +12,10 @@ createFolders = function (relativePath) {
   createFolder(`${relativePath}/text_parts`)
 }
 
-createFiles = async function ({ relativePath, testFiles, textParts, text }) {
+createFiles = async function ({ relativePath, testFile, textParts, text }) {
   const emptyCallback = () => {}
 
-  Object.keys(testFiles).forEach((fileName) => {
-    fs.writeFile(`${relativePath}/tests/${fileName}.yml`, testFiles[fileName], emptyCallback)
-  })
+  fs.writeFile(`${relativePath}/tests/${testFile.name}.yml`, testFile.content, emptyCallback)
 
   Object.keys(textParts).forEach((textPartName) => {
     if (textPartName) {

@@ -1,7 +1,7 @@
 const toolkit = require('./index.js');
 const fs = require('fs');
 
-test("createNewTemplateFolder", async () => {
+test.only("createNewTemplateFolder", async () => {
   const handlerName = "super_handler"
   expect(fs.existsSync(handlerName)).toBe(false);
 
