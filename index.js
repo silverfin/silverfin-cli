@@ -82,6 +82,10 @@ constructReconciliationText = function (handle) {
 
   attributes.text_parts = textParts
 
+  const mainPartPath = `${relativePath}/${config.text}`
+  const mainPartContent = fs.readFileSync(mainPartPath, 'utf-8')
+  attributes.text = mainPartContent
+  
   return attributes
 }
 
