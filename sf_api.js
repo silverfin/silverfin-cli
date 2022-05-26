@@ -4,7 +4,7 @@ require("dotenv").config();
 const missingVariables =  ['SF_HOST', 'SF_ACCESS_TOKEN', 'SF_FIRM_ID'].filter((key) => !process.env[key])
 
 if (missingVariables.length) {
-  throw "Missing configuration variables: #{missingVariables}"
+  throw `Missing configuration variables: ${missingVariables}`
 }
 
 axios.defaults.baseURL = `${process.env.SF_HOST || ''}/api/v4/f/${process.env.SF_FIRM_ID}`
