@@ -2,7 +2,7 @@ const api = require('./sf_api')
 const fsUtils = require('./fs_utils')
 const fs = require('fs');
 
-const FIELDS = ["name_nl", "name_fr", "name_en", "auto_hide_formula", "text_configuration", "virtual_account_number", "reconciliation_type", "public", "allow_duplicate_reconciliations", "is_active"]
+const FIELDS = ["name_nl", "name_fr", "name_en", "auto_hide_formula", "text_configuration", "virtual_account_number", "reconciliation_type", "public", "allow_duplicate_reconciliations", "is_active", "tests"]
 
 createNewTemplateFolder = async function (handle) {
   const relativePath = `./${handle}`
@@ -32,7 +32,7 @@ importNewTemplateFolder = async function (handle) {
 
   const relativePath = `./${handle}`
   fsUtils.createFolders(relativePath)
-  testFile = { name: "test", content: "" }
+  testFile = { name: "test", content: reconciliationText.tests }
   textPartsReducer = (acc, part) => {
     acc[part.name] = part.content
     return acc
@@ -73,6 +73,7 @@ constructReconciliationText = function (handle) {
     return acc
   }, {})
   attributes.text = fs.readFileSync(`${relativePath}/text.liquid`, 'utf-8')
+  attributes.tests = fs.readFileSync(`${relativePath}/tests/test.yml`, 'utf-8')
 
   const textParts = Object.keys(config.text_parts).reduce((array, name) => {
     let path = `${relativePath}/${config.text_parts[name]}`
