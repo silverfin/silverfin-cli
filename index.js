@@ -99,4 +99,35 @@ persistReconciliationText = async function (handle) {
   }
 }
 
-module.exports = { createNewTemplateFolder, importNewTemplateFolder, constructReconciliationText, persistReconciliationText }
+runTests = async function (handle) {
+  const relativePath = `./${handle}`
+  const config = fsUtils.readConfig(relativePath)
+  const testPath = `${relativePath}/${config.test}`
+  const testContent = fs.readFileSync(testPath, 'utf-8')
+
+  const testParams = { 'template': constructReconciliationText(handle), 'tests': testContent }
+
+  const testRunResponse = await api.createTestRun(testParams)
+  const testRunId = testRunResponse.data
+  let testRun = { 'status': 'started' }
+  const pollingDelay = 2000
+
+  while (testRun.status === 'started') {
+    await new Promise(resolve => setTimeout(resolve, pollingDelay))
+
+    const response = await api.fetchTestRun(testRunId)
+    testRun = response.data
+  }
+
+  if (testRun.status !== 'completed') {
+    console.error(testRun.error_message)
+    process.exit(1)
+  }
+
+  if (testRun.result.length !== 0) {
+    console.error('Tests Failed')
+    console.error(testRun.result)
+    process.exit(1)
+  }
+}
+module.exports = { createNewTemplateFolder, importNewTemplateFolder, constructReconciliationText, persistReconciliationText, runTests }

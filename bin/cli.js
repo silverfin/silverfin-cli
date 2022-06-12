@@ -23,6 +23,7 @@ commandsToFunctions = {
   "new": toolkit.createNewTemplateFolder,
   "import": toolkit.importNewTemplateFolder,
   "persistReconciliationText": toolkit.persistReconciliationText,
+  "run_tests": toolkit.runTests,
   "help": printHelp
 }
 commandsDescription = {
@@ -36,6 +37,10 @@ commandsDescription = {
   },
   "persistReconciliationText": {
     "description": "Send template updates back to Silverfin",
+    "required": "--handle"
+  },
+  "run_tests": {
+    "description": "Send template and test to Silverfin and waits for completion",
     "required": "--handle"
   },
   "help": {
