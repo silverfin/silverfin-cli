@@ -1,13 +1,13 @@
 const axios = require('axios')
 require("dotenv").config();
 
-const missingVariables =  ['SF_HOST', 'SF_ACCESS_TOKEN', 'SF_FIRM_ID'].filter((key) => !process.env[key])
+const missingVariables =  ['SF_ACCESS_TOKEN', 'SF_FIRM_ID'].filter((key) => !process.env[key])
 
-if (missingVariables.length) {
-  throw `Missing configuration variables: ${missingVariables}`
+if (missingVariables.length && process.argv[2] !== "help") {
+  throw `Missing configuration variables: ${missingVariables}, call export ${missingVariables[0]}=... before`
 }
 
-axios.defaults.baseURL = `${process.env.SF_HOST || ''}/api/v4/f/${process.env.SF_FIRM_ID}`
+axios.defaults.baseURL = `${process.env.SF_HOST || 'https://live.getsilverfin.com'}/api/v4/f/${process.env.SF_FIRM_ID}`
 axios.defaults.headers.common['Authorization'] = `Bearer ${process.env.SF_ACCESS_TOKEN}`
 
 const fetchReconciliationTexts = function(page = 1) {
