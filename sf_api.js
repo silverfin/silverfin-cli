@@ -7,11 +7,11 @@ axiosConfig = function() {
   }
 }
 
-fetchReconciliationTexts = function(page = 1) {
+const fetchReconciliationTexts = function(page = 1) {
   return axios.get(`reconciliations`, { params: { page: page, per_page: 200 }, ...axiosConfig() })
 }
 
-findReconciliationText = async function (handle, page = 1) {
+const findReconciliationText = async function (handle, page = 1) {
   return fetchReconciliationTexts(page).then((response) => {
     reconciliations = response.data
     if (reconciliations.length == 0) {
@@ -27,8 +27,16 @@ findReconciliationText = async function (handle, page = 1) {
   })
 }
 
-updateReconciliationText = function(id, attributes) {
+const updateReconciliationText = function(id, attributes) {
   return axios.post(`reconciliations/${id}`, attributes, axiosConfig())
 }
 
-module.exports = { fetchReconciliationTexts, updateReconciliationText, findReconciliationText }
+const createTestRun = function(attributes) {
+  return axios.post('reconciliations/test', attributes, axiosConfig())
+}
+
+const fetchTestRun = function(id) {
+  return axios.get(`reconciliations/test_runs/${id}`, axiosConfig())
+ }
+
+module.exports = { fetchReconciliationTexts, updateReconciliationText, findReconciliationText, fetchTestRun, createTestRun }
