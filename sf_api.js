@@ -1,15 +1,17 @@
 const axios = require('axios')
 require("dotenv").config();
 
-axiosConfig = function() {
-  return {
-    baseURL: `https://live.getsilverfin.com/api/v4/f/${process.env.SF_FIRM_ID}`,
-    headers: { Authorization: `Bearer ${process.env.SF_ACCESS_TOKEN}` }
-  }
+const missingVariables =  ['SF_ACCESS_TOKEN', 'SF_FIRM_ID'].filter((key) => !process.env[key])
+
+if (missingVariables.length && process.argv[2] !== "help") {
+  throw `Missing configuration variables: ${missingVariables}, call export ${missingVariables[0]}=... before`
 }
 
+axios.defaults.baseURL = `${process.env.SF_HOST || 'https://live.getsilverfin.com'}/api/v4/f/${process.env.SF_FIRM_ID}`
+axios.defaults.headers.common['Authorization'] = `Bearer ${process.env.SF_ACCESS_TOKEN}`
+
 const fetchReconciliationTexts = function(page = 1) {
-  return axios.get(`reconciliations`, { params: { page: page, per_page: 200 }, ...axiosConfig() })
+  return axios.get(`reconciliations`, { params: { page: page, per_page: 200 } })
 }
 
 const findReconciliationText = async function (handle, page = 1) {
@@ -29,7 +31,7 @@ const findReconciliationText = async function (handle, page = 1) {
 }
 
 const updateReconciliationText = function(id, attributes) {
-  return axios.post(`reconciliations/${id}`, attributes, axiosConfig())
+  return axios.post(`reconciliations/${id}`, attributes)
 }
 
 const createTestRun = function(attributes) {

@@ -44,7 +44,12 @@ commandsDescription = {
     "required": "--handle"
   },
   "help": {
-    "description": "Prints this message"
+    "description": `
+      Prints this message.
+
+      You need to specify SF_ACCESS_TOKEN and SF_FIRM_ID environment variables, e.g. export SF_FIRM_ID=123
+      You can also assign the SF_HOST environment variable to override the API location (to a staging or a local environment), E.g. export SF_HOST=http://localhost:3000. Default is https://live.getsilverfin.com
+    `
   }
 }
 
