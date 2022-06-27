@@ -35,11 +35,11 @@ const updateReconciliationText = function(id, attributes) {
 }
 
 const createTestRun = function(attributes) {
-  return axios.post('reconciliations/test', attributes, axiosConfig())
+  return axios.post('reconciliations/test', attributes)
 }
 
 const fetchTestRun = function(id) {
-  return axios.get(`reconciliations/test_runs/${id}`, axiosConfig())
+  return axios.get(`reconciliations/test_runs/${id}`)
  }
 
 module.exports = { fetchReconciliationTexts, updateReconciliationText, findReconciliationText, fetchTestRun, createTestRun }
