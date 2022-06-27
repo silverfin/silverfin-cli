@@ -32,7 +32,10 @@ importNewTemplateFolder = async function (handle) {
 
   const relativePath = `./${handle}`
   fsUtils.createFolders(relativePath)
-  testFile = { name: "test", content: reconciliationText.tests }
+  testFile = { 
+    name: "test", 
+    content: reconciliationText.tests | ""
+  }
   textPartsReducer = (acc, part) => {
     acc[part.name] = part.content
     return acc
