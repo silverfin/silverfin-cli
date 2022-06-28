@@ -34,13 +34,12 @@ importNewTemplateFolder = async function (handle) {
   fsUtils.createFolders(relativePath)
   testFile = { 
     name: "test", 
-    content: reconciliationText.tests | ""
+    content: "# Add your Liquid Tests here"
   }
   textPartsReducer = (acc, part) => {
     acc[part.name] = part.content
     return acc
   }
-
 
   textParts = reconciliationText.text_parts.reduce(textPartsReducer, {})
   fsUtils.createFiles({ relativePath, testFile, textParts, text: reconciliationText.text })
