@@ -59,6 +59,10 @@ const findSharedPart = async function (name, page = 1) {
   })
 }
 
+const updateSharedPart = function(id, attributes) {
+  return axios.post(`shared_parts/${id}`, attributes)
+}
+
 const createTestRun = function(attributes) {
   return axios.post('reconciliations/test', attributes)
 }
@@ -67,4 +71,4 @@ const fetchTestRun = function(id) {
   return axios.get(`reconciliations/test_runs/${id}`)
  }
 
-module.exports = { fetchReconciliationTexts, updateReconciliationText, findReconciliationText, fetchSharedParts, fetchSharedPartById, findSharedPart, fetchTestRun, createTestRun }
+module.exports = { fetchReconciliationTexts, updateReconciliationText, findReconciliationText, fetchSharedParts, fetchSharedPartById, findSharedPart, updateSharedPart, fetchTestRun, createTestRun }

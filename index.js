@@ -154,6 +154,15 @@ importExistingSharedParts = async function() {
   })
 }
 
+persistSharedPart = async function (name) {
+  const relativePath = `./shared_parts/${name}`
+  const config = fsUtils.readConfig(relativePath)
+  const attributes = {}
+  attributes.text = fs.readFileSync(`${relativePath}/${name}.liquid`, 'utf-8')
+  api.updateSharedPart(config.id, {...attributes, "version_comment": "Testing Cli"})
+
+}
+
 runTests = async function (handle) {
   const relativePath = `./reconciliation_texts/${handle}`
   const config = fsUtils.readConfig(relativePath)
@@ -185,4 +194,4 @@ runTests = async function (handle) {
     process.exit(1)
   }
 }
-module.exports = { createNewTemplateFolder, importNewTemplateFolder, constructReconciliationText, persistReconciliationText, importExistingSharedPartByName, importExistingSharedParts, runTests }
+module.exports = { createNewTemplateFolder, importNewTemplateFolder, constructReconciliationText, persistReconciliationText, importExistingSharedPartByName, importExistingSharedParts, persistSharedPart, runTests }

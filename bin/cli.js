@@ -25,6 +25,7 @@ commandsToFunctions = {
   "persistReconciliationText": toolkit.persistReconciliationText,
   "import_shared_part": toolkit.importExistingSharedPartByName,
   "import_all_shared_parts": toolkit.importExistingSharedParts,
+  "persist_shared_part": toolkit.persistSharedPart,
   "run_tests": toolkit.runTests,
   "help": printHelp
 }
@@ -48,6 +49,10 @@ commandsDescription = {
   },
   "import_all_shared_parts": {
     "description": "Import all existing shared parts"
+  },
+  "persist_shared_part":{
+    "description": "Send shared part updates back to Silverfin",
+    "required": "--handle"
   },
   "run_tests": {
     "description": "Send template and test to Silverfin and waits for completion",
