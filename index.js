@@ -5,8 +5,8 @@ const fs = require('fs');
 const RECONCILIATOIN_FIELDS_TO_SYNC = ["name_nl", "name_fr", "name_en", "auto_hide_formula", "text_configuration", "virtual_account_number", "reconciliation_type", "public", "allow_duplicate_reconciliations", "is_active", "tests"]
 
 createNewTemplateFolder = async function (handle) {
-  const relativePath = `./${handle}`
-
+  const relativePath = `./reconciliation_texts/${handle}`
+  fsUtils.createFolder(`./reconciliation_texts`)
   fsUtils.createFolders(relativePath)
   testFile = { name: "test", content: "" }
   textParts = { "part_1": "" }
@@ -30,7 +30,8 @@ importNewTemplateFolder = async function (handle) {
     throw(`${handle} wasn't found`)
   }
 
-  const relativePath = `./${handle}`
+  const relativePath = `./reconciliation_texts/${handle}`
+  fsUtils.createFolder(`./reconciliation_texts`)
   fsUtils.createFolders(relativePath)
   testFile = { 
     name: "test", 
@@ -67,7 +68,7 @@ importNewTemplateFolder = async function (handle) {
 }
 
 constructReconciliationText = function (handle) {
-  const relativePath = `./${handle}`
+  const relativePath = `./reconciliation_texts/${handle}`
   const config = fsUtils.readConfig(relativePath)
 
   const attributes = RECONCILIATOIN_FIELDS_TO_SYNC.reduce((acc, attribute) => {
@@ -105,7 +106,7 @@ persistReconciliationText = async function (handle) {
 }
 
 runTests = async function (handle) {
-  const relativePath = `./${handle}`
+  const relativePath = `./reconciliation_texts/${handle}`
   const config = fsUtils.readConfig(relativePath)
   const testPath = `${relativePath}/${config.test}`
   const testContent = fs.readFileSync(testPath, 'utf-8')
