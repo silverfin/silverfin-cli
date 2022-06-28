@@ -105,6 +105,55 @@ persistReconciliationText = async function (handle) {
   }
 }
 
+importExistingSharedPartById = async function(id) {
+  const sharedPart = await api.fetchSharedPartById(id)
+
+  if (!sharedPart) {
+    throw(`Shared part ${id} wasn't found.`)
+  }
+
+  const relativePath = `./shared_parts/${sharedPart.data.name}`
+
+  fsUtils.createFolder(`./shared_parts`)
+  fsUtils.createFolder(relativePath)
+
+  fsUtils.createLiquidFile(relativePath, sharedPart.data.name, sharedPart.data.text)
+
+  config = {
+    "id": sharedPart.data.id,
+    "name": sharedPart.data.name,
+    "text": "main.liquid",
+    "used_in": sharedPart.data.used_in
+  }
+
+  writeConfig(relativePath, config)
+}
+
+importExistingSharedPartByName = async function(name) {
+
+  const sharedPartByName = await api.findSharedPart(name)
+
+  if (!sharedPartByName) {
+    throw(`Shared part with name ${name} wasn't found.`)
+  }
+
+  importExistingSharedPartById(sharedPartByName.id)
+}
+
+importExistingSharedParts = async function() {
+  response = await api.fetchSharedParts()
+  const sharedParts = response.data
+
+  if (sharedParts.length == 0) {
+    console.log(`No shared parts found`)
+    return
+  }
+
+  sharedParts.forEach(async (sharedPart) => {
+    response = await importExistingSharedPartById(sharedPart.id)
+  })
+}
+
 runTests = async function (handle) {
   const relativePath = `./reconciliation_texts/${handle}`
   const config = fsUtils.readConfig(relativePath)
@@ -136,4 +185,4 @@ runTests = async function (handle) {
     process.exit(1)
   }
 }
-module.exports = { createNewTemplateFolder, importNewTemplateFolder, constructReconciliationText, persistReconciliationText, runTests }
+module.exports = { createNewTemplateFolder, importNewTemplateFolder, constructReconciliationText, persistReconciliationText, importExistingSharedPartByName, importExistingSharedParts, runTests }

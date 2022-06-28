@@ -34,6 +34,31 @@ const updateReconciliationText = function(id, attributes) {
   return axios.post(`reconciliations/${id}`, attributes)
 }
 
+
+const fetchSharedParts = function(page = 1) {
+  return axios.get(`shared_parts`, { params: { page: page, per_page: 200 }})
+}
+
+const fetchSharedPartById = function(id) {
+  return axios.get(`shared_parts/${id}`)
+}
+
+const findSharedPart = async function (name, page = 1) {
+  return fetchSharedParts(page).then((response) => {
+    sharedParts = response.data
+    if (sharedParts.lenght == 0) {
+      return;
+    }
+
+    sharedPart = sharedParts.find((element) => element['name'] === name)
+    if (sharedPart) {
+      return sharedPart;
+    } else {
+      return findSharedPart(name, page + 1);
+    }
+  })
+}
+
 const createTestRun = function(attributes) {
   return axios.post('reconciliations/test', attributes)
 }
@@ -42,4 +67,4 @@ const fetchTestRun = function(id) {
   return axios.get(`reconciliations/test_runs/${id}`)
  }
 
-module.exports = { fetchReconciliationTexts, updateReconciliationText, findReconciliationText, fetchTestRun, createTestRun }
+module.exports = { fetchReconciliationTexts, updateReconciliationText, findReconciliationText, fetchSharedParts, fetchSharedPartById, findSharedPart, fetchTestRun, createTestRun }
