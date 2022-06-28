@@ -23,7 +23,7 @@ createFiles = async function ({ relativePath, testFile, textParts, text }) {
     }
   })
 
-  fs.writeFile(`${relativePath}/text.liquid`, text, emptyCallback)
+  fs.writeFile(`${relativePath}/main.liquid`, text, emptyCallback)
 }
 
 writeConfig = function (relativePath, config) {

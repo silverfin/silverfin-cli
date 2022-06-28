@@ -14,7 +14,7 @@ createNewTemplateFolder = async function (handle) {
   fsUtils.createFiles({ relativePath, testFile, textParts, text })
 
   config = {
-    "text": "text.liquid",
+    "text": "main.liquid",
     "text_parts": {
       "part_1": "text_parts/part_1.liquid"
     },
@@ -60,7 +60,7 @@ importNewTemplateFolder = async function (handle) {
 
   config = {
     ...attributes,
-    "text": "text.liquid",
+    "text": "main.liquid",
     "text_parts": configTextParts,
     "test": "tests/test.yml",
   }
@@ -75,7 +75,7 @@ constructReconciliationText = function (handle) {
     acc[attribute] = config[attribute]
     return acc
   }, {})
-  attributes.text = fs.readFileSync(`${relativePath}/text.liquid`, 'utf-8')
+  attributes.text = fs.readFileSync(`${relativePath}/main.liquid`, 'utf-8')
   attributes.tests = fs.readFileSync(`${relativePath}/tests/test.yml`, 'utf-8')
 
   const textParts = Object.keys(config.text_parts).reduce((array, name) => {
