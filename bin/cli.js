@@ -23,9 +23,13 @@ commandsToFunctions = {
   "new": toolkit.createNewTemplateFolder,
   "import": toolkit.importNewTemplateFolder,
   "persistReconciliationText": toolkit.persistReconciliationText,
+  "import_shared_part": toolkit.importExistingSharedPartByName,
+  "import_all_shared_parts": toolkit.importExistingSharedParts,
+  "persist_shared_part": toolkit.persistSharedPart,
   "run_tests": toolkit.runTests,
   "help": printHelp
 }
+
 commandsDescription = {
   "new": {
     "description": "Generates new folder structure for a new template",
@@ -37,6 +41,17 @@ commandsDescription = {
   },
   "persistReconciliationText": {
     "description": "Send template updates back to Silverfin",
+    "required": "--handle"
+  },
+  "import_shared_part": {
+    "description": "Imports existing shared part",
+    "required": "--handle"
+  },
+  "import_all_shared_parts": {
+    "description": "Import all existing shared parts"
+  },
+  "persist_shared_part":{
+    "description": "Send shared part updates back to Silverfin",
     "required": "--handle"
   },
   "run_tests": {

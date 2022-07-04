@@ -23,7 +23,12 @@ createFiles = async function ({ relativePath, testFile, textParts, text }) {
     }
   })
 
-  fs.writeFile(`${relativePath}/text.liquid`, text, emptyCallback)
+  fs.writeFile(`${relativePath}/main.liquid`, text, emptyCallback)
+}
+
+createLiquidFile = async function (relativePath, fileName, textContent) {
+  const emptyCallback = () => {}
+  fs.writeFile(`${relativePath}/${fileName}.liquid`, textContent, emptyCallback)
 }
 
 writeConfig = function (relativePath, config) {
@@ -38,4 +43,4 @@ readConfig = function (relativePath) {
   return config
 }
 
-module.exports = { writeConfig, createFiles, createFolders, readConfig }
+module.exports = { writeConfig, createFiles, createLiquidFile, createFolder, createFolders, readConfig }
