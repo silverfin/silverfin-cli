@@ -17,6 +17,11 @@ createFiles = async function ({ relativePath, testFile, textParts, text }) {
 
   fs.writeFile(`${relativePath}/tests/${testFile.name}.yml`, testFile.content, emptyCallback)
 
+  if (!fs.existsSync(`${relativePath}/tests/README.md`)) {
+    const readmeLiquidTests = fs.readFileSync('./resources/liquid_tests/README.md')
+    fs.writeFileSync(`${relativePath}/tests/README.md`, readmeLiquidTests)
+  }
+
   Object.keys(textParts).forEach((textPartName) => {
     if (textPartName) {
       fs.writeFile(`${relativePath}/text_parts/${textPartName}.liquid`, textParts[textPartName], emptyCallback)
