@@ -63,6 +63,14 @@ const updateSharedPart = function(id, attributes) {
   return axios.post(`shared_parts/${id}`, attributes)
 }
 
+const addSharedPart = function(sharedPartId, reconciliationId) {
+  return axios.post(`reconciliations/${reconciliationId}/shared_parts/${sharedPartId}`)
+}
+
+const removeSharedPart = function(sharedPartId, reconciliationId) {
+  return axios.delete(`reconciliations/${reconciliationId}/shared_parts/${sharedPartId}`)
+}
+
 const createTestRun = function(attributes) {
   return axios.post('reconciliations/test', attributes)
 }
@@ -71,4 +79,4 @@ const fetchTestRun = function(id) {
   return axios.get(`reconciliations/test_runs/${id}`)
  }
 
-module.exports = { fetchReconciliationTexts, updateReconciliationText, findReconciliationText, fetchSharedParts, fetchSharedPartById, findSharedPart, updateSharedPart, fetchTestRun, createTestRun }
+module.exports = { fetchReconciliationTexts, updateReconciliationText, findReconciliationText, fetchSharedParts, fetchSharedPartById, findSharedPart, updateSharedPart, addSharedPart, removeSharedPart, fetchTestRun, createTestRun }

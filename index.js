@@ -163,6 +163,94 @@ persistSharedPart = async function (name) {
 
 }
 
+/* This will overwrite existing shared parts in reconcilation's config file */
+refreshSharedPartsUsed = function (handle) {
+  const relativePath = `./reconciliation_texts/${handle}`
+  const configReconciliation = fsUtils.readConfig(relativePath)
+  configReconciliation.shared_parts = []
+
+  const sharedParts = fs.readdir(`./shared_parts`, (err, data) => {
+    if (err) throw err;
+    
+    for (sharedPartDir of data) {
+      let sharedPartPath = `./shared_parts/${sharedPartDir}`
+      let dir = fs.statSync(sharedPartPath, ()=>{});
+      if (dir.isDirectory()) {
+        let configSharedPart = fsUtils.readConfig(sharedPartPath);
+        let found = configSharedPart.used_in.find(function(template,index) {
+          if (template.id == configReconciliation.id) { 
+            configReconciliation.shared_parts.push({
+              'id': configSharedPart.id,
+              'name': sharedPartDir
+            })
+            return true 
+          } 
+        })
+      }
+    }
+    fsUtils.writeConfig(relativePath, configReconciliation)
+  })
+}
+
+addSharedPartToReconciliation = async function (sharedPartHandle, reconciliationHandle) {
+  const relativePathReconciliation = `./reconciliation_texts/${reconciliationHandle}`
+  const configReconciliation = fsUtils.readConfig(relativePathReconciliation)
+
+  const relativePathSharedPart = `./shared_parts/${sharedPartHandle}`
+  const configSharedPart = fsUtils.readConfig(relativePathSharedPart)
+
+  response = await api.addSharedPart(configSharedPart.id, configReconciliation.id)
+
+  if (response.status === 201) {
+    console.log(`OK: Shared part "${sharedPartHandle}" added to "${reconciliationHandle}" reconciliation text.`)
+  }
+
+  sharedPartIndex = configReconciliation.shared_parts.findIndex(sharedPart => sharedPart.id === configSharedPart.id);
+
+  if (sharedPartIndex === -1) {
+    configReconciliation.shared_parts.push({
+      'id': configSharedPart.id,
+      'name': sharedPartHandle
+    })
+    fsUtils.writeConfig(relativePathReconciliation,configReconciliation)
+  }
+
+  reconciliationIndex = configSharedPart.used_in.findIndex(reconciliationText => reconciliationText.id === configReconciliation.id);
+
+  if (reconciliationIndex === -1) {
+    configSharedPart.used_in.push({
+      'id': configReconciliation.id,
+      'type': 'reconciliation'
+    })
+    fsUtils.writeConfig(relativePathSharedPart,configSharedPart)
+  }
+}
+
+removeSharedPartFromReconciliation = async function (sharedPartHandle, reconciliationHandle) {
+  const relativePathReconciliation = `./reconciliation_texts/${reconciliationHandle}`
+  const configReconciliation = fsUtils.readConfig(relativePathReconciliation)
+
+  const relativePathSharedPart = `./shared_parts/${sharedPartHandle}`
+  const configSharedPart = fsUtils.readConfig(relativePathSharedPart)
+
+  response = await api.removeSharedPart(configSharedPart.id, configReconciliation.id);
+  if (response.status === 200) {
+    console.log(`OK: Shared part "${sharedPartHandle}" removed from "${reconciliationHandle}" reconciliation text.`)
+  }
+
+  sharedPartIndex = configReconciliation.shared_parts.findIndex(sharedPart => sharedPart.id === configSharedPart.id);
+  if (sharedPartIndex !== -1) {
+    configReconciliation.shared_parts.splice(sharedPartIndex,1)
+    fsUtils.writeConfig(relativePathReconciliation,configReconciliation)
+  }
+
+  reconciliationIndex = configSharedPart.used_in.findIndex(reconciliationText => reconciliationText.id === configReconciliation.id);
+  if (reconciliationIndex !== -1) {
+    configSharedPart.used_in.splice(reconciliationIndex,1)
+    fsUtils.writeConfig(relativePathSharedPart,configSharedPart)
+  }
+}
+
 runTests = async function (handle) {
   const relativePath = `./reconciliation_texts/${handle}`
   const config = fsUtils.readConfig(relativePath)
@@ -194,4 +282,4 @@ runTests = async function (handle) {
     process.exit(1)
   }
 }
-module.exports = { createNewTemplateFolder, importNewTemplateFolder, constructReconciliationText, persistReconciliationText, importExistingSharedPartByName, importExistingSharedParts, persistSharedPart, runTests }
+module.exports = { createNewTemplateFolder, importNewTemplateFolder, constructReconciliationText, persistReconciliationText, importExistingSharedPartByName, importExistingSharedParts, persistSharedPart, addSharedPartToReconciliation, removeSharedPartFromReconciliation, runTests }
