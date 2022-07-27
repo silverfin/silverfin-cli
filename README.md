@@ -1,3 +1,12 @@
+# sf-toolkit
+
+A command-line tool for Silverfin template development.
+
+## What can be used for ?
+
+- Update your templates from the command-line while storing them in git repositories.
+- Run your Liquid Tests from the command-line.
+
 # Setup & Basic Usage
 
 ## Prerequsites
@@ -37,25 +46,6 @@ SF_FIRM_ID="your firm ID"
 SF_ACCESS_TOKEN="your access token"
 NODE_ENV="development"
 ```
-## Create .gitignore
-
-The installed dependencies and secrets shouldn't be pushed to the remote repository, so we'll create a `.gitignore` to make sure these are not tracked by git.
-
-Add a new `.gitignore` in the root directory:
-
-```
-touch .gitignore
-```
-
-Add the following content to `.gitignore`:
-
-```
-# dependecies installed by npm
-node_modules
-
-# secrets
-.env
-```
 
 ### Linux / Mac terminal
 
@@ -79,7 +69,7 @@ Create `package.json` by running the following command and run through the promp
 yarn init
 ```
 
-Install `sf-toolkit` dependency:
+Install `sf-toolkit` as a dependency of your project:
 
 ```
 yarn add https://github.com/GetSilverfin/sf-toolkit.git
