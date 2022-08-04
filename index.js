@@ -76,7 +76,7 @@ constructReconciliationText = function (handle) {
     return acc
   }, {})
   attributes.text = fs.readFileSync(`${relativePath}/main.liquid`, 'utf-8')
-  attributes.tests = fs.readFileSync(`${relativePath}/tests/test.yml`, 'utf-8')
+  attributes.tests = fs.readFileSync(`${relativePath}/tests/${handle}.yml`, 'utf-8')
 
   const textParts = Object.keys(config.text_parts).reduce((array, name) => {
     let path = `${relativePath}/${config.text_parts[name]}`
