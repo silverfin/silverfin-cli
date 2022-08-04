@@ -1,4 +1,5 @@
 const fs = require('fs');
+const path = require('path');
 
 createFolder = function (path) {
   if (!fs.existsSync(path)) {
@@ -20,7 +21,7 @@ createFiles = async function ({ relativePath, testFile, textParts, text }) {
   }
 
   if (!fs.existsSync(`${relativePath}/tests/README.md`)) {
-    const readmeLiquidTests = fs.readFileSync('./resources/liquid_tests/README.md')
+    const readmeLiquidTests = fs.readFileSync(path.resolve(__dirname,'./resources/liquid_tests/README.md'), 'UTF-8')
     fs.writeFileSync(`${relativePath}/tests/README.md`, readmeLiquidTests)
   }
 
