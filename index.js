@@ -8,7 +8,7 @@ createNewTemplateFolder = async function (handle) {
   const relativePath = `./reconciliation_texts/${handle}`
   fsUtils.createFolder(`./reconciliation_texts`)
   fsUtils.createFolders(relativePath)
-  testFile = { name: "test", content: "" }
+  testFile = { name: handle, content: "" }
   textParts = { "part_1": "" }
   text = ""
   fsUtils.createFiles({ relativePath, testFile, textParts, text })
@@ -18,7 +18,7 @@ createNewTemplateFolder = async function (handle) {
     "text_parts": {
       "part_1": "text_parts/part_1.liquid"
     },
-    "test": "tests/test.yml",
+    "test": `tests/${handle}.yml`,
     "name_en": ""
   }
   writeConfig(relativePath, config)
@@ -34,7 +34,7 @@ importNewTemplateFolder = async function (handle) {
   fsUtils.createFolder(`./reconciliation_texts`)
   fsUtils.createFolders(relativePath)
   testFile = { 
-    name: "test", 
+    name: handle, 
     content: "# Add your Liquid Tests here"
   }
   textPartsReducer = (acc, part) => {
@@ -62,7 +62,7 @@ importNewTemplateFolder = async function (handle) {
     ...attributes,
     "text": "main.liquid",
     "text_parts": configTextParts,
-    "test": "tests/test.yml",
+    "test": `tests/${handle}.yml`,
   }
   writeConfig(relativePath, config)
 }
@@ -76,7 +76,7 @@ constructReconciliationText = function (handle) {
     return acc
   }, {})
   attributes.text = fs.readFileSync(`${relativePath}/main.liquid`, 'utf-8')
-  attributes.tests = fs.readFileSync(`${relativePath}/tests/test.yml`, 'utf-8')
+  attributes.tests = fs.readFileSync(`${relativePath}/tests/${handle}.yml`, 'utf-8')
 
   const textParts = Object.keys(config.text_parts).reduce((array, name) => {
     let path = `${relativePath}/${config.text_parts[name]}`

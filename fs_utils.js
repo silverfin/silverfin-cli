@@ -1,4 +1,5 @@
 const fs = require('fs');
+const path = require('path');
 
 createFolder = function (path) {
   if (!fs.existsSync(path)) {
@@ -15,7 +16,14 @@ createFolders = function (relativePath) {
 createFiles = async function ({ relativePath, testFile, textParts, text }) {
   const emptyCallback = () => {}
 
-  fs.writeFile(`${relativePath}/tests/${testFile.name}.yml`, testFile.content, emptyCallback)
+  if (!fs.existsSync(`${relativePath}/tests/${testFile.name}.yml`)) {
+    fs.writeFile(`${relativePath}/tests/${testFile.name}.yml`, testFile.content, emptyCallback)
+  }
+
+  if (!fs.existsSync(`${relativePath}/tests/README.md`)) {
+    const readmeLiquidTests = fs.readFileSync(path.resolve(__dirname,'./resources/liquid_tests/README.md'), 'UTF-8')
+    fs.writeFileSync(`${relativePath}/tests/README.md`, readmeLiquidTests)
+  }
 
   Object.keys(textParts).forEach((textPartName) => {
     if (textPartName) {
