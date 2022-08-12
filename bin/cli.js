@@ -27,6 +27,7 @@ commandsToFunctions = {
   "import_all_shared_parts": toolkit.importExistingSharedParts,
   "persist_shared_part": toolkit.persistSharedPart,
   "run_tests": toolkit.runTests,
+  "authorize": toolkit.authorize,
   "help": printHelp
 }
 
@@ -57,6 +58,9 @@ commandsDescription = {
   "run_tests": {
     "description": "Send template and test to Silverfin and waits for completion",
     "required": "--handle"
+  },
+  "authorize": {
+    "description": "Authorize the CLI by entering your Silverfin API credentials"
   },
   "help": {
     "description": `

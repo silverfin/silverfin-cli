@@ -194,4 +194,19 @@ runTests = async function (handle) {
     process.exit(1)
   }
 }
-module.exports = { createNewTemplateFolder, importNewTemplateFolder, constructReconciliationText, persistReconciliationText, importExistingSharedPartByName, importExistingSharedParts, persistSharedPart, runTests }
+
+authorize = function () {
+  api.authorizeApp();
+};
+
+module.exports = { 
+  createNewTemplateFolder, 
+  importNewTemplateFolder, 
+  constructReconciliationText, 
+  persistReconciliationText, 
+  importExistingSharedPartByName, 
+  importExistingSharedParts, 
+  persistSharedPart, 
+  runTests,
+  authorize
+}

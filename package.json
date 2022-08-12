@@ -11,6 +11,10 @@
   },
   "dependencies": {
     "axios": "^0.26.1",
-    "dotenv": "^16.0.1"
+    "dotenv": "^16.0.1",
+    "prompt-sync": "^4.2.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.21.0"
   }
 }
