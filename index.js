@@ -1,8 +1,8 @@
-const api = require('./sf_api')
+const api = require('./api/sf_api')
 const fsUtils = require('./fs_utils')
 const fs = require('fs');
 
-const RECONCILIATOIN_FIELDS_TO_SYNC = ["name_nl", "name_fr", "name_en", "auto_hide_formula", "text_configuration", "virtual_account_number", "reconciliation_type", "public", "allow_duplicate_reconciliations", "is_active", "tests"]
+const RECONCILIATION_FIELDS_TO_SYNC = ["name_nl", "name_fr", "name_en", "auto_hide_formula", "text_configuration", "virtual_account_number", "reconciliation_type", "public", "allow_duplicate_reconciliations", "is_active", "tests"]
 
 createNewTemplateFolder = async function (handle) {
   const relativePath = `./reconciliation_texts/${handle}`
@@ -45,7 +45,7 @@ importNewTemplateFolder = async function (handle) {
   textParts = reconciliationText.text_parts.reduce(textPartsReducer, {})
   fsUtils.createFiles({ relativePath, testFile, textParts, text: reconciliationText.text })
 
-  attributes = RECONCILIATOIN_FIELDS_TO_SYNC.reduce((acc, attribute) => {
+  attributes = RECONCILIATION_FIELDS_TO_SYNC.reduce((acc, attribute) => {
     acc[attribute] = reconciliationText[attribute]
     return acc
   }, {})
@@ -71,7 +71,7 @@ constructReconciliationText = function (handle) {
   const relativePath = `./reconciliation_texts/${handle}`
   const config = fsUtils.readConfig(relativePath)
 
-  const attributes = RECONCILIATOIN_FIELDS_TO_SYNC.reduce((acc, attribute) => {
+  const attributes = RECONCILIATION_FIELDS_TO_SYNC.reduce((acc, attribute) => {
     acc[attribute] = config[attribute]
     return acc
   }, {})
