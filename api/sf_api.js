@@ -3,14 +3,7 @@ const axios = require('axios');
 const prompt = require('prompt-sync')({sigint: true});
 const {config} = require('./auth');
 
-// firm id and host can be changed via ENV vars
-require("dotenv").config();
-const missingVariables =  ['SF_FIRM_ID'].filter((key) => !process.env[key]);
-if (missingVariables.length && process.argv[2] !== "help") {
-  throw `Missing configuration variables: ${missingVariables}, call export ${missingVariables[0]}=... before`
-};
 const baseURL = process.env.SF_HOST || 'https://live.getsilverfin.com';
-const firmId = process.env.SF_FIRM_ID;
 
 function authorizeApp(firmId = "") {
   // Check Client ID
@@ -238,7 +231,7 @@ async function fetchTestRun(id, refreshToken = true) {
   };
  };
 
-module.exports = { 
+module.exports = {
   authorizeApp,
   fetchReconciliationTexts, 
   updateReconciliationText, 

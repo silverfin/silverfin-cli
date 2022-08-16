@@ -1,6 +1,6 @@
 const api = require('./api/sf_api')
 const fsUtils = require('./fs_utils')
-const fs = require('fs');
+const fs = require('fs')
 
 const RECONCILIATION_FIELDS_TO_SYNC = ["name_nl", "name_fr", "name_en", "auto_hide_formula", "text_configuration", "virtual_account_number", "reconciliation_type", "public", "allow_duplicate_reconciliations", "is_active", "tests"]
 

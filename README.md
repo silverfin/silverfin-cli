@@ -6,12 +6,13 @@ A command-line tool for Silverfin template development.
 
 - Update your templates from the command-line while storing them in git repositories.
 - Run your Liquid Tests from the command-line.
+- Generate Liquid Tests from existing company files.
 
 # Setup & Basic Usage
 
 ## Prerequsites
 
-To use this CLI tool you need to first obtain a Silverfin API access_token
+To use this CLI tool you first need to register an API application within Silverfin. You will get a `client_id` and `secret`.
 
 ## Install package manager
 
@@ -27,40 +28,6 @@ Install `yarn` globally:
 npm install --global yarn
 ```
 
-## Set environment variables
-
-You can either add the environment variables locally in the file so you only need to add them once, or define them directly in the terminal. 
-
-### Local file 
-
-Add a .env file in the root directory:
-
-```
-touch .env
-```
-
-Add the following variables in  .env:
-
-```
-SF_FIRM_ID="your firm ID"
-SF_ACCESS_TOKEN="your access token"
-NODE_ENV="development"
-```
-
-### Linux / Mac terminal
-
-```
-export SF_FIRM_ID=<firm_id>
-export SF_ACCESS_TOKEN=<access_token>
-```
-
-### Windows terminal
-
-```
-set SF_FIRM_ID=<firm_id>
-set SF_ACCESS_TOKEN=<access_token>
-```
-
 ## Add sf-toolkit package
 
 Create `package.json` by running the following command and run through the prompts:
@@ -72,37 +39,78 @@ yarn init
 Install `sf-toolkit` as a dependency of your project:
 
 ```
-yarn add https://github.com/GetSilverfin/sf-toolkit.git
+yarn add https://github.com/silverfin/sf-toolkit.git
 ```
 
-## Create script shortcuts
+## Add scripts to packages.json
 
-Inside the `package.json`, add a new `scripts` block:
+You can add this `scripts` section to the `packages.json`, where we define `sf-cli` as an alias to call our CLI.
 
-```
-"scripts": {
-    "new-recon": "./node_modules/sf_toolkit/bin/cli.js new",
-    "import-recon": "./node_modules/sf_toolkit/bin/cli.js import",
-    "update-recon": "./node_modules/sf_toolkit/bin/cli.js persistReconciliationText"
-  }
-```
+  "scripts": {
+    "sf-cli": "./node_modules/sf_toolkit/bin/cli.js"
+  },
 
-You can then run these commands starting with `yarn` or `npm run`
+# How to use it
 
-## Create new template directory
+## Authorize the CLI
 
 ```
-yarn new-recon --handle <handle>
+yarn sf-cli authorize
 ```
 
-## Import existing template
+## Import an existing reconciliation
 
 ```
-yarn import-recon --handle <handle>
+yarn sf-cli import-reconciliation --firm <firm-id> --handle <handle>
 ```
 
-## Update existing template
+## Update an existing reconciliation
 
 ```
-yarn update-recon --handle <handle>
+yarn sf-cli update-reconciliation --firm <firm-id> --handle <handle>
+```
+
+## Import all existing reconciliations
+
+```
+yarn sf-cli import-all-reconciliations --firm <firm-id> --handle <handle>
+```
+
+## Import an existing shared part
+
+```
+yarn sf-cli import-shared-part --firm <firm-id> --handle <handle>
+```
+
+## Update an existing shared part
+
+```
+yarn sf-cli update-shared-part --firm <firm-id> --handle <handle>
+```
+
+## Import all existing shared parts
+
+```
+yarn sf-cli import-all-shared-parts --firm <firm-id> --handle <handle>
+```
+
+## Run a Liquid Test
+
+```
+yarn sf-cli run-test --firm <firm-id> --handle <handle>
+```
+
+## Create a Liquid Test
+
+```
+yarn sf-cli create-test --url <url>
+```
+
+## Help
+
+You can always get extra information by adding `--help`. For example:
+
+```
+yarn sf-cli --help
+yarn sf-cli import-reconciliation --help
 ```
