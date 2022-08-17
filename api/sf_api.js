@@ -405,11 +405,228 @@ async function fetchTestRun(id, refreshToken = true) {
   }
 }
 
+async function getPeriods(companyId, page = 1, refreshToken = true) {
+  setAxiosDefaults();
+  try {
+    const response = await axios.get(`/companies/${companyId}/periods`, {
+      params: { page: page, per_page: 200 },
+    });
+    responseSuccessHandler(response);
+    return response;
+  } catch (error) {
+    const callbackParameters = {
+      companyId: companyId,
+      page: page,
+      refreshToken: false,
+    };
+    const response = await responseErrorHandler(
+      error,
+      refreshToken,
+      getPeriods,
+      callbackParameters
+    );
+    return response;
+  }
+}
+
+function findPeriod(periodId, periodsArray) {
+  return periodsArray.find((period) => period.id == periodId);
+}
+
+async function getCompanyDrop(companyId, refreshToken = true) {
+  setAxiosDefaults();
+  try {
+    const response = await axios.get(`/companies/${companyId}`);
+    responseSuccessHandler(response);
+    return response;
+  } catch (error) {
+    const callbackParameters = { companyId: companyId, refreshToken: false };
+    const response = await responseErrorHandler(
+      error,
+      refreshToken,
+      getCompanyDrop,
+      callbackParameters
+    );
+    return response;
+  }
+}
+
+async function getCompanyCustom(companyId, refreshToken = true) {
+  setAxiosDefaults();
+  try {
+    const response = await axios.get(`/companies/${companyId}/custom`);
+    responseSuccessHandler(response);
+    return response;
+  } catch (error) {
+    const callbackParameters = { companyId: companyId, refreshToken: false };
+    const response = await responseErrorHandler(
+      error,
+      refreshToken,
+      getCompanyCustom,
+      callbackParameters
+    );
+    return response;
+  }
+}
+
+async function getWorkflows(companyId, periodId, refreshToken = true) {
+  setAxiosDefaults();
+  try {
+    const response = await axios.get(
+      `/companies/${companyId}/periods/${periodId}/workflows`
+    );
+    responseSuccessHandler(response);
+    return response;
+  } catch (error) {
+    const callbackParameters = {
+      companyId: companyId,
+      periodId: periodId,
+      refreshToken: false,
+    };
+    const response = await responseErrorHandler(
+      error,
+      refreshToken,
+      getWorkflows,
+      callbackParameters
+    );
+    return response;
+  }
+}
+
+async function getWorkflowInformation(
+  companyId,
+  periodId,
+  workflowId,
+  page = 1,
+  refreshToken = true
+) {
+  setAxiosDefaults();
+  try {
+    const response = await axios.get(
+      `/companies/${companyId}/periods/${periodId}/workflows/${workflowId}/reconciliations`,
+      { params: { page: page, per_page: 200 } }
+    );
+    responseSuccessHandler(response);
+    return response;
+  } catch (error) {
+    const callbackParameters = {
+      companyId: companyId,
+      periodId: periodId,
+      workflowId: workflowId,
+      page: page,
+      refreshToken: false,
+    };
+    const response = await responseErrorHandler(
+      error,
+      refreshToken,
+      getWorkflowInformation,
+      callbackParameters
+    );
+    return response;
+  }
+}
+
+async function findReconciliationInWorkflow(
+  reconciliationHandle,
+  companyId,
+  periodId,
+  workflowId,
+  page = 1
+) {
+  const response = await getWorkflowInformation(
+    companyId,
+    periodId,
+    workflowId,
+    page
+  );
+  const workflowArray = response.data;
+  // No data
+  if (workflowArray.length == 0) {
+    console.log(
+      `Reconciliation ${reconciliationHandle} not found in workflow id ${workflowId}`
+    );
+    return;
+  }
+  const reconciliationText = workflowArray.find(
+    (reconciliation) => reconciliation.handle == reconciliationHandle
+  );
+  if (reconciliationText) {
+    return reconciliationText;
+  } else {
+    return findReconciliationInWorkflow(
+      reconciliationHandle,
+      companyId,
+      periodId,
+      workflowId,
+      page + 1
+    );
+  }
+}
+
+async function findReconciliationInWorkflows(
+  reconciliationHandle,
+  companyId,
+  periodId
+) {
+  // Get data from all workflows
+  const responseWorkflows = await getWorkflows(companyId, periodId);
+  // Check in each workflow
+  for (workflow of responseWorkflows.data) {
+    let reconciliationInformation = await findReconciliationInWorkflow(
+      reconciliationHandle,
+      companyId,
+      periodId,
+      workflow.id
+    );
+    // Found
+    if (reconciliationInformation) {
+      return reconciliationInformation;
+    }
+  }
+  // Not found
+  console.log(
+    `Reconciliation ${reconciliationHandle} not found in any workflow`
+  );
+}
+
+async function getAccountDetails(
+  companyId,
+  periodId,
+  accountId,
+  refreshToken = true
+) {
+  setAxiosDefaults();
+  try {
+    const response = await axios.get(
+      `companies/${companyId}/periods/${periodId}/accounts/${accountId}`
+    );
+    responseSuccessHandler(response);
+    return response;
+  } catch (error) {
+    const callbackParameters = {
+      companyId: companyId,
+      periodId: periodId,
+      accountId: accountId,
+      refreshToken: false,
+    };
+    const response = await responseErrorHandler(
+      error,
+      refreshToken,
+      getAccountDetails,
+      callbackParameters
+    );
+    return response;
+  }
+}
+
 module.exports = {
   authorizeApp,
   fetchReconciliationTexts,
   updateReconciliationText,
   findReconciliationText,
+  getReconciliationDetails,
+  getReconciliationCustom,
+  getReconciliationResults,
   fetchSharedParts,
   fetchSharedPartById,
   findSharedPart,
@@ -418,4 +635,13 @@ module.exports = {
   removeSharedPart,
   fetchTestRun,
   createTestRun,
+  getPeriods,
+  findPeriod,
+  getCompanyDrop,
+  getCompanyCustom,
+  getWorkflows,
+  getWorkflowInformation,
+  findReconciliationInWorkflow,
+  findReconciliationInWorkflows,
+  getAccountDetails,
 };
