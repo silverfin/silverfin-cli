@@ -16,8 +16,8 @@ createFolders = function (relativePath) {
 createFiles = async function ({ relativePath, testFile, textParts, text }) {
   const emptyCallback = () => {}
 
-  if (!fs.existsSync(`${relativePath}/tests/${testFile.name}.yml`)) {
-    fs.writeFile(`${relativePath}/tests/${testFile.name}.yml`, testFile.content, emptyCallback)
+  if (!fs.existsSync(`${relativePath}/tests/${testFile.name}_liquid_test.yml`)) {
+    fs.writeFile(`${relativePath}/tests/${testFile.name}_liquid_test.yml`, testFile.content, emptyCallback)
   }
 
   if (!fs.existsSync(`${relativePath}/tests/README.md`)) {
