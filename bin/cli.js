@@ -1,4 +1,5 @@
 const toolkit = require('../index.js');
+const liquidTests = require('../liquid_test_generator/generator');
 const {Command} = require('commander');
 const prompt = require('prompt-sync')({sigint: true});
 const program = new Command();
@@ -130,8 +131,8 @@ program
   .command('create-test')
   .description('Create Liquid Test (YAML file) from an existing reconciliation in a company file')
   .requiredOption('-u, --url <url>', 'Specify the url to be used (mandatory)')
-  .action(() => {
-    // TO BE DONE
+  .action((options) => {
+    liquidTests.testGenerator(options.url);
   });
 
 // Authorize APP

@@ -13,6 +13,13 @@ createFolders = function (relativePath) {
   createFolder(`${relativePath}/text_parts`)
 }
 
+createLiquidTestReadme = function (relativePath) {
+  if (!fs.existsSync(`${relativePath}/tests/README.md`)) {
+    const readmeLiquidTests = fs.readFileSync(path.resolve(__dirname,'./resources/liquid_tests/README.md'), 'UTF-8')
+    fs.writeFileSync(`${relativePath}/tests/README.md`, readmeLiquidTests)
+  }
+}
+
 createFiles = async function ({ relativePath, testFile, textParts, text }) {
   const emptyCallback = () => {}
 
@@ -20,11 +27,8 @@ createFiles = async function ({ relativePath, testFile, textParts, text }) {
     fs.writeFile(`${relativePath}/tests/${testFile.name}_liquid_test.yml`, testFile.content, emptyCallback)
   }
 
-  if (!fs.existsSync(`${relativePath}/tests/README.md`)) {
-    const readmeLiquidTests = fs.readFileSync(path.resolve(__dirname,'./resources/liquid_tests/README.md'), 'UTF-8')
-    fs.writeFileSync(`${relativePath}/tests/README.md`, readmeLiquidTests)
-  }
-
+  createLiquidTestReadme(relativePath)
+  
   Object.keys(textParts).forEach((textPartName) => {
     if (textPartName) {
       fs.writeFile(`${relativePath}/text_parts/${textPartName}.liquid`, textParts[textPartName], emptyCallback)
