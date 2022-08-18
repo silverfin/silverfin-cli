@@ -44,66 +44,77 @@ yarn add https://github.com/silverfin/sf-toolkit.git
 
 ## Add scripts to packages.json
 
-You can add this `scripts` section to the `packages.json`, where we define `sf-cli` as an alias to call our CLI.
+You can add this `scripts` section to the `packages.json`, where we define `silverfin` as an alias to call our CLI.
 
+```
   "scripts": {
-    "sf-cli": "./node_modules/sf_toolkit/bin/cli.js"
+    "silverfin": "node ./node_modules/sf_toolkit/bin/cli.js"
   },
+```
+
+## Add your API credentials as environmental variables
+
+You could use a new `.env` local file, or add them to an existing file in your system (e.g. `~/.bash-profile` or `~/.bashrc`)
+
+```
+export SF_API_CLIENT_ID=...
+export SF_API_SECRET=...
+```
 
 # How to use it
 
 ## Authorize the CLI
 
 ```
-yarn sf-cli authorize
+yarn silverfin authorize
 ```
 
 ## Import an existing reconciliation
 
 ```
-yarn sf-cli import-reconciliation --firm <firm-id> --handle <handle>
+yarn silverfin import-reconciliation --firm <firm-id> --handle <handle>
 ```
 
 ## Update an existing reconciliation
 
 ```
-yarn sf-cli update-reconciliation --firm <firm-id> --handle <handle>
+yarn silverfin update-reconciliation --firm <firm-id> --handle <handle>
 ```
 
 ## Import all existing reconciliations
 
 ```
-yarn sf-cli import-all-reconciliations --firm <firm-id> --handle <handle>
+yarn silverfin import-all-reconciliations --firm <firm-id> --handle <handle>
 ```
 
 ## Import an existing shared part
 
 ```
-yarn sf-cli import-shared-part --firm <firm-id> --handle <handle>
+yarn silverfin import-shared-part --firm <firm-id> --handle <handle>
 ```
 
 ## Update an existing shared part
 
 ```
-yarn sf-cli update-shared-part --firm <firm-id> --handle <handle>
+yarn silverfin update-shared-part --firm <firm-id> --handle <handle>
 ```
 
 ## Import all existing shared parts
 
 ```
-yarn sf-cli import-all-shared-parts --firm <firm-id> --handle <handle>
+yarn silverfin import-all-shared-parts --firm <firm-id> --handle <handle>
 ```
 
 ## Run a Liquid Test
 
 ```
-yarn sf-cli run-test --firm <firm-id> --handle <handle>
+yarn silverfin run-test --firm <firm-id> --handle <handle>
 ```
 
 ## Create a Liquid Test
 
 ```
-yarn sf-cli create-test --url <url>
+yarn silverfin create-test --url <url>
 ```
 
 ## Help
@@ -111,6 +122,6 @@ yarn sf-cli create-test --url <url>
 You can always get extra information by adding `--help`. For example:
 
 ```
-yarn sf-cli --help
-yarn sf-cli import-reconciliation --help
+yarn silverfin --help
+yarn silverfin import-reconciliation --help
 ```

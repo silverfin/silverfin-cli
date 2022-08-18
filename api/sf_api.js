@@ -1,63 +1,58 @@
 
 const axios = require('axios');
+const open = require('open');
 const prompt = require('prompt-sync')({sigint: true});
 const {config} = require('./auth');
 
+require("dotenv").config();
 const baseURL = process.env.SF_HOST || 'https://live.getsilverfin.com';
+const missingVariables =  ['SF_API_CLIENT_ID', 'SF_API_SECRET'].filter((key) => !process.env[key]);
+if (missingVariables.length ) {
+  console.log(`Error: Missing API credentials: [${missingVariables}]`);
+  console.log(`Credentials should be defined as environmental variables. Call export ${missingVariables[0]}=... before using this CLI`);
+  console.log(`If you don't have credentials yet, you need to register your app with Silverfin to get them`);
+  process.exit();
+};
 
-function authorizeApp(firmId = "") {
-  // Check Client ID
-  if (!config.data.clientId) {
-    config.setClientId();
-  } else {
-    console.log(`ClientId loaded from configuration file.`);
-  };
-  // Check Secret
-  if (!config.data.secret) {
-    config.setSecret();
-  } else {
-    console.log(`Secret loaded from configuration file`);
-  };
+async function authorizeApp() {
   const redirectUri = "urn%3Aietf%3Awg%3Aoauth%3A2.0%3Aoob";
   const scope = "user%3Aprofile+user%3Aemail+webhooks+administration%3Aread+administration%3Awrite+permanent_documents%3Aread+permanent_documents%3Awrite+communication%3Aread+communication%3Awrite+financials%3Aread+financials%3Awrite+financials%3Atransactions%3Aread+financials%3Atransactions%3Awrite+links+workflows%3Aread";
-  const url = `${baseURL}/oauth/authorize?client_id=${config.data.clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}`;
-  console.log(`You need to authorize your App. Follow: ${url}`);
+  const url = `${baseURL}/oauth/authorize?client_id=${process.env.SF_API_CLIENT_ID}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}`;
+  await open(url);
+  console.log(`You need to authorize your APP in the browser`);
   console.log('Insert your credentials...');
   const authCodePrompt = prompt('Enter your API authorization code: ',{echo:'*'});
   const firmIdPrompt = prompt('Enter the firm ID: ');
-  // Check firm id against the one entered
-  if (firmId && firmId != firmIdPrompt) {
-      throw `The firm id you entered (${firmIdPrompt}) does not match the one you are trying to use (${firmId})`;
-  };
   // Get tokens
-  getAccessToken(config.data.clientId, config.data.secret, firmIdPrompt, authCodePrompt);
+  getAccessToken(firmIdPrompt, authCodePrompt);
 };
 
 // Get Tokens for the first time
-async function getAccessToken(clientId, secret, firmId, authCode) {  
+async function getAccessToken(firmId, authCode) {  
   try {  
     const redirectUri = "urn%3Aietf%3Awg%3Aoauth%3A2.0%3Aoob";
     const grantType = "authorization_code";
     let requestDetails = {
       method: 'post',
-      url: `https://api.getsilverfin.com/f/${firmId}/oauth/token?client_id=${clientId}&client_secret=${secret}&redirect_uri=${redirectUri}&grant_type=${grantType}&code=${authCode}`
+      url: `https://api.getsilverfin.com/f/${firmId}/oauth/token?client_id=${process.env.SF_API_CLIENT_ID}&client_secret=${process.env.SF_API_SECRET}&redirect_uri=${redirectUri}&grant_type=${grantType}&code=${authCode}`
     };
     const response = await axios(requestDetails);
     config.storeNewTokens(response, firmId);
   }
   catch (error) {
-    console.log(`Error: ${error.response.data.error_description}`);
+    console.log(`Response Status: ${error.response.status} (${error.response.statusText})`);
+    console.log(`Error description: ${JSON.stringify(error.response.data.error_description)}`);
     process.exit();
   };
 };
 
 // Get a new pair of tokens
-async function refreshTokens(clientId, secret, firmId, accessToken, refreshToken) {
+async function refreshTokens(firmId, accessToken, refreshToken) {
   try {
     console.log(`Requesting new pair of tokens`);
     let data = {
-      client_id: clientId,
-      client_secret: secret,
+      client_id: process.env.SF_API_CLIENT_ID,
+      client_secret: process.env.SF_API_SECRET,
       redirect_uri: "urn%3Aietf%3Awg%3Aoauth%3A2.0%3Aoob",
       grant_type: "refresh_token",
       refresh_token: refreshToken,
@@ -67,8 +62,9 @@ async function refreshTokens(clientId, secret, firmId, accessToken, refreshToken
     config.storeNewTokens(response, firmId);
   }
   catch (error) {
-    console.log(`Error refreshing: ${error.response.data.error_description}`);
-    console.log(`Try running the authentication process again`)
+    console.log(`Response Status: ${error.response.status} (${error.response.statusText})`);
+    console.log(`Error description: ${JSON.stringify(error.response.data.error_description)}`);
+    console.log(`Error refreshing the tokens. Try running the authentication process again`)
     process.exit();
   };
 };
@@ -87,17 +83,26 @@ function responseSuccessHandler(response) {
 };
 
 async function responseErrorHandler(error, refreshToken = false, callbackFunction, callbackParameters) {
-  if (refreshToken) {
-    console.log(`Response Status: ${error.response.status} (${error.response.statusText}) - method: ${error.response.config.method} - url: ${error.response.config.url}`);
-    console.log(`Response Data: ${JSON.stringify(error.response.data.error)}`);
-    // Get a new pair of tokens
-    await refreshTokens(config.data.clientId, config.data.secret, firmId, config.data[String(firmId)].accessToken, config.data[String(firmId)].refreshToken);
-    //  Call the original function again
-    return callbackFunction(...Object.values(callbackParameters));
-  } else {
-    console.log(`Api calls failed, try to run the authorization process again`);
-    process.exit();
+  console.log(`Response Status: ${error.response.status} (${error.response.statusText}) - method: ${error.response.config.method} - url: ${error.response.config.url}`);
+  console.log(`Response Data: ${JSON.stringify(error.response.data.error)}`);
+  // Valid Request. Not Found
+  if (error.response.status === 404) {
+    return;
   };
+  // No access credentials
+  if (error.response.status === 401) {
+    if (refreshToken) {
+      // Get a new pair of tokens
+      await refreshTokens(firmId, config.data[String(firmId)].accessToken, config.data[String(firmId)].refreshToken);
+      //  Call the original function again
+      return callbackFunction(...Object.values(callbackParameters));
+    } else {
+      console.log(`API calls failed, try to run the authorization process again`);
+      process.exit();
+    };
+  };
+  // Not handled
+  throw error;
 };
 
 async function fetchReconciliationTexts(page = 1, refreshToken = true) {

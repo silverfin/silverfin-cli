@@ -1,11 +1,17 @@
 const fs = require('fs');
 const path = require('path');
-const prompt = require('prompt-sync')({sigint: true});
+
+// Location
+const homedir = require('os').homedir();
+const sfFolder = path.resolve(homedir, '.silverfin/');
+if (!fs.existsSync(sfFolder)) {
+  fs.mkdirSync(sfFolder);
+};
 
 class Config {
   constructor() {
       try {
-        this.path = path.resolve(__dirname,'./config.json');
+        this.path = path.resolve(homedir, '.silverfin/config.json');
         const fileData = fs.readFileSync(this.path, 'utf-8');
         this.data = JSON.parse(fileData);
       } 
@@ -34,16 +40,6 @@ class Config {
       };
       this.saveConfig();
     };   
-  };
-    
-  setClientId() {
-    this.data.clientId = prompt('Enter your API Client id: ',{echo:'*'});
-    this.saveConfig();
-  };
-    
-  setSecret() {
-    this.data.secret = prompt('Enter your API secret: ',{echo:'*'});
-    this.saveConfig();
   };
 };
 
