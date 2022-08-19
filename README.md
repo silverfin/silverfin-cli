@@ -54,11 +54,23 @@ You can add this `scripts` section to the `packages.json`, where we define `silv
 
 ## Add your API credentials as environmental variables
 
-You could use a new `.env` local file, or add them to an existing file in your system (e.g. `~/.bash-profile` or `~/.bashrc`)
+You could use a new `.env` local file, or add them to an existing file in your system (e.g. `~/.bash-profile`, `~/.bashrc` or `~/.zshrc`)
 
 ```
 export SF_API_CLIENT_ID=...
 export SF_API_SECRET=...
+```
+
+If you are only using one firm, you could set it up as an environmental variable. That way, you won't need to pass the `--firm <firmid>` option every time you run a command.
+
+```
+export SF_FIRM_ID=...
+```
+
+In case you need to use a different host, you can also set it up as an environmental variable. By default it would be `https://live.getsilverfin.com`.
+
+```
+export SF_HOST=...
 ```
 
 # How to use it
@@ -84,7 +96,7 @@ yarn silverfin update-reconciliation --firm <firm-id> --handle <handle>
 ## Import all existing reconciliations
 
 ```
-yarn silverfin import-all-reconciliations --firm <firm-id> --handle <handle>
+yarn silverfin import-all-reconciliations --firm <firm-id>
 ```
 
 ## Import an existing shared part
@@ -102,7 +114,7 @@ yarn silverfin update-shared-part --firm <firm-id> --handle <handle>
 ## Import all existing shared parts
 
 ```
-yarn silverfin import-all-shared-parts --firm <firm-id> --handle <handle>
+yarn silverfin import-all-shared-parts --firm <firm-id>
 ```
 
 ## Run a Liquid Test
