@@ -10,7 +10,7 @@ const program = new Command();
 let firmIdDefault = undefined;
 if (process.env.SF_FIRM_ID) {
   firmIdDefault = process.env.SF_FIRM_ID;
-  console.log(`Firm ID to be used: ${firmIdDefault}`)
+  console.log(`Firm ID to be used: ${firmIdDefault}`);
 };
 
 // Version
@@ -40,7 +40,7 @@ program
       promptConfirmation();
     };
     firmId = options.firm;
-    toolkit.importNewTemplateFolder(options.handle);
+    toolkit.importExistingReconciliationByHandle(options.handle);
   });
 
 // Update a single reconciliation
@@ -69,8 +69,7 @@ program
       promptConfirmation();
     };
     firmId = options.firm;
-    // TO DO: Add function
-    console.log('Method not implemented yet')
+    toolkit.importExistingReconciliations();
   });
 
 // Import a single shared part
