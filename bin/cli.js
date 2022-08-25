@@ -131,7 +131,9 @@ program
   .command('create-test')
   .description('Create Liquid Test (YAML file) from an existing reconciliation in a company file')
   .requiredOption('-u, --url <url>', 'Specify the url to be used (mandatory)')
+  .option('--unreconciled', 'By default, the reconciled status will be set as true. Add this option to set it as false (optional)')
   .action((options) => {
+    reconciledStatus = options.unreconciled ? false : true;
     liquidTests.testGenerator(options.url);
   });
 

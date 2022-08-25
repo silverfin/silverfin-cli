@@ -17,6 +17,9 @@ async function testGenerator(url) {
 	};
 	firmId = parameters.firmId;
 	
+	// Reconciled Status (CLI argument. True by default)
+	liquidTestObject.test_name.expectation.reconciled = reconciledStatus;
+
 	// Get Reconciliation Details
 	const responseDetails = await SF.getReconciliationDetails(parameters.companyId, parameters.ledgerId, parameters.reconciliationId);
 
