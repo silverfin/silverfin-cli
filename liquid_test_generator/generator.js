@@ -22,9 +22,10 @@ async function testGenerator(url) {
 
 	// Get Reconciliation Details
 	const responseDetails = await SF.getReconciliationDetails(parameters.companyId, parameters.ledgerId, parameters.reconciliationId);
+	const reconciliationHandle = responseDetails.data.handle;
 
 	// Get Workflow Information
-	const starredStatus = {...SF.findReconciliationInWorkflow(responseDetails.data.handle, parameters.companyId, parameters.ledgerId, parameters.workflowId)}.starred
+	const starredStatus = {...SF.findReconciliationInWorkflow(reconciliationHandle, parameters.companyId, parameters.ledgerId, parameters.workflowId)}.starred
 
 	// Get period data
 	const responsePeriods = await SF.getPeriods(parameters.companyId);
@@ -46,12 +47,12 @@ async function testGenerator(url) {
 		};
 	};
 
-	// Get all the text properties
+	// Get all the text properties (Customs from current template)
 	const responseCustom = await SF.getReconciliationCustom(parameters.companyId, parameters.ledgerId, parameters.reconciliationId);
 	const currentReconCustom = Utils.processCustom(responseCustom.data);
-	liquidTestObject[testName].data.periods[currentPeriodData.fiscal_year.end_date].reconciliations[responseDetails.data.handle] = {
+	liquidTestObject[testName].data.periods[currentPeriodData.fiscal_year.end_date].reconciliations[reconciliationHandle] = {
 		starred: starredStatus, 
-		...currentReconCustom
+		custom: currentReconCustom
 	};
 	
 	// Get all the results generated in current template
@@ -59,11 +60,15 @@ async function testGenerator(url) {
 	liquidTestObject[testName].expectation.results = responseResults.data;
 
 	// Get the code of the template
-	const reconciliationCode = await SF.findReconciliationText(responseDetails.data.handle);
+	const reconciliationCode = await SF.findReconciliationText(reconciliationHandle);
 
-	// Get results used in the liquid code (main and text_parts)
+	// Search for results from other reconciliations used in the liquid code (main and text_parts)
 	let resultsObj;
 	resultsObj = Utils.searchForResultsFromDependenciesInLiquid(reconciliationCode);
+
+	// Search for custom drops from other reconcilations used in the liquid code (main and text_parts)
+	let customsObj;
+	customsObj = Utils.searchForCustomsFromDependenciesInLiquid(reconciliationCode);
 
 	// Search for shared parts in the liquid code (main and text_parts)
 	const sharedPartsUsed = Utils.lookForSharedPartsInLiquid(reconciliationCode);
@@ -81,8 +86,11 @@ async function testGenerator(url) {
 					sharedPartsUsed.push(nested);
 				};
 			};
-			// Search for results in shared part (we append to existing collection)
+			// Search for results from other reconciliations in shared part (we append to existing collection)
 			resultsObj = Utils.searchForResultsFromDependenciesInLiquid(sharedPartDetails.data, resultsObj);
+
+			// Search for custom drops from other reconcilations in shared parts (we append to existing collection)
+			customsObj = Utils.searchForCustomsFromDependenciesInLiquid(sharedPartDetails.data, customsObj);
 		};
 	};
 	
@@ -92,20 +100,46 @@ async function testGenerator(url) {
 		for (const [handle, resultsArray] of Object.entries(resultsObj)) {
 			try {
 				// Find reconciliation in Workflow to get id (depdeency template can be in a different Workflow)
-				let reconciliation = await SF.findReconciliationInWorkflows(handle, parameters.companyId, parameters.ledgerId)
+				let reconciliation = await SF.findReconciliationInWorkflows(handle, parameters.companyId, parameters.ledgerId);
 				// Fetch results
 				let reconciliationResults = await SF.getReconciliationResults(parameters.companyId, parameters.ledgerId, reconciliation.id);
 				// Add handle and results block to Liquid Test
-				liquidTestObject[testName].data.periods[currentPeriodData.fiscal_year.end_date].reconciliations[handle] = {};
-				liquidTestObject[testName].data.periods[currentPeriodData.fiscal_year.end_date].reconciliations[handle].results = {};
+				liquidTestObject[testName].data.periods[currentPeriodData.fiscal_year.end_date].reconciliations[handle] = liquidTestObject[testName].data.periods[currentPeriodData.fiscal_year.end_date].reconciliations[handle] || {};
+				liquidTestObject[testName].data.periods[currentPeriodData.fiscal_year.end_date].reconciliations[handle].results = liquidTestObject[testName].data.periods[currentPeriodData.fiscal_year.end_date].reconciliations[handle].results || {};
 				// Search for results
 				for (resultTag of resultsArray) {
 					// Add result to Liquid Test
 					liquidTestObject[testName].data.periods[currentPeriodData.fiscal_year.end_date].reconciliations[handle].results[resultTag] = reconciliationResults.data[resultTag];
 				};
 			} catch (err) {
-				console.error(err)
+				console.error(err);
 			};
+		};
+	};
+
+	// We already got the text properties from current reconciliation
+	if (customsObj.hasOwnProperty(reconciliationHandle)) {
+		delete customsObj[reconciliationHandle];
+	};
+
+	// Get custom drops from dependency reconciliations
+	if (customsObj) {
+		// Search in each reconciliation
+		for (const [handle, customsArray] of Object.entries(customsObj)) {
+      try {
+        // Find reconciliation in Workflow to get id (depdeency template can be in a different Workflow)
+        let reconciliation = await SF.findReconciliationInWorkflows(handle, parameters.companyId, parameters.ledgerId);
+        // Fetch test properties
+        let reconciliationCustomResponse = await SF.getReconciliationCustom(parameters.companyId, parameters.ledgerId, reconciliation.id);
+        let reconciliationCustomDrops = Utils.processCustom(reconciliationCustomResponse.data);
+        // Add handle to Liquid Test
+        liquidTestObject[testName].data.periods[currentPeriodData.fiscal_year.end_date].reconciliations[handle] = liquidTestObject[testName].data.periods[currentPeriodData.fiscal_year.end_date].reconciliations[handle] || {};
+				// Add custom drops
+        liquidTestObject[testName].data.periods[currentPeriodData.fiscal_year.end_date].reconciliations[handle].custom = reconciliationCustomDrops;
+      }
+      catch (err) {
+        console.log(err);
+      }
 		};
 	};
 
@@ -175,7 +209,7 @@ async function testGenerator(url) {
 	};
 
 	// Save YAML
-	Utils.exportYAML(responseDetails.data.handle, liquidTestObject);
+	Utils.exportYAML(reconciliationHandle, liquidTestObject);
 };
 
 

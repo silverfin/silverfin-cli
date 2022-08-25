@@ -92,7 +92,7 @@ function processCustom(customArray) {
     let element = `${item.namespace}.${item.key}`;
     obj[element] = item.value;
   };
-  return { custom: obj };
+  return obj;
 };
 
 // Company Drop used
@@ -158,6 +158,41 @@ function searchForResultsFromDependenciesInLiquid(reconcilationObject, resultsCo
   return resultsCollection; // { handle: [result_1, result_2], ...}
 };
 
+// Do we need to get custom drops from other templates? Check Liquid Code (handle & custom names)
+// We can pass an existing collection {handle:[drop]} from a previous call
+function searchForCustomsFromDependenciesInLiquid(reconcilationObject, customCollection = {}) {
+  const reCustomsFetched = RegExp(/\w*\.custom\.\w*\.\w*/g); // handle.custom.namespace.key
+    
+  // Main Part (or shared part)
+  let customsFound = reconcilationObject.text.match(reCustomsFetched) || [];
+
+  // Parts
+  if (reconcilationObject.text_parts) {
+    for (part of reconcilationObject.text_parts) {
+      let customsPart = part.content.match(reCustomsFetched) || [];
+      if (customsPart) {
+        customsFound = customsFound.concat(customsPart);
+      };
+    };
+  };
+
+  // Process Customs. 
+  for (custom of customsFound) {
+    const [handle, _, namespace, key] = custom.split('.'); // handle;custom;namespace;key
+    const customNamespaceKey = `${namespace}.${key}`;
+    // Check if handle is already there. Empty array
+    if (!customCollection.hasOwnProperty(handle)) {
+      customCollection[handle] = [];
+    };
+    // Check if custom is already there.
+    if (customCollection[handle].indexOf(customNamespaceKey) == -1) {
+      customCollection[handle].push(customNamespaceKey)
+    };
+  };
+
+  return customCollection; // { handle: [result_1, result_2], ...}
+};
+
 // Look for Shared Parts used
 function lookForSharedPartsInLiquid(reconcilationObject) {
   const sharedPartsNamesArray = [];
@@ -203,6 +238,7 @@ module.exports = {
   processCustom,
   getCompanyDependencies,
   searchForResultsFromDependenciesInLiquid,
+  searchForCustomsFromDependenciesInLiquid,
   lookForSharedPartsInLiquid,
   lookForAccounts
 };
