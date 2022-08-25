@@ -1,6 +1,9 @@
+#!/usr/bin/env node
+
 const toolkit = require('../index.js');
 const {Command} = require('commander');
 const prompt = require('prompt-sync')({sigint: true});
+const pkg = require('../package.json');
 const program = new Command();
 
 // Load firm id from ENV vars
@@ -11,9 +14,9 @@ if (process.env.SF_FIRM_ID) {
 };
 
 // Version
-program
-  .version('0.1.0');
-
+if (pkg.version){
+  program.version(pkg.version);
+};
 
 // Prompt Confirmation
 function promptConfirmation(){

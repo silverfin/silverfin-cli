@@ -22,7 +22,12 @@ async function authorizeApp() {
   console.log(`You need to authorize your APP in the browser`);
   console.log('Insert your credentials...');
   const authCodePrompt = prompt('Enter your API authorization code: ',{echo:'*'});
-  const firmIdPrompt = prompt('Enter the firm ID: ');
+  let firmIdPrompt;
+  if (process.env.SF_FIRM_ID) {
+    firmIdPrompt = prompt(`Enter the firm ID: (leave blank to use ${process.env.SF_FIRM_ID})`, {value:process.env.SF_FIRM_ID});
+  } else {
+    firmIdPrompt = prompt('Enter the firm ID: ');
+  };
   // Get tokens
   getAccessToken(firmIdPrompt, authCodePrompt);
 };

@@ -5,10 +5,10 @@
   "main": "index.js",
   "license": "MIT",
   "private": false,
-  "bin": "./bin/sf_toolkit.js",
+  "bin": "./bin/cli.js",
   "scripts": {
     "test": "jest",
-    "sf-cli": "./node_modules/sf-toolkit/bin/cli.js"
+    "silverfin": "./node_modules/sf-toolkit/bin/cli.js"
   },
   "dependencies": {
     "axios": "^0.26.1",
