@@ -6,7 +6,7 @@ const Utils = require('./utils');
 async function testGenerator(url) {
 
 	// Liquid Test Object
-	const liquidTestObject = Utils.createBaseLiquidTest();
+	const liquidTestObject = Utils.createBaseLiquidTest(testName);
 	
 	// Get parameters from URL provided
 	const parameters = Utils.extractURL(url);
@@ -18,7 +18,7 @@ async function testGenerator(url) {
 	firmId = parameters.firmId;
 	
 	// Reconciled Status (CLI argument. True by default)
-	liquidTestObject.test_name.expectation.reconciled = reconciledStatus;
+	liquidTestObject[testName].expectation.reconciled = reconciledStatus;
 
 	// Get Reconciliation Details
 	const responseDetails = await SF.getReconciliationDetails(parameters.companyId, parameters.ledgerId, parameters.reconciliationId);
@@ -31,9 +31,9 @@ async function testGenerator(url) {
 	const currentPeriodData = SF.findPeriod(parameters.ledgerId, responsePeriods.data);
 
 	// Set Current Period
-	liquidTestObject.test_name.context.period = String(currentPeriodData.fiscal_year.end_date);
-	liquidTestObject.test_name.data.periods[currentPeriodData.fiscal_year.end_date] = liquidTestObject.test_name.data.periods['replace_period_name'];
-	delete liquidTestObject.test_name.data.periods['replace_period_name'];
+	liquidTestObject[testName].context.period = String(currentPeriodData.fiscal_year.end_date);
+	liquidTestObject[testName].data.periods[currentPeriodData.fiscal_year.end_date] = liquidTestObject[testName].data.periods['replace_period_name'];
+	delete liquidTestObject[testName].data.periods['replace_period_name'];
 
 	// Check Previous Period
 	const currentPeriodIndex = responsePeriods.data.indexOf(currentPeriodData);
@@ -42,21 +42,21 @@ async function testGenerator(url) {
 		const previousPeriodData = responsePeriods.data[currentPeriodIndex+1];
 		if (previousPeriodData) {
 			// Add empty previous period to Liquid Test
-			liquidTestObject.test_name.data.periods[previousPeriodData.fiscal_year.end_date] = null;       
+			liquidTestObject[testName].data.periods[previousPeriodData.fiscal_year.end_date] = null;       
 		};
 	};
 
 	// Get all the text properties
 	const responseCustom = await SF.getReconciliationCustom(parameters.companyId, parameters.ledgerId, parameters.reconciliationId);
 	const currentReconCustom = Utils.processCustom(responseCustom.data);
-	liquidTestObject.test_name.data.periods[currentPeriodData.fiscal_year.end_date].reconciliations[responseDetails.data.handle] = {
+	liquidTestObject[testName].data.periods[currentPeriodData.fiscal_year.end_date].reconciliations[responseDetails.data.handle] = {
 		starred: starredStatus, 
 		...currentReconCustom
 	};
 	
 	// Get all the results generated in current template
 	const responseResults = await SF.getReconciliationResults(parameters.companyId, parameters.ledgerId, parameters.reconciliationId);
-	liquidTestObject.test_name.expectation.results = responseResults.data;
+	liquidTestObject[testName].expectation.results = responseResults.data;
 
 	// Get the code of the template
 	const reconciliationCode = await SF.findReconciliationText(responseDetails.data.handle);
@@ -96,12 +96,12 @@ async function testGenerator(url) {
 				// Fetch results
 				let reconciliationResults = await SF.getReconciliationResults(parameters.companyId, parameters.ledgerId, reconciliation.id);
 				// Add handle and results block to Liquid Test
-				liquidTestObject.test_name.data.periods[currentPeriodData.fiscal_year.end_date].reconciliations[handle] = {};
-				liquidTestObject.test_name.data.periods[currentPeriodData.fiscal_year.end_date].reconciliations[handle].results = {};
+				liquidTestObject[testName].data.periods[currentPeriodData.fiscal_year.end_date].reconciliations[handle] = {};
+				liquidTestObject[testName].data.periods[currentPeriodData.fiscal_year.end_date].reconciliations[handle].results = {};
 				// Search for results
 				for (resultTag of resultsArray) {
 					// Add result to Liquid Test
-					liquidTestObject.test_name.data.periods[currentPeriodData.fiscal_year.end_date].reconciliations[handle].results[resultTag] = reconciliationResults.data[resultTag];
+					liquidTestObject[testName].data.periods[currentPeriodData.fiscal_year.end_date].reconciliations[handle].results[resultTag] = reconciliationResults.data[resultTag];
 				};
 			} catch (err) {
 				console.error(err)
@@ -113,7 +113,7 @@ async function testGenerator(url) {
 	const companyObj = Utils.getCompanyDependencies(reconciliationCode);
 	
 	if (companyObj.standardDropElements.length !== 0 || companyObj.customDropElements.length !== 0) {
-		liquidTestObject.test_name.data.company = {};
+		liquidTestObject[testName].data.company = {};
 	}
 
 	// Get Company Data - company drop
@@ -125,7 +125,7 @@ async function testGenerator(url) {
 			const [a, key] = drop.split('.'); // company.foo
 			if (key in companyData) {
 				// Add to Liquid Test
-				liquidTestObject.test_name.data.company[key] = companyData[key] 
+				liquidTestObject[testName].data.company[key] = companyData[key] 
 			};
 		};
 	};
@@ -134,7 +134,7 @@ async function testGenerator(url) {
 	if (companyObj.customDropElements.length !== 0) {
 		const responseCompanyCustom = await SF.getCompanyCustom(parameters.companyId);
 		const companyCustom = responseCompanyCustom.data; // [ { namespace: foo, key: bar, value: baz }... ]
-		liquidTestObject.test_name.data.company.custom = {};
+		liquidTestObject[testName].data.company.custom = {};
 
 		for (drop of companyObj.customDropElements) {
 			const [a, b, namespace, key] = drop.split('.'); // company.custom.namespace.key
@@ -146,7 +146,7 @@ async function testGenerator(url) {
 			if (foundItem) {
 				let namespaceKey = `${namespace}.${key}`;
 				// Add to Liquid Test
-				liquidTestObject.test_name.data.company.custom[namespaceKey] = foundItem.value;
+				liquidTestObject[testName].data.company.custom[namespaceKey] = foundItem.value;
 			}
 		}
 	};
@@ -154,14 +154,14 @@ async function testGenerator(url) {
 	// Search for account ids in customs
 	const accountIds = Utils.lookForAccounts(liquidTestObject);
 	if (accountIds.length != 0) {
-		liquidTestObject.test_name.data.periods[currentPeriodData.fiscal_year.end_date].accounts = {};
+		liquidTestObject[testName].data.periods[currentPeriodData.fiscal_year.end_date].accounts = {};
 		for (accountId of accountIds) {
 			accountId = accountId.replace("#","");
 			try {
 				let accountResponse = await SF.getAccountDetails(parameters.companyId, parameters.ledgerId, accountId);
 				// If value is zero it won't be found ?
 				if (accountResponse) {
-					liquidTestObject.test_name.data.periods[currentPeriodData.fiscal_year.end_date].accounts[accountResponse.data.account.number] = {
+					liquidTestObject[testName].data.periods[currentPeriodData.fiscal_year.end_date].accounts[accountResponse.data.account.number] = {
 						id: accountResponse.data.account.id,
 						name: accountResponse.data.account.name,
 						value: Number(accountResponse.data.value)

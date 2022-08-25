@@ -3,9 +3,9 @@ const fs = require('fs');
 const fsUtils = require('../fs_utils')
 
 // Create base Liquid Test object
-function createBaseLiquidTest() {
+function createBaseLiquidTest(testName) {
   return {
-    test_name: {
+    [testName]: {
       context: {
         period: "#Replace with period"
       },
