@@ -289,8 +289,13 @@ program
     "--unreconciled",
     "By default, the reconciled status will be set as true. Add this option to set it as false (optional)"
   )
+  .option(
+    "-t, --test-name <testName>",
+    "Establish the name of the test. It should have no white-spaces (e.g. test_name)(optional)"
+  )
   .action((options) => {
     reconciledStatus = options.unreconciled ? false : true;
+    testName = options.testName ? options.testName : "test_name";
     liquidTests.testGenerator(options.url);
   });
 
