@@ -64,15 +64,15 @@ async function testGenerator(url) {
 
 	// Search for results from other reconciliations used in the liquid code (main and text_parts)
 	let resultsObj;
-	resultsObj = Utils.searchForResultsFromDependenciesInLiquid(reconciliationCode);
+	resultsObj = Utils.searchForResultsFromDependenciesInLiquid(reconciliationCode, reconciliationHandle);
 
 	// Search for custom drops from other reconcilations used in the liquid code (main and text_parts)
 	let customsObj;
-	customsObj = Utils.searchForCustomsFromDependenciesInLiquid(reconciliationCode);
+	customsObj = Utils.searchForCustomsFromDependenciesInLiquid(reconciliationCode, reconciliationHandle);
 
 	// Search for shared parts in the liquid code (main and text_parts)
-	const sharedPartsUsed = Utils.lookForSharedPartsInLiquid(reconciliationCode);
-	if (sharedPartsUsed.length != 0) {
+	const sharedPartsUsed = Utils.lookForSharedPartsInLiquid(reconciliationCode, reconciliationHandle);
+	if (sharedPartsUsed && sharedPartsUsed.length != 0) {
 		for (sharedPartName of sharedPartsUsed) {
 			// Look for shared part id
 			let sharedPartResponse = await SF.findSharedPart(sharedPartName);
@@ -95,7 +95,7 @@ async function testGenerator(url) {
 	};
 	
 	// Get results from dependencies reconciliations
-	if (resultsObj) {
+	if (Object.keys(resultsObj).length !== 0) {
 		// Search in each reconciliation
 		for (const [handle, resultsArray] of Object.entries(resultsObj)) {
 			try {
@@ -123,19 +123,21 @@ async function testGenerator(url) {
 	};
 
 	// Get custom drops from dependency reconciliations
-	if (customsObj) {
+	if (Object.keys(customsObj).length !== 0) {
 		// Search in each reconciliation
 		for (const [handle, customsArray] of Object.entries(customsObj)) {
       try {
         // Find reconciliation in Workflow to get id (depdeency template can be in a different Workflow)
         let reconciliation = await SF.findReconciliationInWorkflows(handle, parameters.companyId, parameters.ledgerId);
-        // Fetch test properties
-        let reconciliationCustomResponse = await SF.getReconciliationCustom(parameters.companyId, parameters.ledgerId, reconciliation.id);
-        let reconciliationCustomDrops = Utils.processCustom(reconciliationCustomResponse.data);
-        // Add handle to Liquid Test
-        liquidTestObject[testName].data.periods[currentPeriodData.fiscal_year.end_date].reconciliations[handle] = liquidTestObject[testName].data.periods[currentPeriodData.fiscal_year.end_date].reconciliations[handle] || {};
-				// Add custom drops
-        liquidTestObject[testName].data.periods[currentPeriodData.fiscal_year.end_date].reconciliations[handle].custom = reconciliationCustomDrops;
+		if (reconciliation) {
+			// Fetch test properties
+			let reconciliationCustomResponse = await SF.getReconciliationCustom(parameters.companyId, parameters.ledgerId, reconciliation.id);
+			let reconciliationCustomDrops = Utils.processCustom(reconciliationCustomResponse.data);
+			// Add handle to Liquid Test
+			liquidTestObject[testName].data.periods[currentPeriodData.fiscal_year.end_date].reconciliations[handle] = liquidTestObject[testName].data.periods[currentPeriodData.fiscal_year.end_date].reconciliations[handle] || {};
+					// Add custom drops
+			liquidTestObject[testName].data.periods[currentPeriodData.fiscal_year.end_date].reconciliations[handle].custom = reconciliationCustomDrops;
+		};
       }
       catch (err) {
         console.log(err);
@@ -144,7 +146,7 @@ async function testGenerator(url) {
 	};
 
 	// Get company drop used in the liquid code (main and text_parts)
-	const companyObj = Utils.getCompanyDependencies(reconciliationCode);
+	const companyObj = Utils.getCompanyDependencies(reconciliationCode, reconciliationHandle);
 	
 	if (companyObj.standardDropElements.length !== 0 || companyObj.customDropElements.length !== 0) {
 		liquidTestObject[testName].data.company = {};
@@ -212,7 +214,6 @@ async function testGenerator(url) {
 	Utils.exportYAML(reconciliationHandle, liquidTestObject);
 };
 
-
 module.exports = {
   testGenerator
-}
+};
