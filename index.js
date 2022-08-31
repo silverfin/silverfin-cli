@@ -2,45 +2,53 @@ const SF = require('./api/sf_api');
 const fsUtils = require('./fs_utils');
 const fs = require('fs');
 
-const RECONCILIATION_FIELDS_TO_SYNC = ["name_nl", "name_fr", "name_en", "auto_hide_formula", "text_configuration", "virtual_account_number", "reconciliation_type", "public", "allow_duplicate_reconciliations", "is_active", "tests"];
+const RECONCILIATION_FIELDS_TO_SYNC = ["name_nl", "name_fr", "name_en", "auto_hide_formula", "text_configuration", "virtual_account_number", "reconciliation_type", "public", "allow_duplicate_reconciliations", "is_active"];
 
 function storeImportedReconciliation(reconciliationText) {
   const handle = reconciliationText.handle;
   const relativePath = `./reconciliation_texts/${handle}`;
   fsUtils.createFolder(`./reconciliation_texts`);
   fsUtils.createFolders(relativePath);
-  testFile = { 
-    name: handle, 
-    content: "# Add your Liquid Tests here"
-  };
+
+  // Template
   textPartsReducer = (acc, part) => {
     acc[part.name] = part.content;
     return acc;
   };
+  const textParts = reconciliationText.text_parts.reduce(textPartsReducer, {});
+  const mainPart = reconciliationText.text;
+  fsUtils.createTemplateFiles(relativePath, mainPart, textParts);
 
-  textParts = reconciliationText.text_parts.reduce(textPartsReducer, {});
-  fsUtils.createFiles({ relativePath, testFile, textParts, text: reconciliationText.text });
+  // Liquid Test YAML
+  const testFilenameRoot = handle;
+  let testContent;
+  if (reconciliationText.tests) {
+    testContent = reconciliationText.tests
+  } else {
+    testContentt = "# Add your Liquid Tests here"
+  };
+  fsUtils.createLiquidTestFiles(relativePath, testFilenameRoot, testContent);
 
-  attributes = RECONCILIATION_FIELDS_TO_SYNC.reduce((acc, attribute) => {
+  // Config Json File
+  const attributes = RECONCILIATION_FIELDS_TO_SYNC.reduce((acc, attribute) => {
     acc[attribute] = reconciliationText[attribute];
     return acc;
   }, {})
 
-  configTextParts = Object.keys(textParts).reduce((acc, name) => {
+  const configTextParts = Object.keys(textParts).reduce((acc, name) => {
     if (name) {
       acc[name] = `text_parts/${name}.liquid`;
     };
-
     return acc;
   }, {});
 
-  config = {
+  const configContent = {
     ...attributes,
     "text": "main.liquid",
     "text_parts": configTextParts,
-    "test": `tests/${handle}.yml`,
+    "test": `tests/${handle}_liquid_test.yml`,
   };
-  fsUtils.writeConfig(relativePath, config);
+  fsUtils.writeConfig(relativePath, configContent);
 };
 
 async function importExistingReconciliationByHandle(handle) {
@@ -75,12 +83,11 @@ function constructReconciliationText(handle) {
     return acc;
   }, {})
   attributes.text = fs.readFileSync(`${relativePath}/main.liquid`, 'utf-8');
-  attributes.tests = fs.readFileSync(`${relativePath}/tests/${handle}.yml`, 'utf-8');
+  attributes.tests = fs.readFileSync(`${relativePath}/tests/${handle}_liquid_test.yml`, 'utf-8');
 
   const textParts = Object.keys(config.text_parts).reduce((array, name) => {
     let path = `${relativePath}/${config.text_parts[name]}`;
     let content = fs.readFileSync(path, 'utf-8');
-
     array.push({ name, content });
     return array;
   }, []);
@@ -96,11 +103,9 @@ function constructReconciliationText(handle) {
 
 async function persistReconciliationText(handle) {
   reconciliationText = await SF.findReconciliationText(handle);
-
   if (!reconciliationText) {
     throw("Reconciliation not found");
   }; 
-
   SF.updateReconciliationText(reconciliationText.id, {...constructReconciliationText(handle), "version_comment": "Update published using the API"});
 };
 
