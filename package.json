@@ -1,16 +1,23 @@
 {
   "name": "sf_toolkit",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Node package that let's you externally manage Silverfin templates",
   "main": "index.js",
   "license": "MIT",
   "private": false,
-  "bin": "./bin/sf_toolkit.js",
+  "bin": "./bin/cli.js",
   "scripts": {
-    "test": "jest"
+    "test": "jest",
+    "silverfin": "./node_modules/sf-toolkit/bin/cli.js"
   },
   "dependencies": {
     "axios": "^0.26.1",
-    "dotenv": "^16.0.1"
+    "commander": "^9.4.0",
+    "dotenv": "^16.0.1",
+    "open": "^8.4.0",
+    "prompt-sync": "^4.2.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.21.0"
   }
 }

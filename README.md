@@ -6,12 +6,13 @@ A command-line tool for Silverfin template development.
 
 - Update your templates from the command-line while storing them in git repositories.
 - Run your Liquid Tests from the command-line.
+- Generate Liquid Tests from existing company files.
 
 # Setup & Basic Usage
 
 ## Prerequsites
 
-To use this CLI tool you need to first obtain a Silverfin API access_token
+To use this CLI tool you first need to register an API application within Silverfin. You will get a `client_id` and `secret`.
 
 ## Install package manager
 
@@ -27,40 +28,6 @@ Install `yarn` globally:
 npm install --global yarn
 ```
 
-## Set environment variables
-
-You can either add the environment variables locally in the file so you only need to add them once, or define them directly in the terminal. 
-
-### Local file 
-
-Add a .env file in the root directory:
-
-```
-touch .env
-```
-
-Add the following variables in  .env:
-
-```
-SF_FIRM_ID="your firm ID"
-SF_ACCESS_TOKEN="your access token"
-NODE_ENV="development"
-```
-
-### Linux / Mac terminal
-
-```
-export SF_FIRM_ID=<firm_id>
-export SF_ACCESS_TOKEN=<access_token>
-```
-
-### Windows terminal
-
-```
-set SF_FIRM_ID=<firm_id>
-set SF_ACCESS_TOKEN=<access_token>
-```
-
 ## Add sf-toolkit package
 
 Create `package.json` by running the following command and run through the prompts:
@@ -72,37 +39,101 @@ yarn init
 Install `sf-toolkit` as a dependency of your project:
 
 ```
-yarn add https://github.com/GetSilverfin/sf-toolkit.git
+yarn add https://github.com/silverfin/sf-toolkit.git
 ```
 
-## Create script shortcuts
+## Add scripts to packages.json
 
-Inside the `package.json`, add a new `scripts` block:
-
-```
-"scripts": {
-    "new-recon": "./node_modules/sf_toolkit/bin/cli.js new",
-    "import-recon": "./node_modules/sf_toolkit/bin/cli.js import",
-    "update-recon": "./node_modules/sf_toolkit/bin/cli.js persistReconciliationText"
-  }
-```
-
-You can then run these commands starting with `yarn` or `npm run`
-
-## Create new template directory
+You can add this `scripts` section to the `packages.json`, where we define `silverfin` as an alias to call our CLI.
 
 ```
-yarn new-recon --handle <handle>
+  "scripts": {
+    "silverfin": "node ./node_modules/sf_toolkit/bin/cli.js"
+  },
 ```
 
-## Import existing template
+## Add your API credentials as environmental variables
+
+You could use a new `.env` local file, or add them to an existing file in your system (e.g. `~/.bash-profile`, `~/.bashrc` or `~/.zshrc`)
 
 ```
-yarn import-recon --handle <handle>
+export SF_API_CLIENT_ID=...
+export SF_API_SECRET=...
 ```
 
-## Update existing template
+If you are only using one firm, you could set it up as an environmental variable. That way, you won't need to pass the `--firm <firmid>` option every time you run a command.
 
 ```
-yarn update-recon --handle <handle>
+export SF_FIRM_ID=...
+```
+
+In case you need to use a different host, you can also set it up as an environmental variable. By default it would be `https://live.getsilverfin.com`.
+
+```
+export SF_HOST=...
+```
+
+# How to use it
+
+## Authorize the CLI
+
+```
+yarn silverfin authorize
+```
+
+## Import an existing reconciliation
+
+```
+yarn silverfin import-reconciliation --firm <firm-id> --handle <handle>
+```
+
+## Update an existing reconciliation
+
+```
+yarn silverfin update-reconciliation --firm <firm-id> --handle <handle>
+```
+
+## Import all existing reconciliations
+
+```
+yarn silverfin import-all-reconciliations --firm <firm-id>
+```
+
+## Import an existing shared part
+
+```
+yarn silverfin import-shared-part --firm <firm-id> --handle <handle>
+```
+
+## Update an existing shared part
+
+```
+yarn silverfin update-shared-part --firm <firm-id> --handle <handle>
+```
+
+## Import all existing shared parts
+
+```
+yarn silverfin import-all-shared-parts --firm <firm-id>
+```
+
+## Run a Liquid Test
+
+```
+yarn silverfin run-test --firm <firm-id> --handle <handle>
+```
+
+## Create a Liquid Test
+
+```
+yarn silverfin create-test --url <url>
+```
+
+## Help
+
+You can always get extra information by adding `--help`. For example:
+
+```
+yarn silverfin --help
+yarn silverfin import-reconciliation --help
 ```
