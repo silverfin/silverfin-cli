@@ -36,9 +36,9 @@ function storeImportedReconciliation(reconciliationText) {
   const testFilenameRoot = handle;
   let testContent;
   if (reconciliationText.tests) {
-    testContent = reconciliationText.tests
+    testContent = reconciliationText.tests;
   } else {
-    testContentt = "# Add your Liquid Tests here"
+    testContent = "# Add your Liquid Tests here";
   };
   fsUtils.createLiquidTestFiles(relativePath, testFilenameRoot, testContent);
 
@@ -96,7 +96,6 @@ function constructReconciliationText(handle) {
     return acc;
   }, {})
   attributes.text = fs.readFileSync(`${relativePath}/main.liquid`, 'utf-8');
-  attributes.tests = fs.readFileSync(`${relativePath}/tests/${handle}_liquid_test.yml`, 'utf-8');
 
   const textParts = Object.keys(config.text_parts).reduce((array, name) => {
     let path = `${relativePath}/${config.text_parts[name]}`;
@@ -177,6 +176,96 @@ async function persistSharedPart(name) {
   SF.updateSharedPart(config.id, {...attributes, "version_comment": "Testing Cli"});
 };
 
+/* This will overwrite existing shared parts in reconcilation's config file */
+/* Look in each shared part if it is used in the provided reconciliation */
+function refreshSharedPartsUsed(handle) {
+  const relativePath = `./reconciliation_texts/${handle}`;
+  const configReconciliation = fsUtils.readConfig(relativePath);
+  configReconciliation.shared_parts = [];
+  fs.readdir(`./shared_parts`, (err, allSharedParts) => {
+    if (err) throw err;    
+    for (sharedPartDir of allSharedParts) {
+      let sharedPartPath = `./shared_parts/${sharedPartDir}`;
+      let dir = fs.statSync(sharedPartPath, ()=>{});
+      if (dir.isDirectory()) {
+        let configSharedPart = fsUtils.readConfig(sharedPartPath);
+        configSharedPart.used_in.find((template,index)=>{
+          if (template.id == configReconciliation.id) { 
+            configReconciliation.shared_parts.push({
+              'id': configSharedPart.id,
+              'name': sharedPartDir
+            });
+            console.log(`Shared part ${sharedPartDir} used in reconciliation ${handle}:`);
+            return true; 
+          }; 
+        });
+      };
+    };
+    fsUtils.writeConfig(relativePath, configReconciliation);
+  });
+};
+
+async function addSharedPartToReconciliation(sharedPartHandle, reconciliationHandle) {
+  const relativePathReconciliation = `./reconciliation_texts/${reconciliationHandle}`;
+  const configReconciliation = fsUtils.readConfig(relativePathReconciliation);
+  configReconciliation.shared_parts = configReconciliation.shared_parts || [];
+
+  const relativePathSharedPart = `./shared_parts/${sharedPartHandle}`;
+  const configSharedPart = fsUtils.readConfig(relativePathSharedPart);
+
+  const response = await SF.addSharedPart(configSharedPart.id, configReconciliation.id);
+
+  if (response.status === 201) {
+    console.log(`Shared part "${sharedPartHandle}" added to "${reconciliationHandle}" reconciliation text.`);
+  };
+
+  const sharedPartIndex = configReconciliation.shared_parts.findIndex(sharedPart => sharedPart.id === configSharedPart.id);
+
+  if (sharedPartIndex === -1) {
+    configReconciliation.shared_parts.push({
+      'id': configSharedPart.id,
+      'name': sharedPartHandle
+    });
+    fsUtils.writeConfig(relativePathReconciliation,configReconciliation);
+  };
+
+  const reconciliationIndex = configSharedPart.used_in.findIndex(reconciliationText => reconciliationText.id === configReconciliation.id);
+
+  if (reconciliationIndex === -1) {
+    configSharedPart.used_in.push({
+      'id': configReconciliation.id,
+      'type': 'reconciliation'
+    });
+    fsUtils.writeConfig(relativePathSharedPart,configSharedPart);
+  };
+};
+
+async function removeSharedPartFromReconciliation(sharedPartHandle, reconciliationHandle) {
+  const relativePathReconciliation = `./reconciliation_texts/${reconciliationHandle}`;
+  const configReconciliation = fsUtils.readConfig(relativePathReconciliation);
+  configReconciliation.shared_parts = configReconciliation.shared_parts || [];
+
+  const relativePathSharedPart = `./shared_parts/${sharedPartHandle}`;
+  const configSharedPart = fsUtils.readConfig(relativePathSharedPart);
+
+  const response = await SF.removeSharedPart(configSharedPart.id, configReconciliation.id);
+  if (response.status === 200) {
+    console.log(`Shared part "${sharedPartHandle}" removed from "${reconciliationHandle}" reconciliation text.`);
+  };
+
+  const sharedPartIndex = configReconciliation.shared_parts.findIndex(sharedPart => sharedPart.id === configSharedPart.id);
+  if (sharedPartIndex !== -1) {
+    configReconciliation.shared_parts.splice(sharedPartIndex,1);
+    fsUtils.writeConfig(relativePathReconciliation,configReconciliation);
+  };
+
+  const reconciliationIndex = configSharedPart.used_in.findIndex(reconciliationText => reconciliationText.id === configReconciliation.id);
+  if (reconciliationIndex !== -1) {
+    configSharedPart.used_in.splice(reconciliationIndex,1);
+    fsUtils.writeConfig(relativePathSharedPart,configSharedPart);
+  };
+};
+
 async function runTests(handle) {
   const relativePath = `./reconciliation_texts/${handle}`;
   const config = fsUtils.readConfig(relativePath);
@@ -218,7 +307,10 @@ module.exports = {
   persistReconciliationText, 
   importExistingSharedPartByName, 
   importExistingSharedParts, 
-  persistSharedPart, 
+  persistSharedPart,
+  refreshSharedPartsUsed,
+  addSharedPartToReconciliation,
+  removeSharedPartFromReconciliation,
   runTests,
   authorize
 };

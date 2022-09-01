@@ -52,7 +52,7 @@ async function createLiquidFile(relativePath, fileName, textContent) {
 function writeConfig(relativePath, config) {
   emptyCallback = () => {};
   fs.writeFile(`${relativePath}/config.json`, JSON.stringify(config, null, 2), emptyCallback);
-  console.log(`Template: config.json file created`);
+  console.log(`config.json file saved`);
 };
 
 function readConfig(relativePath) {
