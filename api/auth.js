@@ -22,7 +22,7 @@ class Config {
     };
   
   saveConfig() {
-    fs.writeFileSync(this.path, JSON.stringify(this.data), 'utf8', (err) => {
+    fs.writeFileSync(this.path, JSON.stringify(this.data, null, 2), 'utf8', (err) => {
       if (err) {
         console.log(`Error while writing config file: ${err}`);
       } else {

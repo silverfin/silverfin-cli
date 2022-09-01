@@ -23,7 +23,7 @@ function promptConfirmation(){
   const confirm = prompt('This will overwrite existin templates. Do you want to proceed? (yes/NO): ');
   if (confirm.toLocaleLowerCase() !== 'yes' && confirm.toLowerCase() !== 'y') {
     console.log('Operation cancelled');
-    process.exit();
+    process.exit(1);
   };
   return true;
 };

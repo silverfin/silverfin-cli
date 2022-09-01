@@ -16,6 +16,13 @@ const RECONCILIATION_FIELDS_TO_SYNC = [
   "allow_duplicate_reconciliations", 
   "is_active"
 ];
+const RECONCILIATION_FIELDS_TO_PUSH = [
+  "name_en", 
+  "name_fr", 
+  "name_nl", 
+  "auto_hide_formula", 
+  "text_configuration"
+];
 
 function storeImportedReconciliation(reconciliationText) {
   const handle = reconciliationText.handle;
@@ -91,7 +98,7 @@ function constructReconciliationText(handle) {
   const relativePath = `./reconciliation_texts/${handle}`;
   const config = fsUtils.readConfig(relativePath);
 
-  const attributes = RECONCILIATION_FIELDS_TO_SYNC.reduce((acc, attribute) => {
+  const attributes = RECONCILIATION_FIELDS_TO_PUSH.reduce((acc, attribute) => {
     acc[attribute] = config[attribute];
     return acc;
   }, {})
@@ -114,11 +121,19 @@ function constructReconciliationText(handle) {
 };
 
 async function persistReconciliationText(handle) {
-  reconciliationText = await SF.findReconciliationText(handle);
-  if (!reconciliationText) {
+  const relativePath = `./reconciliation_texts/${handle}`;
+  const config = fsUtils.readConfig(relativePath);
+  let reconciliationTextId;
+  if (config && config.id) {
+    reconciliationTextId = config.id;
+    console.log('Loaded from config')
+  } else {
+    reconciliationTextId = {...await SF.findReconciliationText(handle)}.id;
+  };
+  if (!reconciliationTextId) {
     throw("Reconciliation not found");
   }; 
-  SF.updateReconciliationText(reconciliationText.id, {...constructReconciliationText(handle), "version_comment": "Update published using the API"});
+  SF.updateReconciliationText(reconciliationTextId, {...constructReconciliationText(handle), "version_comment": "Update published using the API"});
 };
 
 async function importExistingSharedPartById(id) {

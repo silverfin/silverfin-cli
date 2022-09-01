@@ -11,7 +11,7 @@ if (missingVariables.length ) {
   console.log(`Error: Missing API credentials: [${missingVariables}]`);
   console.log(`Credentials should be defined as environmental variables. Call export ${missingVariables[0]}=... before using this CLI`);
   console.log(`If you don't have credentials yet, you need to register your app with Silverfin to get them`);
-  process.exit();
+  process.exit(1);
 };
 
 async function authorizeApp() {
@@ -29,7 +29,8 @@ async function authorizeApp() {
     firmIdPrompt = prompt('Enter the firm ID: ');
   };
   // Get tokens
-  getAccessToken(firmIdPrompt, authCodePrompt);
+  await getAccessToken(firmIdPrompt, authCodePrompt);
+  console.log('Done');
 };
 
 // Get Tokens for the first time
@@ -47,7 +48,7 @@ async function getAccessToken(firmId, authCode) {
   catch (error) {
     console.log(`Response Status: ${error.response.status} (${error.response.statusText})`);
     console.log(`Error description: ${JSON.stringify(error.response.data.error_description)}`);
-    process.exit();
+    process.exit(1);
   };
 };
 
@@ -70,7 +71,7 @@ async function refreshTokens(firmId, accessToken, refreshToken) {
     console.log(`Response Status: ${error.response.status} (${error.response.statusText})`);
     console.log(`Error description: ${JSON.stringify(error.response.data.error_description)}`);
     console.log(`Error refreshing the tokens. Try running the authentication process again`)
-    process.exit();
+    process.exit(1);
   };
 };
 
@@ -103,7 +104,7 @@ async function responseErrorHandler(error, refreshToken = false, callbackFunctio
       return callbackFunction(...Object.values(callbackParameters));
     } else {
       console.log(`API calls failed, try to run the authorization process again`);
-      process.exit();
+      process.exit(1);
     };
   };
   // Not handled
