@@ -208,6 +208,34 @@ async function updateSharedPart(id, attributes, refreshToken = true) {
   };
 };
 
+async function addSharedPart(sharedPartId, reconciliationId, refreshToken = true) {
+  setAxiosDefaults();
+  try {
+    const response = await axios.post(`reconciliations/${reconciliationId}/shared_parts/${sharedPartId}`);
+    responseSuccessHandler(response);
+    return response;
+  }
+  catch (error) {
+    const callbackParameters = {sharedPartId:sharedPartId, reconciliationId:reconciliationId, refreshToken: false};
+    const response = await responseErrorHandler(error, refreshToken, updateSharedPart, callbackParameters);
+    return response;
+  };
+};
+
+async function removeSharedPart(sharedPartId, reconciliationId, refreshToken = true) {
+  setAxiosDefaults();
+  try {
+    const response = await axios.delete(`reconciliations/${reconciliationId}/shared_parts/${sharedPartId}`);
+    responseSuccessHandler(response);
+    return response;
+  }
+  catch (error) {
+    const callbackParameters = {sharedPartId:sharedPartId, reconciliationId:reconciliationId, refreshToken: false};
+    const response = await responseErrorHandler(error, refreshToken, updateSharedPart, callbackParameters);
+    return response;
+  };
+};
+
 async function createTestRun(attributes, refreshToken = true) {
   setAxiosDefaults();
   try {
@@ -245,6 +273,8 @@ module.exports = {
   fetchSharedPartById, 
   findSharedPart, 
   updateSharedPart, 
+  addSharedPart,
+  removeSharedPart,
   fetchTestRun, 
   createTestRun 
 };
