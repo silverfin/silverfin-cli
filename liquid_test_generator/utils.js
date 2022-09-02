@@ -90,7 +90,12 @@ function processCustom(customArray) {
   const obj = {};
   for (item of customArray) {
     let element = `${item.namespace}.${item.key}`;
-    obj[element] = item.value;
+    // Fori
+    if (item.value.field) {
+      obj[element] = item.value.field;
+    } else {
+      obj[element] = item.value;
+    };
   };
   return obj;
 };
@@ -133,12 +138,9 @@ function getCompanyDependencies(reconcilationObject, reconciliationHandle) {
 // Do we need to get results from other templates? Check Liquid Code (handle & result names)
 // We can pass an existing collection {handle:[results]} from a previous call
 function searchForResultsFromDependenciesInLiquid(reconcilationObject, reconciliationHandle, resultsCollection = {}) {
+  // Normal Scenario
   const reResultsFetched = RegExp(/period\.reconciliations\.\w+\.results\.\w+/g); // period.reconciliations.handle.results.result_name
-  // assign variable = period.reconciliations && variable.result.result_name ?
-  // assign variable = period.reconciliations.handle && varaible.result_name ?
-  // period.reconcilations.handle.results.[result_name_capture] ?
-  // period.reconciliations.[handle_capture].results.[result_name_capture] ?
-
+  
   // No main part ?
   if (!reconcilationObject.text) {
     console.log(`Reconciliation "${reconciliationHandle}": no liquid code found`);
@@ -147,7 +149,7 @@ function searchForResultsFromDependenciesInLiquid(reconcilationObject, reconcili
   
   // Main Part (or shared part)
   let resultsFound = reconcilationObject.text.match(reResultsFetched) || [];
-
+  
   // Parts
   if (reconcilationObject.text_parts) {
     for (part of reconcilationObject.text_parts) {
@@ -157,19 +159,64 @@ function searchForResultsFromDependenciesInLiquid(reconcilationObject, reconcili
       };
     };
   };
-
+  
   // Process Results. 
   for (result of resultsFound) {
-    const [a, b, handle, c, resultName] = result.split('.'); // period;reconciliation;handle;results;result_name
+    let [a, b, handle, c, resultName] = result.split('.'); // period;reconciliation;handle;results;result_name
     // Check if handle is already there. Empty array
     if (!resultsCollection.hasOwnProperty(handle)) {
       resultsCollection[handle] = [];
     };
     // Check if result is already there.
     if (resultsCollection[handle].indexOf(resultName) == -1) {
-      resultsCollection[handle].push(resultName)
+      resultsCollection[handle].push(resultName);
     };
   };
+  
+  // Assign: Scenarios
+  // {% assign variable_name = period.reconciliations.handle %} && {{ variable_name.results.result_name }}
+  // {% assign variable_name = period.reconciliations.handle.results %} && {{ variable_name.result_name }}
+  const reAssign = RegExp(/\w+(\ )?=(\ )?period\.reconciliations\.\w+(\.results)?(\ |\%)/g); // period.reconciliations.handle or period.reconciliations.handle.results
+  let resultsFoundAssign = reconcilationObject.text.match(reAssign) || [];
+  const variables = resultsFoundAssign.map((element)=>{
+    let parts = element.split("="); // variable, period.reconciliation.handle...
+    return [parts[0].trim(), parts[1].split(".")[2].trim()]; // [variable name, handle]
+  });
+  for ([variableName, handle] of variables) {
+    let expression = `(\ |\%|\{)${variableName}(\.results)?\.\\w+(\ |\%|\})`; // variable.result_name or variable.results.result_name 
+    let reAssignResults = new RegExp(expression, 'g');
+    // Main
+    let assignResultsFound = reconcilationObject.text.match(reAssignResults) || [];
+    // Parts
+    if (reconcilationObject.text_parts) {
+      for (part of reconcilationObject.text_parts) {
+        let assignResultsPart = part.content.match(reAssignResults) || [];
+        if (assignResultsPart) {
+          assignResultsFound = assignResultsFound.concat(assignResultsPart);
+        };
+      };
+    };    
+    // Process
+    for (result of assignResultsFound) {
+      let parts = result.split('.');
+      if (parts.length > 1){
+        let resultName = parts[parts.length-1].trim();
+        // Check if handle is already there. Empty array
+        if (!resultsCollection.hasOwnProperty(handle)) {
+          resultsCollection[handle] = [];
+        };
+        // Check if result is already there.
+        if (resultsCollection[handle].indexOf(resultName) == -1) {
+          resultsCollection[handle].push(resultName);
+        };
+      };
+    };
+  };
+  
+  // Capture: Scenarios
+  // period.reconcilations.handle.results.[result_name_capture] ?
+  // period.reconciliations.[handle_capture].results.[result_name_capture] ?
+  // TO DO
 
   return resultsCollection; // { handle: [result_1, result_2], ...}
 };
@@ -177,9 +224,8 @@ function searchForResultsFromDependenciesInLiquid(reconcilationObject, reconcili
 // Do we need to get custom drops from other templates? Check Liquid Code (handle & custom names)
 // We can pass an existing collection {handle:[drop]} from a previous call
 function searchForCustomsFromDependenciesInLiquid(reconcilationObject, reconciliationHandle, customCollection = {}) {
-  const reCustomsFetched = RegExp(/period\.reconciliations\.custom\.\w+\.\w+/g); // period.reconciliations.handle.custom.namespace.key
-  // assign variable = period.reconciliations && variable.custom.namespace.key ?
-  // assign variable = period.reconciliations.handle && varaible.custom.namespace.key ?
+  // Normal Scenario
+  const reCustomsFetched = RegExp(/period\.reconciliations\.\w+\.custom\.\w+\.\w+/g); // period.reconciliations.handle.custom.namespace.key
 
   // No main part ?
   if (!reconcilationObject.text) {
@@ -202,8 +248,8 @@ function searchForCustomsFromDependenciesInLiquid(reconcilationObject, reconcili
 
   // Process Customs. 
   for (custom of customsFound) {
-    const [a, b, handle, c, namespace, key] = custom.split('.'); // handle;custom;namespace;key
-    const customNamespaceKey = `${namespace}.${key}`;
+    let [a, b, handle, c, namespace, key] = custom.split('.'); // handle;custom;namespace;key
+    let customNamespaceKey = `${namespace}.${key}`;
     // Check if handle is already there. Empty array
     if (!customCollection.hasOwnProperty(handle)) {
       customCollection[handle] = [];
@@ -213,6 +259,14 @@ function searchForCustomsFromDependenciesInLiquid(reconcilationObject, reconcili
       customCollection[handle].push(customNamespaceKey)
     };
   };
+
+  // Assign: Scenarios
+  // assign variable = period.reconciliations && variable.custom.namespace.key ?
+  // assign variable = period.reconciliations.handle && varaible.custom.namespace.key ?
+  // TO DO
+
+  // Capture: Scenarios
+  // TO DO
 
   return customCollection; // { handle: [result_1, result_2], ...}
 };

@@ -87,10 +87,10 @@ async function testGenerator(url) {
 				};
 			};
 			// Search for results from other reconciliations in shared part (we append to existing collection)
-			resultsObj = Utils.searchForResultsFromDependenciesInLiquid(sharedPartDetails.data, resultsObj);
+			resultsObj = Utils.searchForResultsFromDependenciesInLiquid(sharedPartDetails.data, sharedPartDetails.data.name, resultsObj);
 
 			// Search for custom drops from other reconcilations in shared parts (we append to existing collection)
-			customsObj = Utils.searchForCustomsFromDependenciesInLiquid(sharedPartDetails.data, customsObj);
+			customsObj = Utils.searchForCustomsFromDependenciesInLiquid(sharedPartDetails.data, sharedPartDetails.data.name, customsObj);
 		};
 	};
 	
@@ -101,15 +101,17 @@ async function testGenerator(url) {
 			try {
 				// Find reconciliation in Workflow to get id (depdeency template can be in a different Workflow)
 				let reconciliation = await SF.findReconciliationInWorkflows(handle, parameters.companyId, parameters.ledgerId);
-				// Fetch results
-				let reconciliationResults = await SF.getReconciliationResults(parameters.companyId, parameters.ledgerId, reconciliation.id);
-				// Add handle and results block to Liquid Test
-				liquidTestObject[testName].data.periods[currentPeriodData.fiscal_year.end_date].reconciliations[handle] = liquidTestObject[testName].data.periods[currentPeriodData.fiscal_year.end_date].reconciliations[handle] || {};
-				liquidTestObject[testName].data.periods[currentPeriodData.fiscal_year.end_date].reconciliations[handle].results = liquidTestObject[testName].data.periods[currentPeriodData.fiscal_year.end_date].reconciliations[handle].results || {};
-				// Search for results
-				for (resultTag of resultsArray) {
-					// Add result to Liquid Test
-					liquidTestObject[testName].data.periods[currentPeriodData.fiscal_year.end_date].reconciliations[handle].results[resultTag] = reconciliationResults.data[resultTag];
+				if (reconciliation) {
+					// Fetch results
+					let reconciliationResults = await SF.getReconciliationResults(parameters.companyId, parameters.ledgerId, reconciliation.id);
+					// Add handle and results block to Liquid Test
+					liquidTestObject[testName].data.periods[currentPeriodData.fiscal_year.end_date].reconciliations[handle] = liquidTestObject[testName].data.periods[currentPeriodData.fiscal_year.end_date].reconciliations[handle] || {};
+					liquidTestObject[testName].data.periods[currentPeriodData.fiscal_year.end_date].reconciliations[handle].results = liquidTestObject[testName].data.periods[currentPeriodData.fiscal_year.end_date].reconciliations[handle].results || {};
+					// Search for results
+					for (resultTag of resultsArray) {
+						// Add result to Liquid Test
+						liquidTestObject[testName].data.periods[currentPeriodData.fiscal_year.end_date].reconciliations[handle].results[resultTag] = reconciliationResults.data[resultTag];
+					};
 				};
 			} catch (err) {
 				console.error(err);
@@ -133,10 +135,17 @@ async function testGenerator(url) {
 			// Fetch test properties
 			let reconciliationCustomResponse = await SF.getReconciliationCustom(parameters.companyId, parameters.ledgerId, reconciliation.id);
 			let reconciliationCustomDrops = Utils.processCustom(reconciliationCustomResponse.data);
+			// Filter Customs
+			let dropsKeys = Object.keys(reconciliationCustomDrops);
+			const matchingKeys = dropsKeys.filter((key)=> customsArray.indexOf(key) !== -1);
+			const filteredCustomDrops = {};
+			for (key of matchingKeys){
+				filteredCustomDrops[key] = reconciliationCustomDrops[key];
+			};
 			// Add handle to Liquid Test
 			liquidTestObject[testName].data.periods[currentPeriodData.fiscal_year.end_date].reconciliations[handle] = liquidTestObject[testName].data.periods[currentPeriodData.fiscal_year.end_date].reconciliations[handle] || {};
-					// Add custom drops
-			liquidTestObject[testName].data.periods[currentPeriodData.fiscal_year.end_date].reconciliations[handle].custom = reconciliationCustomDrops;
+			// Add custom drops
+			liquidTestObject[testName].data.periods[currentPeriodData.fiscal_year.end_date].reconciliations[handle].custom = filteredCustomDrops;
 		};
       }
       catch (err) {
