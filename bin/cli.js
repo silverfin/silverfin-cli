@@ -18,6 +18,26 @@ if (pkg.version){
   program.version(pkg.version);
 };
 
+// Uncaught Errors. Open Issue in GitHub
+function  uncaughtErrors(err) {
+  if (err.stack) {
+    console.error(`!!! Please open an issue including this log on ${pkg.bugs.url}`);
+    console.error('');
+    console.error(err.message);
+    console.error(`silverfin: v${pkg.version}, node: ${process.version}`);
+    console.error('');
+    console.error(err.stack);
+  };
+  process.exit(1);
+};
+process
+  .on('uncaughtException', err => {
+    uncaughtErrors(err);
+  })
+  .on("unhandledRejection", err => {
+    uncaughtErrors(err);
+  });
+
 // Prompt Confirmation
 function promptConfirmation(){
   const confirm = prompt('This will overwrite existin templates. Do you want to proceed? (yes/NO): ');
@@ -192,8 +212,3 @@ program
   });
 
 program.parse();
-
-// Unhandled errors while running the cli
-process.on('unhandledRejection', error => {
-  console.log(error);
-});
