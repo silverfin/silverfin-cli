@@ -21,6 +21,7 @@ if (pkg.version){
 // Uncaught Errors. Open Issue in GitHub
 function  uncaughtErrors(err) {
   if (err.stack) {
+    console.error('');
     console.error(`!!! Please open an issue including this log on ${pkg.bugs.url}`);
     console.error('');
     console.error(err.message);
@@ -157,7 +158,7 @@ program
   .description('Add an existing shared part to an existing reconciliation')
   .requiredOption('-f, --firm <firm-id>', 'Specify the firm to be used (mandatory)', firmIdDefault)
   .requiredOption('-s, --shared-part <name>', 'Specify the shared part to be added (mandatory)')
-  .requiredOption('-r, --reconciliation <handle>', 'Specify the reconciliation that needs to be updated (mandatory)')
+  .requiredOption('-h, --handle <handle>', 'Specify the reconciliation that needs to be updated (mandatory)')
   .option('--yes', 'Skip the prompt confirmation (optional)')
   .action((options) => {
     if (!options.yes) {
@@ -173,7 +174,7 @@ program
   .description('Remove an existing shared part to an existing reconciliation')
   .requiredOption('-f, --firm <firm-id>', 'Specify the firm to be used (mandatory)', firmIdDefault)
   .requiredOption('-s, --shared-part <name>', 'Specify the shared part to be removed (mandatory)')
-  .requiredOption('-r, --reconciliation <handle>', 'Specify the reconciliation that needs to be updated (mandatory)')
+  .requiredOption('-h, --handle <handle>', 'Specify the reconciliation that needs to be updated (mandatory)')
   .option('--yes', 'Skip the prompt confirmation (optional)')
   .action((options) => {
     if (!options.yes) {

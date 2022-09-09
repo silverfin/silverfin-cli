@@ -14,7 +14,8 @@ const RECONCILIATION_FIELDS_TO_SYNC = [
   "reconciliation_type", 
   "public", 
   "allow_duplicate_reconciliations", 
-  "is_active"
+  "is_active",
+  "externally_managed"
 ];
 const RECONCILIATION_FIELDS_TO_PUSH = [
   "name_en", 
@@ -26,6 +27,10 @@ const RECONCILIATION_FIELDS_TO_PUSH = [
 
 function storeImportedReconciliation(reconciliationText) {
   const handle = reconciliationText.handle;
+  if (!reconciliationText.main) {
+    console.log(`You don't have access to this template's liquid code: ${handle}`);
+    return;
+  };
   const relativePath = `./reconciliation_texts/${handle}`;
   fsUtils.createFolder(`./reconciliation_texts`);
   fsUtils.createFolders(relativePath);

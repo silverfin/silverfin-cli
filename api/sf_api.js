@@ -90,13 +90,14 @@ function responseSuccessHandler(response) {
 
 async function responseErrorHandler(error, refreshToken = false, callbackFunction, callbackParameters) {
   console.log(`Response Status: ${error.response.status} (${error.response.statusText}) - method: ${error.response.config.method} - url: ${error.response.config.url}`);
-  console.log(`Response Data: ${JSON.stringify(error.response.data.error)}`);
   // Valid Request. Not Found
   if (error.response.status === 404) {
+    console.log(`Response Data error: ${JSON.stringify(error.response.data.error)}`);
     return;
   };
   // No access credentials
   if (error.response.status === 401) {
+    console.log(`Response Data error: ${JSON.stringify(error.response.data.error)}`);
     if (refreshToken) {
       // Get a new pair of tokens
       await refreshTokens(firmId, config.data[String(firmId)].accessToken, config.data[String(firmId)].refreshToken);
@@ -106,6 +107,17 @@ async function responseErrorHandler(error, refreshToken = false, callbackFunctio
       console.log(`API calls failed, try to run the authorization process again`);
       process.exit(1);
     };
+  };
+  // Unprocessable Entity
+  if (error.response.status === 422) {
+    console.log(`Response Data: ${JSON.stringify(error.response.data)}`);
+    console.log(`You don't have the rights to update the previous parameters`)
+    process.exit(1);
+  };
+  // Forbidden 
+  if (error.response.status === 403) {
+    console.log('Forbidden access. Terminating process')
+    process.exit(1);
   };
   // Not handled
   throw error;
