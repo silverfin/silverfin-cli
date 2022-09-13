@@ -197,7 +197,7 @@ async function testGenerator(url) {
 	};
 
 	// Search for account ids in customs
-	const accountIds = Utils.lookForAccounts(liquidTestObject);
+	const accountIds = Utils.lookForAccountsIDs(liquidTestObject);
 	if (accountIds.length != 0) {
 		liquidTestObject[testName].data.periods[currentPeriodData.fiscal_year.end_date].accounts = {};
 		for (accountId of accountIds) {

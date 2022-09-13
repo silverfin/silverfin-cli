@@ -91,7 +91,7 @@ function processCustom(customArray) {
   for (item of customArray) {
     let element = `${item.namespace}.${item.key}`;
     // Fori
-    if (item.value.field) {
+    if (item.value && item.value.field) {
       obj[element] = item.value.field;
     } else {
       obj[element] = item.value;
@@ -307,8 +307,8 @@ function lookForSharedPartsInLiquid(reconcilationObject, reconciliationHandle) {
 };
 
 // Look for Account IDs in customs
-function lookForAccounts(obj){
-  const reAccountID = RegExp(/#[0-9]{8}/g);
+function lookForAccountsIDs(obj){
+  const reAccountID = RegExp(/#[0-9]+/g); // #1234567890
   const stringified = JSON.stringify(obj);
   const array = stringified.match(reAccountID) || [];
   const uniqueArray = [...new Set(array)];
@@ -324,5 +324,5 @@ module.exports = {
   searchForResultsFromDependenciesInLiquid,
   searchForCustomsFromDependenciesInLiquid,
   lookForSharedPartsInLiquid,
-  lookForAccounts
+  lookForAccountsIDs
 };
