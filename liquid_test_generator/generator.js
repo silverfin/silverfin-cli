@@ -202,6 +202,7 @@ async function testGenerator(url) {
 		liquidTestObject[testName].data.periods[currentPeriodData.fiscal_year.end_date].accounts = {};
 		for (accountId of accountIds) {
 			accountId = accountId.replace("#","");
+			// Current Period
 			try {
 				let accountResponse = await SF.getAccountDetails(parameters.companyId, parameters.ledgerId, accountId);
 				// If value is zero it won't be found ?
@@ -215,6 +216,8 @@ async function testGenerator(url) {
 			}
 			catch (error) {
 				console.log(error);
+			// Previous Period
+			// Should we include this ?
 			};
 		};
 	};

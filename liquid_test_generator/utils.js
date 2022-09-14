@@ -1,6 +1,6 @@
 const YAML = require('yaml');
 const fs = require('fs');
-const fsUtils = require('../fs_utils')
+const fsUtils = require('../fs_utils');
 
 // Create base Liquid Test object
 function createBaseLiquidTest(testName) {
@@ -49,7 +49,6 @@ function extractURL(url) {
   };
 };
 
- 
 function generateFileName(handle, counter = 0) {
   let fileName = `${handle}_liquid_test.yml`;
   if (counter != 0) {
@@ -62,8 +61,6 @@ function generateFileName(handle, counter = 0) {
     return filePath;
 };
 
-
- 
 // Create YAML
 function exportYAML(handle, liquidTestObject) {
   const relativePath = `./reconciliation_texts/${handle}`;
@@ -314,6 +311,26 @@ function lookForAccountsIDs(obj){
   const uniqueArray = [...new Set(array)];
   return uniqueArray; // [ #12345678, ...]
 };
+
+// Search for account_collections that have defaults defined
+/*
+function lookForDefaultAccounts(reconcilationObject) {
+  // No main part ?
+  if (!reconcilationObject.text) {
+    console.log(`Reconciliation "${reconciliationHandle}": no liquid code found`);
+    return;
+  };
+  // Main
+  const inputFields = liquidUtils.lookForInputFields(reconcilationObject.text,'account_collection');
+  const defaultVariables = liquidUtils.lookForDefault(inputFields);
+  const accountsArray = [];
+  for (variable of defaultVariables){
+    accountsArray.push(liquidUtils.lookForAssign(reconcilationObject.text, variable));
+  };
+  // ??
+  // We cannot search accounts by it's number, we need the id
+};
+*/
 
 module.exports = {
   createBaseLiquidTest,
