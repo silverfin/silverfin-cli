@@ -80,7 +80,8 @@ function setAxiosDefaults() {
     axios.defaults.baseURL = `${baseURL}/api/v4/f/${firmId}`
     axios.defaults.headers.common['Authorization'] = `Bearer ${config.data[String(firmId)].accessToken}`
   } else {
-    throw `Missing authorization for firm id: ${firmId}`;
+    console.log(`Missing authorization for firm id: ${firmId}`);
+    process.exit(1);
   };
 };
 

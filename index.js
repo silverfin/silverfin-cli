@@ -27,12 +27,12 @@ const RECONCILIATION_FIELDS_TO_PUSH = [
 
 function fsErrorHandler(error) {
   if(error.code == 'ENOENT') {
-    console.log(`The path ${error.path} was not found, please ensure you've imported all required files`)
+    console.log(`The path ${error.path} was not found, please ensure you've imported all required files`);
   } else {
-    console.log('')
-    console.log(error)
-  }
-}
+    console.log('');
+    console.log(error);
+  };
+};
 
 function storeImportedReconciliation(reconciliationText) {
   const handle = reconciliationText.handle || reconciliationText.id
@@ -151,8 +151,8 @@ async function persistReconciliationText(handle) {
     }; 
     SF.updateReconciliationText(reconciliationTextId, {...constructReconciliationText(handle), "version_comment": "Update published using the API"});
   } catch (error) {
-    fsErrorHandler(error)
-  }
+    fsErrorHandler(error);
+  };
 };
 
 async function importExistingSharedPartById(id) {
@@ -160,7 +160,7 @@ async function importExistingSharedPartById(id) {
 
   if (!sharedPart) {
     throw(`Shared part ${id} wasn't found.`);
-  }
+  };
 
   const relativePath = `./shared_parts/${sharedPart.data.name}`;
 
@@ -210,9 +210,8 @@ async function persistSharedPart(name) {
     attributes.text = fs.readFileSync(`${relativePath}/${name}.liquid`, 'utf-8');
     SF.updateSharedPart(config.id, {...attributes, "version_comment": "Testing Cli"});
   } catch (error) {
-    fsErrorHandler(error)
-  }
-  
+    fsErrorHandler(error);
+  };
 };
 
 /* This will overwrite existing shared parts in reconcilation's config file */
@@ -244,10 +243,8 @@ function refreshSharedPartsUsed(handle) {
       fsUtils.writeConfig(relativePath, configReconciliation);
     });
   } catch (error) {
-    if(error) {
-      fsErrorHandler(error)
-    }
-  }  
+      fsErrorHandler(error);
+  };
 };
 
 async function addSharedPartToReconciliation(sharedPartHandle, reconciliationHandle) {
@@ -285,8 +282,8 @@ async function addSharedPartToReconciliation(sharedPartHandle, reconciliationHan
       fsUtils.writeConfig(relativePathSharedPart,configSharedPart);
     };
   } catch (error) {
-    fsErrorHandler(error)
-  }
+    fsErrorHandler(error);
+  };
 };
 
 async function removeSharedPartFromReconciliation(sharedPartHandle, reconciliationHandle) {
@@ -315,8 +312,8 @@ async function removeSharedPartFromReconciliation(sharedPartHandle, reconciliati
       fsUtils.writeConfig(relativePathSharedPart,configSharedPart);
     };
   } catch (error) {
-    fsErrorHandler(error)
-  }
+    fsErrorHandler(error);
+  };
 };
 
 async function runTests(handle) {
@@ -350,8 +347,8 @@ async function runTests(handle) {
       process.exit(1);
     };
   } catch(error) {
-    fsErrorHandler(error)
-  }
+    fsErrorHandler(error);
+  };
 };
 
 function authorize() {
