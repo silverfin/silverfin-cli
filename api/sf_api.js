@@ -200,7 +200,7 @@ async function findSharedPart(name, page = 1) {
   const response = await fetchSharedParts(page);
   const sharedParts = response.data;
   // No data
-  if (sharedParts.lenght == 0) {
+  if (sharedParts.length == 0) {
     console.log(`Shared part ${name} not found`);
     return;
   }

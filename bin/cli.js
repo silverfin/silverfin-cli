@@ -41,7 +41,7 @@ process
 
 // Prompt Confirmation
 function promptConfirmation(){
-  const confirm = prompt('This will overwrite existin templates. Do you want to proceed? (yes/NO): ');
+  const confirm = prompt('This will overwrite existing templates. Do you want to proceed? (y/n): ');
   if (confirm.toLocaleLowerCase() !== 'yes' && confirm.toLowerCase() !== 'y') {
     console.log('Operation cancelled');
     process.exit(1);

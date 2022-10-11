@@ -1,0 +1,21 @@
+<table>
+  <thead>
+    <tr>
+      <th class="usr-width-40 usr-line-bottom"><b>Voordelen</b></th>
+      <th class="usr-line-bottom"></th>
+      <th class="usr-line-bottom"></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>{% input beneficiary.selection as:select options:director_options option_values:director_values %}</td>
+      <td>{% input beneficiary.bik_street %}</td>
+      <td>{% input beneficiary.bik_number %}</td>
+    </tr>
+    <tr>
+      <td>&nbsp;</td>
+      <td>{% input beneficiary.bik_postal_code %}</td>
+      <td>{% input beneficiary.bik_city %}</td>
+    </tr>
+  </tbody>
+</table>
