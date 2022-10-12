@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
-const toolkit = require('../index.js');
-const {Command} = require('commander');
-const prompt = require('prompt-sync')({sigint: true});
-const pkg = require('../package.json');
+const toolkit = require("../index.js");
+const { Command } = require("commander");
+const prompt = require("prompt-sync")({ sigint: true });
+const pkg = require("../package.json");
 const program = new Command();
 
 // Load firm id from ENV vars
@@ -11,204 +11,288 @@ let firmIdDefault = undefined;
 if (process.env.SF_FIRM_ID) {
   firmIdDefault = process.env.SF_FIRM_ID;
   console.log(`Firm ID to be used: ${firmIdDefault}`);
-};
+}
 
 // Version
-if (pkg.version){
+if (pkg.version) {
   program.version(pkg.version);
-};
+}
 
 // Uncaught Errors. Open Issue in GitHub
-function  uncaughtErrors(err) {
+function uncaughtErrors(err) {
   if (err.stack) {
-    console.error('');
-    console.error(`!!! Please open an issue including this log on ${pkg.bugs.url}`);
-    console.error('');
+    console.error("");
+    console.error(
+      `!!! Please open an issue including this log on ${pkg.bugs.url}`
+    );
+    console.error("");
     console.error(err.message);
     console.error(`silverfin: v${pkg.version}, node: ${process.version}`);
-    console.error('');
+    console.error("");
     console.error(err.stack);
-  };
+  }
   process.exit(1);
-};
+}
 process
-  .on('uncaughtException', err => {
+  .on("uncaughtException", (err) => {
     uncaughtErrors(err);
   })
-  .on("unhandledRejection", err => {
+  .on("unhandledRejection", (err) => {
     uncaughtErrors(err);
   });
 
 // Prompt Confirmation
-function promptConfirmation(){
-  const confirm = prompt('This will overwrite existing templates. Do you want to proceed? (y/n): ');
-  if (confirm.toLocaleLowerCase() !== 'yes' && confirm.toLowerCase() !== 'y') {
-    console.log('Operation cancelled');
+function promptConfirmation() {
+  const confirm = prompt(
+    "This will overwrite existing templates. Do you want to proceed? (y/n): "
+  );
+  if (confirm.toLocaleLowerCase() !== "yes" && confirm.toLowerCase() !== "y") {
+    console.log("Operation cancelled");
     process.exit(1);
-  };
+  }
   return true;
-};
+}
 
 // Import a single reconciliation
 program
-  .command('import-reconciliation')
-  .description('Import an existing reconciliation template')
-  .requiredOption('-f, --firm <firm-id>', 'Specify the firm to be used (mandatory)', firmIdDefault)
-  .requiredOption('-h, --handle <handle>', 'Specify the reconcilation to be used (mandatory)')
-  .option('--yes', 'Skip the prompt confirmation (optional)')
+  .command("import-reconciliation")
+  .description("Import an existing reconciliation template")
+  .requiredOption(
+    "-f, --firm <firm-id>",
+    "Specify the firm to be used (mandatory)",
+    firmIdDefault
+  )
+  .requiredOption(
+    "-h, --handle <handle>",
+    "Specify the reconcilation to be used (mandatory)"
+  )
+  .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     if (!options.yes) {
       promptConfirmation();
-    };
+    }
     firmId = options.firm;
     toolkit.importExistingReconciliationByHandle(options.handle);
   });
 
 // Update a single reconciliation
 program
-  .command('update-reconciliation')
-  .description('Update an existing reconciliation template')
-  .requiredOption('-f, --firm <firm-id>', 'Specify the firm to be used (mandatory)', firmIdDefault)
-  .requiredOption('-h, --handle <handle>', 'Specify the reconcilation to be used (mandatory)')
-  .option('--yes', 'Skip the prompt confirmation (optional)')
-  .action((options)=>{
+  .command("update-reconciliation")
+  .description("Update an existing reconciliation template")
+  .requiredOption(
+    "-f, --firm <firm-id>",
+    "Specify the firm to be used (mandatory)",
+    firmIdDefault
+  )
+  .requiredOption(
+    "-h, --handle <handle>",
+    "Specify the reconcilation to be used (mandatory)"
+  )
+  .option("--yes", "Skip the prompt confirmation (optional)")
+  .action((options) => {
     if (!options.yes) {
       promptConfirmation();
-    };
+    }
     firmId = options.firm;
     toolkit.persistReconciliationText(options.handle);
   });
 
 // Import all reconciliations
 program
-  .command('import-all-reconciliations')
-  .description('Import all reconciliations at once')
-  .requiredOption('-f, --firm <firm-id>', 'Specify the firm to be used (mandatory)', firmIdDefault)
-  .option('--yes', 'Skip the prompt confirmation (optional)')
+  .command("import-all-reconciliations")
+  .description("Import all reconciliations at once")
+  .requiredOption(
+    "-f, --firm <firm-id>",
+    "Specify the firm to be used (mandatory)",
+    firmIdDefault
+  )
+  .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     if (!options.yes) {
       promptConfirmation();
-    };
+    }
     firmId = options.firm;
     toolkit.importExistingReconciliations();
   });
 
 // Import a single shared part
 program
-  .command('import-shared-part')
-  .description('Import an existing shared part')
-  .requiredOption('-f, --firm <firm-id>', 'Specify the firm to be used (mandatory)', firmIdDefault)
-  .requiredOption('-h, --handle <handle>', 'Specify the shared part to be used (mandatory)')
-  .option('--yes', 'Skip the prompt confirmation (optional)')
+  .command("import-shared-part")
+  .description("Import an existing shared part")
+  .requiredOption(
+    "-f, --firm <firm-id>",
+    "Specify the firm to be used (mandatory)",
+    firmIdDefault
+  )
+  .requiredOption(
+    "-h, --handle <handle>",
+    "Specify the shared part to be used (mandatory)"
+  )
+  .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     if (!options.yes) {
       promptConfirmation();
-    };
+    }
     firmId = options.firm;
     toolkit.importExistingSharedPartByName(options.handle);
   });
 
 // Update a single shared part
 program
-  .command('update-shared-part')
-  .description('Update an existing shared part')
-  .requiredOption('-f, --firm <firm-id>', 'Specify the firm to be used (mandatory)', firmIdDefault)
-  .requiredOption('-h, --handle <handle>', 'Specify the shared part to be used (mandatory)')
-  .option('--yes', 'Skip the prompt confirmation (optional)')
+  .command("update-shared-part")
+  .description("Update an existing shared part")
+  .requiredOption(
+    "-f, --firm <firm-id>",
+    "Specify the firm to be used (mandatory)",
+    firmIdDefault
+  )
+  .requiredOption(
+    "-h, --handle <handle>",
+    "Specify the shared part to be used (mandatory)"
+  )
+  .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     if (!options.yes) {
       promptConfirmation();
-    };
+    }
     firmId = options.firm;
     toolkit.persistSharedPart(options.handle);
   });
 
 // Import all shared parts
 program
-  .command('import-all-shared-parts')
-  .description('Import all shared parts at once')
-  .requiredOption('-f, --firm <firm-id>', 'Specify the firm to be used (mandatory)', firmIdDefault)
-  .option('--yes', 'Skip the prompt confirmation (optional)')
+  .command("import-all-shared-parts")
+  .description("Import all shared parts at once")
+  .requiredOption(
+    "-f, --firm <firm-id>",
+    "Specify the firm to be used (mandatory)",
+    firmIdDefault
+  )
+  .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     if (!options.yes) {
       promptConfirmation();
-    };
+    }
     firmId = options.firm;
     toolkit.importExistingSharedParts();
   });
 
 // Update shared parts used in a reconciliation
 program
-  .command('shared-parts-used')
-  .description('Update the list of shared used for a specific reconciliation')
-  .requiredOption('-f, --firm <firm-id>', 'Specify the firm to be used (mandatory)', firmIdDefault)
-  .requiredOption('-h, --handle <handle>', 'Specify the reconciliation to be used (mandatory)')
-  .option('--yes', 'Skip the prompt confirmation (optional)')
+  .command("shared-parts-used")
+  .description("Update the list of shared used for a specific reconciliation")
+  .requiredOption(
+    "-f, --firm <firm-id>",
+    "Specify the firm to be used (mandatory)",
+    firmIdDefault
+  )
+  .requiredOption(
+    "-h, --handle <handle>",
+    "Specify the reconciliation to be used (mandatory)"
+  )
+  .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     if (!options.yes) {
       promptConfirmation();
-    };
+    }
     firmId = options.firm;
     toolkit.refreshSharedPartsUsed(options.handle);
   });
- 
+
 // Add shared part to reconciliation
 program
-  .command('add-shared-part')
-  .description('Add an existing shared part to an existing reconciliation')
-  .requiredOption('-f, --firm <firm-id>', 'Specify the firm to be used (mandatory)', firmIdDefault)
-  .requiredOption('-s, --shared-part <name>', 'Specify the shared part to be added (mandatory)')
-  .requiredOption('-h, --handle <handle>', 'Specify the reconciliation that needs to be updated (mandatory)')
-  .option('--yes', 'Skip the prompt confirmation (optional)')
+  .command("add-shared-part")
+  .description("Add an existing shared part to an existing reconciliation")
+  .requiredOption(
+    "-f, --firm <firm-id>",
+    "Specify the firm to be used (mandatory)",
+    firmIdDefault
+  )
+  .requiredOption(
+    "-s, --shared-part <name>",
+    "Specify the shared part to be added (mandatory)"
+  )
+  .requiredOption(
+    "-h, --handle <handle>",
+    "Specify the reconciliation that needs to be updated (mandatory)"
+  )
+  .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     if (!options.yes) {
       promptConfirmation();
-    };
+    }
     firmId = options.firm;
-    toolkit.addSharedPartToReconciliation(options.sharedPart, options.reconciliation);
+    toolkit.addSharedPartToReconciliation(
+      options.sharedPart,
+      options.reconciliation
+    );
   });
 
-  // Remove shared part to reconciliation
+// Remove shared part to reconciliation
 program
-  .command('remove-shared-part')
-  .description('Remove an existing shared part to an existing reconciliation')
-  .requiredOption('-f, --firm <firm-id>', 'Specify the firm to be used (mandatory)', firmIdDefault)
-  .requiredOption('-s, --shared-part <name>', 'Specify the shared part to be removed (mandatory)')
-  .requiredOption('-h, --handle <handle>', 'Specify the reconciliation that needs to be updated (mandatory)')
-  .option('--yes', 'Skip the prompt confirmation (optional)')
+  .command("remove-shared-part")
+  .description("Remove an existing shared part to an existing reconciliation")
+  .requiredOption(
+    "-f, --firm <firm-id>",
+    "Specify the firm to be used (mandatory)",
+    firmIdDefault
+  )
+  .requiredOption(
+    "-s, --shared-part <name>",
+    "Specify the shared part to be removed (mandatory)"
+  )
+  .requiredOption(
+    "-h, --handle <handle>",
+    "Specify the reconciliation that needs to be updated (mandatory)"
+  )
+  .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     if (!options.yes) {
       promptConfirmation();
-    };
+    }
     firmId = options.firm;
-    toolkit.removeSharedPartFromReconciliation(options.sharedPart, options.reconciliation);
+    toolkit.removeSharedPartFromReconciliation(
+      options.sharedPart,
+      options.reconciliation
+    );
   });
 
 // Run Liquid Test
 program
-  .command('run-test')
-  .description('Run Liquid Tests for a reconciliation template from a YAML file')
-  .requiredOption('-f, --firm <firm-id>', 'Specify the firm to be used (mandatory)', firmIdDefault)
-  .requiredOption('-h, --handle <handle>', 'Specify the reconciliation to be used (mandatory)')
+  .command("run-test")
+  .description(
+    "Run Liquid Tests for a reconciliation template from a YAML file"
+  )
+  .requiredOption(
+    "-f, --firm <firm-id>",
+    "Specify the firm to be used (mandatory)",
+    firmIdDefault
+  )
+  .requiredOption(
+    "-h, --handle <handle>",
+    "Specify the reconciliation to be used (mandatory)"
+  )
   .action((options) => {
     firmId = options.firm;
     toolkit.runTests(options.handle);
   });
 
-// Create Liquid Test 
+// Create Liquid Test
 program
-  .command('create-test')
-  .description('Create Liquid Test (YAML file) from an existing reconciliation in a company file')
-  .requiredOption('-u, --url <url>', 'Specify the url to be used (mandatory)')
+  .command("create-test")
+  .description(
+    "Create Liquid Test (YAML file) from an existing reconciliation in a company file"
+  )
+  .requiredOption("-u, --url <url>", "Specify the url to be used (mandatory)")
   .action(() => {
     // TO BE DONE
   });
 
 // Authorize APP
 program
-  .command('authorize')
-  .description('Authorize the CLI by entering your Silverfin API credentials')
-  .action(()=>{
+  .command("authorize")
+  .description("Authorize the CLI by entering your Silverfin API credentials")
+  .action(() => {
     toolkit.authorize();
   });
 
