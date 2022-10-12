@@ -1,54 +1,74 @@
 const fs = require('fs');
 const path = require('path');
 
-createFolder = function (path) {
+function createFolder(path) {
   if (!fs.existsSync(path)) {
-    fs.mkdirSync(path)
-  }
-}
+    fs.mkdirSync(path);
+  };
+};
 
-createFolders = function (relativePath) {
-  createFolder(relativePath)
-  createFolder(`${relativePath}/tests`)
-  createFolder(`${relativePath}/text_parts`)
-}
+function createFolders(relativePath) {
+  createFolder(relativePath);
+  createFolder(`${relativePath}/tests`);
+  createFolder(`${relativePath}/text_parts`);
+};
 
-createFiles = async function ({ relativePath, testFile, textParts, text }) {
-  const emptyCallback = () => {}
-
-  if (!fs.existsSync(`${relativePath}/tests/${testFile.name}.yml`)) {
-    fs.writeFile(`${relativePath}/tests/${testFile.name}.yml`, testFile.content, emptyCallback)
-  }
-
+async function createLiquidTestFiles(relativePath, testFilenameRoot, testContent) {
+  const emptyCallback = () => {};
+  // Liquid Test: YAML
+  if (!fs.existsSync(`${relativePath}/tests/${testFilenameRoot}_liquid_test.yml`)) {
+    fs.writeFile(`${relativePath}/tests/${testFilenameRoot}_liquid_test.yml`, testContent, emptyCallback);
+  };
+  // Liquid Test: Readme
   if (!fs.existsSync(`${relativePath}/tests/README.md`)) {
-    const readmeLiquidTests = fs.readFileSync(path.resolve(__dirname,'./resources/liquid_tests/README.md'), 'UTF-8')
-    fs.writeFileSync(`${relativePath}/tests/README.md`, readmeLiquidTests)
-  }
+    const readmeLiquidTests = fs.readFileSync(path.resolve(__dirname,'./resources/liquid_tests/README.md'), 'UTF-8');
+    fs.writeFileSync(`${relativePath}/tests/README.md`, readmeLiquidTests);
+  };
+  
+  if (relativePath) {
+    console.log(`Liquid testing file(s) created for ${relativePath}`)
+  }  
+};
 
+async function createTemplateFiles(relativePath, textMain, textParts) {
+  const emptyCallback = () => {};
+  // Template: Main
+  fs.writeFile(`${relativePath}/main.liquid`, textMain, emptyCallback);
+  // Template: Parts
   Object.keys(textParts).forEach((textPartName) => {
     if (textPartName) {
-      fs.writeFile(`${relativePath}/text_parts/${textPartName}.liquid`, textParts[textPartName], emptyCallback)
-    }
-  })
+      fs.writeFile(`${relativePath}/text_parts/${textPartName}.liquid`, textParts[textPartName], emptyCallback);
+    };
+  });
 
-  fs.writeFile(`${relativePath}/main.liquid`, text, emptyCallback)
-}
+  if (relativePath) {
+    console.log(`Liquid template file(s) created for ${relativePath}`)
+  }  
+};
 
-createLiquidFile = async function (relativePath, fileName, textContent) {
-  const emptyCallback = () => {}
-  fs.writeFile(`${relativePath}/${fileName}.liquid`, textContent, emptyCallback)
-}
+async function createLiquidFile(relativePath, fileName, textContent) {
+  const emptyCallback = () => {};
+  fs.writeFile(`${relativePath}/${fileName}.liquid`, textContent, emptyCallback);
+  console.log(`${fileName} file created`);
+};
 
-writeConfig = function (relativePath, config) {
-  emptyCallback = () => {}
+function writeConfig(relativePath, config) {
+  emptyCallback = () => {};
   fs.writeFile(`${relativePath}/config.json`, JSON.stringify(config, null, 2), emptyCallback);
-}
+};
 
-readConfig = function (relativePath) {
-  const json = fs.readFileSync(`${relativePath}/config.json`).toString()
-  const config = JSON.parse(json)
+function readConfig(relativePath) {
+  const json = fs.readFileSync(`${relativePath}/config.json`).toString();
+  const config = JSON.parse(json);
+  return config;
+};
 
-  return config
-}
-
-module.exports = { writeConfig, createFiles, createLiquidFile, createFolder, createFolders, readConfig }
+module.exports = { 
+  writeConfig,
+  createTemplateFiles,
+  createLiquidTestFiles,
+  createLiquidFile, 
+  createFolder, 
+  createFolders, 
+  readConfig };
+  

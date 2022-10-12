@@ -11,7 +11,7 @@ if (missingVariables.length ) {
   console.log(`Error: Missing API credentials: [${missingVariables}]`);
   console.log(`Credentials should be defined as environmental variables. Call export ${missingVariables[0]}=... before using this CLI`);
   console.log(`If you don't have credentials yet, you need to register your app with Silverfin to get them`);
-  process.exit();
+  process.exit(1);
 };
 
 async function authorizeApp() {
@@ -29,7 +29,8 @@ async function authorizeApp() {
     firmIdPrompt = prompt('Enter the firm ID: ');
   };
   // Get tokens
-  getAccessToken(firmIdPrompt, authCodePrompt);
+  await getAccessToken(firmIdPrompt, authCodePrompt);
+  console.log('Done');
 };
 
 // Get Tokens for the first time
@@ -47,7 +48,7 @@ async function getAccessToken(firmId, authCode) {
   catch (error) {
     console.log(`Response Status: ${error.response.status} (${error.response.statusText})`);
     console.log(`Error description: ${JSON.stringify(error.response.data.error_description)}`);
-    process.exit();
+    process.exit(1);
   };
 };
 
@@ -70,7 +71,7 @@ async function refreshTokens(firmId, accessToken, refreshToken) {
     console.log(`Response Status: ${error.response.status} (${error.response.statusText})`);
     console.log(`Error description: ${JSON.stringify(error.response.data.error_description)}`);
     console.log(`Error refreshing the tokens. Try running the authentication process again`)
-    process.exit();
+    process.exit(1);
   };
 };
 
@@ -79,7 +80,8 @@ function setAxiosDefaults() {
     axios.defaults.baseURL = `${baseURL}/api/v4/f/${firmId}`
     axios.defaults.headers.common['Authorization'] = `Bearer ${config.data[String(firmId)].accessToken}`
   } else {
-    throw `Missing authorization for firm id: ${firmId}`;
+    console.log(`Missing authorization for firm id: ${firmId}`);
+    process.exit(1);
   };
 };
 
@@ -89,13 +91,14 @@ function responseSuccessHandler(response) {
 
 async function responseErrorHandler(error, refreshToken = false, callbackFunction, callbackParameters) {
   console.log(`Response Status: ${error.response.status} (${error.response.statusText}) - method: ${error.response.config.method} - url: ${error.response.config.url}`);
-  console.log(`Response Data: ${JSON.stringify(error.response.data.error)}`);
   // Valid Request. Not Found
   if (error.response.status === 404) {
+    console.log(`Response Data error: ${JSON.stringify(error.response.data.error)}`);
     return;
   };
   // No access credentials
   if (error.response.status === 401) {
+    console.log(`Response Data error: ${JSON.stringify(error.response.data.error)}`);
     if (refreshToken) {
       // Get a new pair of tokens
       await refreshTokens(firmId, config.data[String(firmId)].accessToken, config.data[String(firmId)].refreshToken);
@@ -103,8 +106,19 @@ async function responseErrorHandler(error, refreshToken = false, callbackFunctio
       return callbackFunction(...Object.values(callbackParameters));
     } else {
       console.log(`API calls failed, try to run the authorization process again`);
-      process.exit();
+      process.exit(1);
     };
+  };
+  // Unprocessable Entity
+  if (error.response.status === 422) {
+    console.log(`Response Data: ${JSON.stringify(error.response.data)}`);
+    console.log(`You don't have the rights to update the previous parameters`)
+    process.exit(1);
+  };
+  // Forbidden 
+  if (error.response.status === 403) {
+    console.log('Forbidden access. Terminating process')
+    process.exit(1);
   };
   // Not handled
   throw error;
@@ -187,7 +201,7 @@ async function findSharedPart(name, page = 1) {
   const response = await fetchSharedParts(page);
   const sharedParts = response.data;
   // No data
-  if (sharedParts.lenght == 0) {
+  if (sharedParts.length == 0) {
     console.log(`Shared part ${name} not found`);
     return;
   }
@@ -208,6 +222,34 @@ async function updateSharedPart(id, attributes, refreshToken = true) {
   }
   catch (error) {
     const callbackParameters = {id:id, attributes:attributes, refreshToken: false};
+    const response = await responseErrorHandler(error, refreshToken, updateSharedPart, callbackParameters);
+    return response;
+  };
+};
+
+async function addSharedPart(sharedPartId, reconciliationId, refreshToken = true) {
+  setAxiosDefaults();
+  try {
+    const response = await axios.post(`reconciliations/${reconciliationId}/shared_parts/${sharedPartId}`);
+    responseSuccessHandler(response);
+    return response;
+  }
+  catch (error) {
+    const callbackParameters = {sharedPartId:sharedPartId, reconciliationId:reconciliationId, refreshToken: false};
+    const response = await responseErrorHandler(error, refreshToken, updateSharedPart, callbackParameters);
+    return response;
+  };
+};
+
+async function removeSharedPart(sharedPartId, reconciliationId, refreshToken = true) {
+  setAxiosDefaults();
+  try {
+    const response = await axios.delete(`reconciliations/${reconciliationId}/shared_parts/${sharedPartId}`);
+    responseSuccessHandler(response);
+    return response;
+  }
+  catch (error) {
+    const callbackParameters = {sharedPartId:sharedPartId, reconciliationId:reconciliationId, refreshToken: false};
     const response = await responseErrorHandler(error, refreshToken, updateSharedPart, callbackParameters);
     return response;
   };
@@ -250,6 +292,8 @@ module.exports = {
   fetchSharedPartById, 
   findSharedPart, 
   updateSharedPart, 
+  addSharedPart,
+  removeSharedPart,
   fetchTestRun, 
   createTestRun 
 };

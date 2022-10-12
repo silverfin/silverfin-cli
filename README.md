@@ -75,6 +75,15 @@ export SF_HOST=...
 
 # How to use it
 
+## Help
+
+You can always get extra information by adding `--help` flag. For example:
+
+```
+yarn silverfin --help
+yarn silverfin import-reconciliation --help
+```
+
 ## Authorize the CLI
 
 ```
@@ -127,13 +136,4 @@ yarn silverfin run-test --firm <firm-id> --handle <handle>
 
 ```
 yarn silverfin create-test --url <url>
-```
-
-## Help
-
-You can always get extra information by adding `--help`. For example:
-
-```
-yarn silverfin --help
-yarn silverfin import-reconciliation --help
 ```

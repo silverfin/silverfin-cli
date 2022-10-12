@@ -10,7 +10,7 @@ const program = new Command();
 let firmIdDefault = undefined;
 if (process.env.SF_FIRM_ID) {
   firmIdDefault = process.env.SF_FIRM_ID;
-  console.log(`Firm ID to be used: ${firmIdDefault}`)
+  console.log(`Firm ID to be used: ${firmIdDefault}`);
 };
 
 // Version
@@ -18,12 +18,33 @@ if (pkg.version){
   program.version(pkg.version);
 };
 
+// Uncaught Errors. Open Issue in GitHub
+function  uncaughtErrors(err) {
+  if (err.stack) {
+    console.error('');
+    console.error(`!!! Please open an issue including this log on ${pkg.bugs.url}`);
+    console.error('');
+    console.error(err.message);
+    console.error(`silverfin: v${pkg.version}, node: ${process.version}`);
+    console.error('');
+    console.error(err.stack);
+  };
+  process.exit(1);
+};
+process
+  .on('uncaughtException', err => {
+    uncaughtErrors(err);
+  })
+  .on("unhandledRejection", err => {
+    uncaughtErrors(err);
+  });
+
 // Prompt Confirmation
 function promptConfirmation(){
-  const confirm = prompt('This will overwrite existin templates. Do you want to proceed? (yes/NO): ');
+  const confirm = prompt('This will overwrite existing templates. Do you want to proceed? (y/n): ');
   if (confirm.toLocaleLowerCase() !== 'yes' && confirm.toLowerCase() !== 'y') {
     console.log('Operation cancelled');
-    process.exit();
+    process.exit(1);
   };
   return true;
 };
@@ -33,14 +54,14 @@ program
   .command('import-reconciliation')
   .description('Import an existing reconciliation template')
   .requiredOption('-f, --firm <firm-id>', 'Specify the firm to be used (mandatory)', firmIdDefault)
-  .requiredOption('-h, --handle <handle>', 'Mandatory. Specify the reconcilation to be used (mandatory)')
+  .requiredOption('-h, --handle <handle>', 'Specify the reconcilation to be used (mandatory)')
   .option('--yes', 'Skip the prompt confirmation (optional)')
   .action((options) => {
     if (!options.yes) {
       promptConfirmation();
     };
     firmId = options.firm;
-    toolkit.importNewTemplateFolder(options.handle);
+    toolkit.importExistingReconciliationByHandle(options.handle);
   });
 
 // Update a single reconciliation
@@ -48,7 +69,7 @@ program
   .command('update-reconciliation')
   .description('Update an existing reconciliation template')
   .requiredOption('-f, --firm <firm-id>', 'Specify the firm to be used (mandatory)', firmIdDefault)
-  .requiredOption('-h, --handle <handle>', 'Mandatory. Specify the reconcilation to be used (mandatory)')
+  .requiredOption('-h, --handle <handle>', 'Specify the reconcilation to be used (mandatory)')
   .option('--yes', 'Skip the prompt confirmation (optional)')
   .action((options)=>{
     if (!options.yes) {
@@ -69,8 +90,7 @@ program
       promptConfirmation();
     };
     firmId = options.firm;
-    // TO DO: Add function
-    console.log('Method not implemented yet')
+    toolkit.importExistingReconciliations();
   });
 
 // Import a single shared part
@@ -78,7 +98,7 @@ program
   .command('import-shared-part')
   .description('Import an existing shared part')
   .requiredOption('-f, --firm <firm-id>', 'Specify the firm to be used (mandatory)', firmIdDefault)
-  .requiredOption('-h, --handle <handle>', 'Mandatory. Specify the shared part to be used (mandatory)')
+  .requiredOption('-h, --handle <handle>', 'Specify the shared part to be used (mandatory)')
   .option('--yes', 'Skip the prompt confirmation (optional)')
   .action((options) => {
     if (!options.yes) {
@@ -93,7 +113,7 @@ program
   .command('update-shared-part')
   .description('Update an existing shared part')
   .requiredOption('-f, --firm <firm-id>', 'Specify the firm to be used (mandatory)', firmIdDefault)
-  .requiredOption('-h, --handle <handle>', 'Mandatory. Specify the shared part to be used (mandatory)')
+  .requiredOption('-h, --handle <handle>', 'Specify the shared part to be used (mandatory)')
   .option('--yes', 'Skip the prompt confirmation (optional)')
   .action((options) => {
     if (!options.yes) {
@@ -117,12 +137,59 @@ program
     toolkit.importExistingSharedParts();
   });
 
+// Update shared parts used in a reconciliation
+program
+  .command('shared-parts-used')
+  .description('Update the list of shared used for a specific reconciliation')
+  .requiredOption('-f, --firm <firm-id>', 'Specify the firm to be used (mandatory)', firmIdDefault)
+  .requiredOption('-h, --handle <handle>', 'Specify the reconciliation to be used (mandatory)')
+  .option('--yes', 'Skip the prompt confirmation (optional)')
+  .action((options) => {
+    if (!options.yes) {
+      promptConfirmation();
+    };
+    firmId = options.firm;
+    toolkit.refreshSharedPartsUsed(options.handle);
+  });
+ 
+// Add shared part to reconciliation
+program
+  .command('add-shared-part')
+  .description('Add an existing shared part to an existing reconciliation')
+  .requiredOption('-f, --firm <firm-id>', 'Specify the firm to be used (mandatory)', firmIdDefault)
+  .requiredOption('-s, --shared-part <name>', 'Specify the shared part to be added (mandatory)')
+  .requiredOption('-h, --handle <handle>', 'Specify the reconciliation that needs to be updated (mandatory)')
+  .option('--yes', 'Skip the prompt confirmation (optional)')
+  .action((options) => {
+    if (!options.yes) {
+      promptConfirmation();
+    };
+    firmId = options.firm;
+    toolkit.addSharedPartToReconciliation(options.sharedPart, options.reconciliation);
+  });
+
+  // Remove shared part to reconciliation
+program
+  .command('remove-shared-part')
+  .description('Remove an existing shared part to an existing reconciliation')
+  .requiredOption('-f, --firm <firm-id>', 'Specify the firm to be used (mandatory)', firmIdDefault)
+  .requiredOption('-s, --shared-part <name>', 'Specify the shared part to be removed (mandatory)')
+  .requiredOption('-h, --handle <handle>', 'Specify the reconciliation that needs to be updated (mandatory)')
+  .option('--yes', 'Skip the prompt confirmation (optional)')
+  .action((options) => {
+    if (!options.yes) {
+      promptConfirmation();
+    };
+    firmId = options.firm;
+    toolkit.removeSharedPartFromReconciliation(options.sharedPart, options.reconciliation);
+  });
+
 // Run Liquid Test
 program
   .command('run-test')
   .description('Run Liquid Tests for a reconciliation template from a YAML file')
   .requiredOption('-f, --firm <firm-id>', 'Specify the firm to be used (mandatory)', firmIdDefault)
-  .requiredOption('-h, --handle <handle>', 'Mandatory. Specify the reconciliation to be used (mandatory)')
+  .requiredOption('-h, --handle <handle>', 'Specify the reconciliation to be used (mandatory)')
   .action((options) => {
     firmId = options.firm;
     toolkit.runTests(options.handle);
@@ -146,8 +213,3 @@ program
   });
 
 program.parse();
-
-// Unhandled errors while running the cli
-process.on('unhandledRejection', error => {
-  console.log(error);
-});

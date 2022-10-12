@@ -5,7 +5,13 @@
   "main": "index.js",
   "license": "MIT",
   "private": false,
-  "bin": "./bin/cli.js",
+  "bin": {
+    "silverfin": "./bin/cli.js"
+  },
+  "homepage": "https://github.com/silverfin/sf-toolkit#readme",
+  "bugs": {
+    "url": "https://github.com/silverfin/sf-toolkit/issues"
+  },
   "scripts": {
     "test": "jest",
     "silverfin": "./node_modules/sf-toolkit/bin/cli.js"
