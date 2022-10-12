@@ -277,17 +277,6 @@ program
     toolkit.runTests(options.handle);
   });
 
-// Create Liquid Test
-program
-  .command("create-test")
-  .description(
-    "Create Liquid Test (YAML file) from an existing reconciliation in a company file"
-  )
-  .requiredOption("-u, --url <url>", "Specify the url to be used (mandatory)")
-  .action(() => {
-    // TO BE DONE
-  });
-
 // Authorize APP
 program
   .command("authorize")

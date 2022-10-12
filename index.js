@@ -1,6 +1,8 @@
 const SF = require("./api/sf_api");
 const fsUtils = require("./fs_utils");
 const fs = require("fs");
+const readline = require("readline");
+const Spinner = require("cli-spinner").Spinner;
 
 const RECONCILIATION_FIELDS_TO_SYNC = [
   "id",
@@ -374,14 +376,25 @@ async function runTests(handle) {
 
     const testRunResponse = await SF.createTestRun(testParams);
     const testRunId = testRunResponse.data;
+    console.log(testRunId);
+
     let testRun = { status: "started" };
     const pollingDelay = 2000;
+    const spinner = new Spinner("%s Running tests..");
+    spinner.setSpinnerString("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏");
+    spinner.start();
 
     while (testRun.status === "started") {
-      await new Promise((resolve) => setTimeout(resolve, pollingDelay));
+      await new Promise((resolve) => {
+        setTimeout(resolve, pollingDelay);
+      });
       const response = await SF.fetchTestRun(testRunId);
       testRun = response.data;
     }
+
+    spinner.stop();
+    readline.clearLine(process.stdout);
+    readline.cursorTo(process.stdout, 0);
 
     if (testRun.status !== "completed") {
       console.error(testRun.error_message);
@@ -390,8 +403,13 @@ async function runTests(handle) {
 
     if (testRun.result.length !== 0) {
       console.error("Tests Failed");
-      console.error(testRun.result);
+      console.dir(testRun.result, { maxArrayLength: null });
       process.exit(1);
+    } else {
+      if (testRun.status == "completed") {
+        console.log("ALL TESTS PASSED");
+        process.exit(1);
+      }
     }
   } catch (error) {
     fsErrorHandler(error);
