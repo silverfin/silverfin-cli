@@ -207,11 +207,16 @@ async function findReconciliationText(handle, page = 1) {
     console.log(`Reconciliation ${handle} not found`);
     return;
   }
-  const reconciliationText = reconciliations.find(
+  let reconciliationTexts = reconciliations.filter(
     (element) => element["handle"] === handle
   );
-  if (reconciliationText) {
-    return reconciliationText;
+  if (reconciliationTexts.length != 0) {
+    for (reconciliationText of reconciliationTexts) {
+      // Only return reconciliations were liquid code is not hidden
+      if (reconciliationText.hasOwnProperty("text")) {
+        return reconciliationText;
+      }
+    }
   } else {
     return findReconciliationText(handle, page + 1);
   }
