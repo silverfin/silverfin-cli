@@ -41,7 +41,7 @@ async function testGenerator(url) {
 	const periodsMaxIndex = responsePeriods.data.length-1;
 	if (currentPeriodIndex < periodsMaxIndex ) {
 		const previousPeriodData = responsePeriods.data[currentPeriodIndex+1];
-		if (previousPeriodData) {
+		if (previousPeriodData && previousPeriodData.fiscal_year.end_date != currentPeriodData.fiscal_year.end_date) {
 			// Add empty previous period to Liquid Test
 			liquidTestObject[testName].data.periods[previousPeriodData.fiscal_year.end_date] = null;       
 		};
