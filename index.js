@@ -1,8 +1,8 @@
 const SF = require("./api/sf_api");
 const fsUtils = require("./fs_utils");
 const fs = require("fs");
-const readline = require("readline");
-const Spinner = require("cli-spinner").Spinner;
+const spinner = require("./resources/spinner");
+const chalk = require("chalk");
 
 const RECONCILIATION_FIELDS_TO_SYNC = [
   "id",
@@ -376,13 +376,10 @@ async function runTests(handle) {
 
     const testRunResponse = await SF.createTestRun(testParams);
     const testRunId = testRunResponse.data;
-    console.log(testRunId);
 
     let testRun = { status: "started" };
     const pollingDelay = 2000;
-    const spinner = new Spinner("%s Running tests..");
-    spinner.setSpinnerString("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏");
-    spinner.start();
+    spinner.spin("Running tests..");
 
     while (testRun.status === "started") {
       await new Promise((resolve) => {
@@ -392,23 +389,171 @@ async function runTests(handle) {
       testRun = response.data;
     }
 
-    spinner.stop();
-    readline.clearLine(process.stdout);
-    readline.cursorTo(process.stdout, 0);
-
     if (testRun.status !== "completed") {
+      console.error("Ran into an error an couldn't complete test run");
       console.error(testRun.error_message);
       process.exit(1);
     }
 
     if (testRun.result.length !== 0) {
-      console.error("Tests Failed");
-      console.dir(testRun.result, { maxArrayLength: null });
+      spinner.spin("Processing test results..");
+
+      const formattedTests = [];
+
+      testRun.result.map((test) => {
+        const name = test.test;
+        const type = test.result.split(".")[0];
+        const outcome = test.got;
+        const expected = test.expected;
+        const lineNumber = test.line_number;
+
+        const emptyTestExpectations = {
+          name,
+          reconciled: {},
+          results: [],
+          rollforwards: [],
+        };
+
+        const existingItemIndex = formattedTests.findIndex(
+          (item) => item.name === name
+        );
+        const existingItem =
+          formattedTests[existingItemIndex] || emptyTestExpectations;
+
+        const testOutput = {
+          lineNumber,
+          expected,
+          outcome,
+        };
+
+        const testExpectations = {
+          name,
+          reconciled: { ...existingItem.reconciled },
+          results: [...existingItem.results],
+          rollforwards: [...existingItem.rollforwards],
+        };
+
+        switch (type) {
+          case "reconciled":
+            testExpectations.reconciled = testOutput;
+            break;
+          case "results":
+            const resultName = test.result.split(".")[1];
+            testOutput.resultName = resultName;
+            testExpectations.results.push(testOutput);
+            break;
+          case "rollforward":
+            const rollforwardName = test.result.split(".").slice(1);
+            testOutput.rollforwardName = rollforwardName;
+            testExpectations.rollforwards.push(testOutput);
+            break;
+        }
+
+        if (existingItemIndex !== -1) {
+          formattedTests[existingItemIndex] = testExpectations;
+        } else {
+          formattedTests.push(testExpectations);
+        }
+      });
+
+      spinner.clear();
+      console.log("")
+
+      console.error(
+        chalk.red(
+          `${formattedTests.length} TEST${
+            formattedTests.length > 1 ? "S" : ""
+          } FAILED`
+        )
+      );
+
+      formattedTests.forEach((test) => {
+        console.log("---------------------------------------------------------------");
+        console.log(test.name);
+
+        // Display success messages of test
+        if (Object.keys(test.reconciled).length === 0) {
+          console.log(chalk.green("Reconciliation expectation passed"));
+        }
+
+        if (test.results.length === 0) {
+          console.log(chalk.green("All result expectations passed"));
+        }
+
+        if (test.rollforwards.length === 0) {
+          console.log(chalk.green("All rollforward expectations passed"));
+        }
+
+        // Display error messages of test
+        if (Object.keys(test.reconciled).length > 0) {
+          console.log(chalk.red("Reconciliation expectation failed"));
+          console.log(`At line number ${test.reconciled.lineNumber}`);
+          console.log(
+            `got ${chalk.blue.bold(
+              test.reconciled.outcome
+            )} but expected ${chalk.blue.bold(test.reconciled.expected)}`
+          );
+          console.log("");
+        }
+
+        if (test.results.length > 0) {
+          console.log(
+            chalk.red(
+              `${test.results.length} result expectation${
+                test.results.length > 1 ? "s" : ""
+              } failed`
+            )
+          );
+          test.results.forEach((expectation) => {
+            console.log(`At line number ${expectation.lineNumber}`);
+            console.log(
+              `For result ${chalk.blue.bold(
+                expectation.resultName
+              )} got ${chalk.blue.bold(expectation.outcome)} (${chalk.italic(
+                typeof expectation.outcome
+              )}) but expected ${chalk.blue.bold(
+                expectation.expected
+              )} (${chalk.italic(typeof expectation.expected)})`
+            );
+          });
+          console.log("");
+        }
+
+        if (test.rollforwards.length > 0) {
+          console.log(
+            chalk.red(
+              `${test.rollforwards.length} rollforward expectation${
+                test.rollforwards.length > 1 ? "s" : ""
+              } failed`
+            )
+          );
+          test.rollforwards.forEach((expectation) => {
+            console.log(`At line number ${expectation.lineNumber}`);
+            console.log(
+              `For rollforward ${chalk.blue.bold(
+                expectation.rollforwardName
+              )} got ${chalk.blue.bold(expectation.outcome)} (${chalk.italic(
+                typeof expectation.outcome
+              )}) but expected ${chalk.blue.bold(
+                expectation.expected
+              )} (${chalk.italic(typeof expectation.expected)})`
+            );
+          });
+          console.log("");
+        }
+      });
+      console.error(
+        chalk.red(
+          `${formattedTests.length} TEST${
+            formattedTests.length > 1 ? "S" : ""
+          } FAILED`
+        )
+      );
       process.exit(1);
     } else {
       if (testRun.status == "completed") {
         console.log("ALL TESTS PASSED");
-        process.exit(1);
+        process.exit(0);
       }
     }
   } catch (error) {
