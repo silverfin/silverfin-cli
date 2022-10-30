@@ -13,12 +13,18 @@ function createFolders(relativePath) {
   createFolder(`${relativePath}/text_parts`);
 }
 
+const errorCallback = (error) => {
+  if (error) {
+    console.log("An error occurred when creating the liquid testing file");
+    console.log(error);
+  }
+};
+
 async function createLiquidTestFiles(
   relativePath,
   testFilenameRoot,
   testContent
 ) {
-  const emptyCallback = () => {};
   // Liquid Test: YAML
   if (
     !fs.existsSync(`${relativePath}/tests/${testFilenameRoot}_liquid_test.yml`)
@@ -26,25 +32,39 @@ async function createLiquidTestFiles(
     fs.writeFile(
       `${relativePath}/tests/${testFilenameRoot}_liquid_test.yml`,
       testContent,
-      emptyCallback
+      (error) => {
+        if (error) {
+          errorCallback(error)
+        } else {
+          if (relativePath) {
+            console.log(`Liquid testing YAML file created for ${relativePath}`);
+          }
+        }
+      }
+    );
+  } else {
+    console.log(
+      `Liquid testing file ${testFilenameRoot}_liquid_test.yml already exists, so the file content was not overwritten`
     );
   }
+
   // Liquid Test: Readme
   if (!fs.existsSync(`${relativePath}/tests/README.md`)) {
     const readmeLiquidTests = fs.readFileSync(
       path.resolve(__dirname, "./resources/liquid_tests/README.md"),
       "UTF-8"
     );
-    fs.writeFileSync(`${relativePath}/tests/README.md`, readmeLiquidTests);
-  }
-
-  if (relativePath) {
-    console.log(`Liquid testing file(s) created for ${relativePath}`);
+    fs.writeFile(
+      `${relativePath}/tests/README.md`,
+      readmeLiquidTests,
+      (error) => { errorCallback(error) }
+    );
   }
 }
 
 async function createTemplateFiles(relativePath, textMain, textParts) {
   const emptyCallback = () => {};
+  
   // Template: Main
   fs.writeFile(`${relativePath}/main.liquid`, textMain, emptyCallback);
   // Template: Parts
