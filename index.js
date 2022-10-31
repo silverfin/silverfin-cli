@@ -368,9 +368,11 @@ async function runTests(handle) {
     const config = fsUtils.readConfig(relativePath);
     const testPath = `${relativePath}/${config.test}`;
     const testContent = fs.readFileSync(testPath, "utf-8");
+    const templateContent = constructReconciliationText(handle);
+    templateContent.reconciliation_type = config.reconciliation_type;
 
     const testParams = {
-      template: constructReconciliationText(handle),
+      template: templateContent,
       tests: testContent,
     };
 
