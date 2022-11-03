@@ -14,7 +14,6 @@ const isWsl = require("is-wsl");
 const commandExistsSync = require("command-exists").sync;
 
 const RECONCILIATION_FIELDS_TO_SYNC = [
-  "id",
   "handle",
   "name_en",
   "name_fr",
@@ -63,7 +62,7 @@ function errorHandler(error) {
   }
 }
 
-function storeImportedReconciliation(reconciliationText) {
+function storeImportedReconciliation(firmId, reconciliationText) {
   const handle = reconciliationText.handle || reconciliationText.id;
 
   if (!reconciliationText.text) {
@@ -110,6 +109,9 @@ function storeImportedReconciliation(reconciliationText) {
 
   const configContent = {
     ...attributes,
+    id: {
+      [firmId]: reconciliationText.id,
+    },
     text: "main.liquid",
     text_parts: configTextParts,
     test: `tests/${handle}_liquid_test.yml`,
@@ -122,7 +124,7 @@ async function importExistingReconciliationByHandle(firmId, handle) {
   if (!reconciliationText) {
     throw `${handle} wasn't found`;
   }
-  storeImportedReconciliation(reconciliationText);
+  storeImportedReconciliation(firmId, reconciliationText);
 }
 
 async function importExistingReconciliationById(firmId, reconciliationId) {
@@ -133,7 +135,7 @@ async function importExistingReconciliationById(firmId, reconciliationId) {
   if (!reconciliationText) {
     throw `${reconciliationId} wasn't found`;
   }
-  storeImportedReconciliation(reconciliationText);
+  storeImportedReconciliation(firmId, reconciliationText);
 }
 
 // Import all reconciliations
@@ -147,9 +149,56 @@ async function importExistingReconciliations(firmId, page = 1) {
     return;
   }
   reconciliationsArray.forEach(async (reconciliation) => {
-    storeImportedReconciliation(reconciliation);
+    storeImportedReconciliation(firmId, reconciliation);
   });
   importExistingReconciliations(firmId, page + 1);
+}
+
+// Look for the template in Silverfin with the handle/name and get it's ID
+// Type has to be either "reconciliation_texts" or "shared_parts"
+async function updateTemplateID(firmId, type, handle) {
+  let relativePath;
+  let templateText;
+  if (type === "reconciliation_texts") {
+    relativePath = `./reconciliation_texts/${handle}`;
+    templateText = await SF.findReconciliationText(firmId, handle);
+  }
+  if (type === "shared_parts") {
+    relativePath = `./shared_parts/${handle}`;
+    templateText = await SF.findSharedPart(firmId, handle);
+  }
+  if (!templateText) {
+    console.log(`${handle} wasn't found`);
+    return;
+  }
+  const configPath = `${relativePath}/config.json`;
+  if (!fs.existsSync(configPath)) {
+    console.log(
+      `There is no config.json file for ${handle}. You need to import or create it first.`
+    );
+    return;
+  }
+  const config = fsUtils.readConfig(relativePath);
+  if (typeof config.id !== "object") {
+    config.id = {};
+  }
+  config.id[firmId] = templateText.id;
+  fsUtils.writeConfig(relativePath, config);
+  console.log(`${handle}: ID updated`);
+}
+
+// For all existing reconciliations in the repository, find their IDs
+async function getAllTemplatesId(firmId, type) {
+  try {
+    let templatesArray = fsUtils.getTemplatePaths(type); // shared_parts or reconciliation_texts
+    for (configPath of templatesArray) {
+      let configTemplate = fsUtils.readConfig(configPath);
+      let handle = configTemplate.handle || configTemplate.name;
+      await updateTemplateID(firmId, type, handle);
+    }
+  } catch (error) {
+    errorHandler(error);
+  }
 }
 
 function constructReconciliationText(handle) {
@@ -183,8 +232,8 @@ async function persistReconciliationText(firmId, handle) {
     const relativePath = `./reconciliation_texts/${handle}`;
     const config = fsUtils.readConfig(relativePath);
     let reconciliationTextId;
-    if (config && config.id) {
-      reconciliationTextId = config.id;
+    if (config && config.id[firmId]) {
+      reconciliationTextId = config.id[firmId];
       console.log("Loaded from config");
     } else {
       reconciliationTextId = {
@@ -221,11 +270,37 @@ async function importExistingSharedPartById(firmId, id) {
     sharedPart.data.text
   );
 
-  let config = {
-    id: sharedPart.data.id,
+  // Adjust ID and find reconciliation handle
+  let used_in = [];
+  for (reconciliation of sharedPart.data.used_in) {
+    // Search in repository
+    let reconHandle = fsUtils.findHandleByID(
+      "reconciliation_texts",
+      reconciliation.id
+    );
+    if (reconHandle) {
+      reconciliation.handle = reconHandle;
+      // Search through the API
+    } else {
+      let reconciliationText = await SF.findReconciliationTextById(
+        firmId,
+        reconciliation.id
+      );
+      if (reconciliationText) {
+        reconciliation.handle = reconciliationText.handle;
+      }
+    }
+    reconId = reconciliation.id;
+    reconciliation.id = {};
+    reconciliation.id[firmId] = reconId;
+    used_in.push(reconciliation);
+  }
+
+  const config = {
+    id: { [firmId]: sharedPart.data.id },
     name: sharedPart.data.name,
     text: "main.liquid",
-    used_in: sharedPart.data.used_in,
+    used_in: used_in,
   };
 
   fsUtils.writeConfig(relativePath, config);
@@ -236,7 +311,7 @@ async function importExistingSharedPartByName(firmId, name) {
   if (!sharedPartByName) {
     throw `Shared part with name ${name} wasn't found.`;
   }
-  importExistingSharedPartById(firmId, sharedPartByName.id);
+  await importExistingSharedPartById(firmId, sharedPartByName.id);
 }
 
 async function importExistingSharedParts(firmId, page = 1) {
@@ -251,7 +326,7 @@ async function importExistingSharedParts(firmId, page = 1) {
   sharedParts.forEach(async (sharedPart) => {
     await importExistingSharedPartById(firmId, sharedPart.id);
   });
-  importExistingSharedParts(firmId, page + 1);
+  await importExistingSharedParts(firmId, page + 1);
 }
 
 async function persistSharedPart(firmId, name) {
@@ -263,7 +338,7 @@ async function persistSharedPart(firmId, name) {
       `${relativePath}/${name}.liquid`,
       "utf-8"
     );
-    SF.updateSharedPart(firmId, config.id, {
+    SF.updateSharedPart(firmId, config.id[firmId], {
       ...attributes,
       version_comment: "Testing Cli",
     });
@@ -272,38 +347,41 @@ async function persistSharedPart(firmId, name) {
   }
 }
 
-/* This will overwrite existing shared parts in reconcilation's config file */
-/* Look in each shared part if it is used in the provided reconciliation */
-function refreshSharedPartsUsed(handle) {
+async function newSharedPart(firmId, name) {
   try {
-    const relativePath = `./reconciliation_texts/${handle}`;
-    const configReconciliation = fsUtils.readConfig(relativePath);
-    configReconciliation.shared_parts = [];
-    fs.readdir(`./shared_parts`, (error, allSharedParts) => {
-      if (error) throw error;
-      for (sharedPartDir of allSharedParts) {
-        let sharedPartPath = `./shared_parts/${sharedPartDir}`;
-        let dir = fs.statSync(sharedPartPath, () => {});
-        if (dir.isDirectory()) {
-          let configSharedPart = fsUtils.readConfig(sharedPartPath);
-          configSharedPart.used_in.find((template, index) => {
-            if (template.id == configReconciliation.id) {
-              configReconciliation.shared_parts.push({
-                id: configSharedPart.id,
-                name: sharedPartDir,
-              });
-              console.log(
-                `Shared part ${sharedPartDir} used in reconciliation ${handle}:`
-              );
-              return true;
-            }
-          });
-        }
-      }
-      fsUtils.writeConfig(relativePath, configReconciliation);
+    const existingSharedPart = await SF.findSharedPart(firmId, name);
+    if (existingSharedPart) {
+      console.log(`Shared part ${name} already exists. Skip it's creation`);
+      return;
+    }
+    const relativePath = `./shared_parts/${name}`;
+    fsUtils.createConfigIfMissing(relativePath);
+    const config = fsUtils.readConfig(relativePath);
+    const attributes = {};
+    attributes.text = fs.readFileSync(
+      `${relativePath}/${name}.liquid`,
+      "utf-8"
+    );
+    attributes.name = name;
+    const response = await SF.createSharedPart(firmId, {
+      ...attributes,
+      version_comment: "Creating shared part with the Cli",
     });
+    // Store new firm id
+    if (response && response.status == 201) {
+      config.id[firmId] = response.data.id;
+      fsUtils.writeConfig(relativePath, config);
+    }
   } catch (error) {
     errorHandler(error);
+  }
+}
+
+async function newSharedPartsAll(firmId) {
+  const sharedPartsArray = fsUtils.getTemplatePaths("shared_parts");
+  for (sharedPartPath of sharedPartsArray) {
+    const sharedPartName = sharedPartPath.split("/")[2];
+    await newSharedPart(firmId, sharedPartName);
   }
 }
 
@@ -314,48 +392,93 @@ async function addSharedPartToReconciliation(
 ) {
   try {
     const relativePathReconciliation = `./reconciliation_texts/${reconciliationHandle}`;
-    const configReconciliation = fsUtils.readConfig(relativePathReconciliation);
+    const configReconciliation = await fsUtils.readConfig(
+      relativePathReconciliation
+    );
     configReconciliation.shared_parts = configReconciliation.shared_parts || [];
 
     const relativePathSharedPart = `./shared_parts/${sharedPartHandle}`;
-    const configSharedPart = fsUtils.readConfig(relativePathSharedPart);
+    const configSharedPart = await fsUtils.readConfig(relativePathSharedPart);
+
+    if (!configReconciliation.id[firmId] || !configSharedPart.id[firmId]) {
+      console.log(
+        `ID missing for reconciliation and/or shared part (${reconciliationHandle} & ${sharedPartHandle})`
+      );
+      return;
+    }
 
     const response = await SF.addSharedPart(
       firmId,
-      configSharedPart.id,
-      configReconciliation.id
+      configSharedPart.id[firmId],
+      configReconciliation.id[firmId]
     );
 
     if (response.status === 201) {
       console.log(
         `Shared part "${sharedPartHandle}" added to "${reconciliationHandle}" reconciliation text.`
       );
-    }
 
-    const sharedPartIndex = configReconciliation.shared_parts.findIndex(
-      (sharedPart) => sharedPart.id === configSharedPart.id
-    );
+      const sharedPartIndex = configReconciliation.shared_parts.findIndex(
+        (sharedPart) => sharedPartHandle === sharedPart.name
+      );
+      const reconciliationIndex = configSharedPart.used_in.findIndex(
+        (reconciliationText) =>
+          reconciliationHandle === reconciliationText.handle
+      );
 
-    if (sharedPartIndex === -1) {
-      configReconciliation.shared_parts.push({
-        id: configSharedPart.id,
-        name: sharedPartHandle,
-      });
-      fsUtils.writeConfig(relativePathReconciliation, configReconciliation);
-    }
-    const reconciliationIndex = configSharedPart.used_in.findIndex(
-      (reconciliationText) => reconciliationText.id === configReconciliation.id
-    );
+      // Not stored yet
+      if (sharedPartIndex === -1) {
+        configReconciliation.shared_parts.push({
+          id: { [firmId]: configSharedPart.id[firmId] },
+          name: sharedPartHandle,
+        });
+      }
+      // Previously stored
+      if (sharedPartIndex !== -1) {
+        configReconciliation.shared_parts[sharedPartIndex].id[firmId] =
+          configSharedPart.id[firmId];
+      }
 
-    if (reconciliationIndex === -1) {
-      configSharedPart.used_in.push({
-        id: configReconciliation.id,
-        type: "reconciliation",
-      });
+      // Not stored yet
+      if (reconciliationIndex === -1) {
+        configSharedPart.used_in.push({
+          id: { [firmId]: configReconciliation.id[firmId] },
+          type: "reconciliation",
+          handle: reconciliationHandle,
+        });
+      }
+      // Previously stored
+      if (reconciliationIndex !== -1) {
+        configSharedPart.used_in[reconciliationIndex].id[firmId] =
+          configReconciliation.id[firmId];
+      }
+
+      // Save Configs
       fsUtils.writeConfig(relativePathSharedPart, configSharedPart);
+      fsUtils.writeConfig(relativePathReconciliation, configReconciliation);
     }
   } catch (error) {
     errorHandler(error);
+  }
+}
+
+// Loop through all shared parts (config files)
+// Try to add the shared part to each reconciliation listed in 'used_in'
+async function addAllSharedPartsToAllReconciliation(firmId) {
+  const sharedPartsArray = fsUtils.getTemplatePaths("shared_parts");
+  for (sharedPartPath of sharedPartsArray) {
+    let configSharedPart = fsUtils.readConfig(sharedPartPath);
+    for (reconciliation of configSharedPart.used_in) {
+      if (reconciliation.handle) {
+        if (fs.existsSync(`./reconciliation_texts/${reconciliation.handle}`)) {
+          await addSharedPartToReconciliation(
+            firmId,
+            configSharedPart.name,
+            reconciliation.handle
+          );
+        }
+      }
+    }
   }
 }
 
@@ -374,8 +497,8 @@ async function removeSharedPartFromReconciliation(
 
     const response = await SF.removeSharedPart(
       firmId,
-      configSharedPart.id,
-      configReconciliation.id
+      configSharedPart.id[firmId],
+      configReconciliation.id[firmId]
     );
     if (response.status === 200) {
       console.log(
@@ -384,7 +507,7 @@ async function removeSharedPartFromReconciliation(
     }
 
     const sharedPartIndex = configReconciliation.shared_parts.findIndex(
-      (sharedPart) => sharedPart.id === configSharedPart.id
+      (sharedPart) => sharedPart.id[firmId] === configSharedPart.id[firmId]
     );
     if (sharedPartIndex !== -1) {
       configReconciliation.shared_parts.splice(sharedPartIndex, 1);
@@ -392,7 +515,8 @@ async function removeSharedPartFromReconciliation(
     }
 
     const reconciliationIndex = configSharedPart.used_in.findIndex(
-      (reconciliationText) => reconciliationText.id === configReconciliation.id
+      (reconciliationText) =>
+        reconciliationText.id[firmId] === configReconciliation.id[firmId]
     );
     if (reconciliationIndex !== -1) {
       configSharedPart.used_in.splice(reconciliationIndex, 1);
@@ -753,15 +877,19 @@ module.exports = {
   importExistingSharedPartByName,
   importExistingSharedParts,
   persistSharedPart,
-  refreshSharedPartsUsed,
+  newSharedPart,
+  newSharedPartsAll,
   addSharedPartToReconciliation,
   removeSharedPartFromReconciliation,
+  addAllSharedPartsToAllReconciliation,
   runTests,
   runTestsWithOutput,
   getHTML,
   resolveHTMLPath,
   checkAllTestsErrorsPresent,
   authorize,
+  updateTemplateID,
+  getAllTemplatesId,
   uncaughtErrors,
   setDefaultFirmID,
   getDefaultFirmID,

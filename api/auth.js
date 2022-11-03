@@ -50,11 +50,10 @@ class Config {
   // Get Access Token
   getTokens(firmId) {
     this.checkDefaultFirmsObject();
-    if (this.data.hasOwnProperty(firmId)) {
-      return this.data[firmId];
-    } else {
+    if (!this.data.hasOwnProperty(firmId)) {
       return null;
     }
+    return this.data[firmId];
   }
 
   // Set default firm id
