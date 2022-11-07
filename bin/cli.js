@@ -10,7 +10,11 @@ const program = new Command();
 let firmIdDefault = undefined;
 if (process.env.SF_FIRM_ID) {
   firmIdDefault = process.env.SF_FIRM_ID;
-  console.log(`Firm ID to be used: ${firmIdDefault}`);
+}
+function checkDefaultFirm(firmUsed) {
+  if (firmUsed === firmIdDefault) {
+    console.log(`Firm ID to be used: ${firmIdDefault}`);
+  }
 }
 
 // Version
@@ -71,6 +75,7 @@ program
     if (!options.yes) {
       promptConfirmation();
     }
+    checkDefaultFirm(options.firm);
     firmId = options.firm;
     toolkit.importExistingReconciliationByHandle(options.handle);
   });
@@ -93,6 +98,7 @@ program
     if (!options.yes) {
       promptConfirmation();
     }
+    checkDefaultFirm(options.firm);
     firmId = options.firm;
     toolkit.persistReconciliationText(options.handle);
   });
@@ -111,6 +117,7 @@ program
     if (!options.yes) {
       promptConfirmation();
     }
+    checkDefaultFirm(options.firm);
     firmId = options.firm;
     toolkit.importExistingReconciliations();
   });
@@ -133,6 +140,7 @@ program
     if (!options.yes) {
       promptConfirmation();
     }
+    checkDefaultFirm(options.firm);
     firmId = options.firm;
     toolkit.importExistingSharedPartByName(options.handle);
   });
@@ -155,6 +163,7 @@ program
     if (!options.yes) {
       promptConfirmation();
     }
+    checkDefaultFirm(options.firm);
     firmId = options.firm;
     toolkit.persistSharedPart(options.handle);
   });
@@ -173,6 +182,7 @@ program
     if (!options.yes) {
       promptConfirmation();
     }
+    checkDefaultFirm(options.firm);
     firmId = options.firm;
     toolkit.importExistingSharedParts();
   });
@@ -195,6 +205,7 @@ program
     if (!options.yes) {
       promptConfirmation();
     }
+    checkDefaultFirm(options.firm);
     firmId = options.firm;
     toolkit.refreshSharedPartsUsed(options.handle);
   });
@@ -221,6 +232,7 @@ program
     if (!options.yes) {
       promptConfirmation();
     }
+    checkDefaultFirm(options.firm);
     firmId = options.firm;
     toolkit.addSharedPartToReconciliation(
       options.sharedPart,
@@ -250,6 +262,7 @@ program
     if (!options.yes) {
       promptConfirmation();
     }
+    checkDefaultFirm(options.firm);
     firmId = options.firm;
     toolkit.removeSharedPartFromReconciliation(
       options.sharedPart,
@@ -273,6 +286,7 @@ program
     "Specify the reconciliation to be used (mandatory)"
   )
   .action((options) => {
+    checkDefaultFirm(options.firm);
     firmId = options.firm;
     toolkit.runTests(options.handle);
   });
