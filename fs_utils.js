@@ -34,7 +34,7 @@ async function createLiquidTestFiles(
       testContent,
       (error) => {
         if (error) {
-          errorCallback(error)
+          errorCallback(error);
         } else {
           if (relativePath) {
             console.log(`Liquid testing YAML file created for ${relativePath}`);
@@ -57,14 +57,16 @@ async function createLiquidTestFiles(
     fs.writeFile(
       `${relativePath}/tests/README.md`,
       readmeLiquidTests,
-      (error) => { errorCallback(error) }
+      (error) => {
+        errorCallback(error);
+      }
     );
   }
 }
 
 async function createTemplateFiles(relativePath, textMain, textParts) {
   const emptyCallback = () => {};
-  
+
   // Template: Main
   fs.writeFile(`${relativePath}/main.liquid`, textMain, emptyCallback);
   // Template: Parts
@@ -108,6 +110,48 @@ function readConfig(relativePath) {
   return config;
 }
 
+// Get an array with all the reconciliations or all shared parts
+function getTemplatePaths(relativePath) {
+  if (
+    relativePath !== "shared_parts" &&
+    relativePath !== "reconciliation_texts"
+  ) {
+    throw "relativePath should be shared_parts or reconciliation_texts";
+  }
+  let templatesArray = [];
+  let allTemplates = fs.readdirSync(`./${relativePath}`);
+  for (templateDir of allTemplates) {
+    let templatePath = `./${relativePath}/${templateDir}`;
+    let dir = fs.statSync(templatePath, () => {});
+    if (dir.isDirectory()) {
+      let configPath = `${templatePath}/config.json`;
+      if (fs.existsSync(configPath)) {
+        templatesArray.push(templatePath);
+      }
+    }
+  }
+  return templatesArray;
+}
+
+// Get an array with all the shared parts (name) used in a specific reconciliation (handle)
+function getSharedParts(handle) {
+  const reconciliationConfig = readConfig(`reconciliation_texts/${handle}`);
+  const reconciliationID = reconciliationConfig.id;
+  const allSharedPartsPaths = getTemplatePaths("shared_parts");
+  const sharedPartsPresent = [];
+  for (sharedPartPath of allSharedPartsPaths) {
+    let sharedPartConfig = readConfig(sharedPartPath);
+    const usedInReconciliation = (reconciliation) =>
+      reconciliation.id === reconciliationID;
+    let reconciliationIndex =
+      sharedPartConfig.used_in.findIndex(usedInReconciliation);
+    if (reconciliationIndex !== -1) {
+      sharedPartsPresent.push(sharedPartConfig.name);
+    }
+  }
+  return sharedPartsPresent;
+}
+
 module.exports = {
   writeConfig,
   createTemplateFiles,
@@ -116,4 +160,6 @@ module.exports = {
   createFolder,
   createFolders,
   readConfig,
+  getTemplatePaths,
+  getSharedParts,
 };

@@ -370,6 +370,20 @@ async function runTests(handle) {
     const testContent = fs.readFileSync(testPath, "utf-8");
     const templateContent = constructReconciliationText(handle);
     templateContent.reconciliation_type = config.reconciliation_type;
+    const sharedParts = fsUtils.getSharedParts(handle);
+    if (sharedParts.length !== 0) {
+      templateContent.text_shared_parts = [];
+      for (sharedPart of sharedParts) {
+        let sharedPartContent = fs.readFileSync(
+          `shared_parts/${sharedPart}/${sharedPart}.liquid`,
+          "utf-8"
+        );
+        templateContent.text_shared_parts.push({
+          name: sharedPart,
+          content: sharedPartContent,
+        });
+      }
+    }
 
     const testParams = {
       template: templateContent,
@@ -459,7 +473,7 @@ async function runTests(handle) {
       });
 
       spinner.clear();
-      console.log("")
+      console.log("");
 
       console.error(
         chalk.red(
@@ -470,7 +484,9 @@ async function runTests(handle) {
       );
 
       formattedTests.forEach((test) => {
-        console.log("---------------------------------------------------------------");
+        console.log(
+          "---------------------------------------------------------------"
+        );
         console.log(test.name);
 
         // Display success messages of test
