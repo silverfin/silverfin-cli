@@ -1,7 +1,7 @@
 const SF = require("./api/sf_api");
 const fsUtils = require("./fs_utils");
 const fs = require("fs");
-const spinner = require("./resources/spinner");
+const { spinner } = require("./resources/spinner");
 const chalk = require("chalk");
 const pkg = require("./package.json");
 
@@ -385,6 +385,7 @@ async function runTests(handle) {
     const testPath = `${relativePath}/${config.test}`;
     const testContent = fs.readFileSync(testPath, "utf-8");
     const templateContent = constructReconciliationText(handle);
+    templateContent.handle = handle;
     templateContent.reconciliation_type = config.reconciliation_type;
     const sharedParts = fsUtils.getSharedParts(handle);
     if (sharedParts.length !== 0) {
@@ -411,8 +412,8 @@ async function runTests(handle) {
 
     let testRun = { status: "started" };
     const pollingDelay = 2000;
-    spinner.spin("Running tests..");
 
+    spinner.spin("Running tests..");
     while (testRun.status === "started") {
       await new Promise((resolve) => {
         setTimeout(resolve, pollingDelay);
@@ -420,174 +421,173 @@ async function runTests(handle) {
       const response = await SF.fetchTestRun(testRunId);
       testRun = response.data;
     }
+    spinner.stop();
 
-    if (testRun.status !== "completed") {
-      console.error("Ran into an error an couldn't complete test run");
-      console.error(testRun.error_message);
-      process.exit(1);
+    // Possible status: started, completed, test_error, internal_error
+    if (testRun.status === "internal_error") {
+      console.log(
+        "Internal error. Try to run the test again or contact support if the issue persists."
+      );
     }
 
-    if (testRun.result.length !== 0) {
-      spinner.spin("Processing test results..");
+    if (testRun.status === "test_error") {
+      console.log("Ran into an error an couldn't complete test run");
+      console.log(chalk.red(testRun.error_message));
+    }
 
-      const formattedTests = [];
+    if (testRun.status === "completed") {
+      if (testRun.result.length === 0) {
+        console.log(chalk.green("ALL TESTS HAVE PASSED"));
+      } else {
+        // Test run successfully but return errors
+        spinner.spin("Processing test results..");
+        spinner.stop();
+        const formattedTests = [];
 
-      testRun.result.map((test) => {
-        const name = test.test;
-        const type = test.result.split(".")[0];
-        const outcome = test.got;
-        const expected = test.expected;
-        const lineNumber = test.line_number;
+        testRun.result.map((test) => {
+          const name = test.test;
+          const type = test.result.split(".")[0];
+          const outcome = test.got;
+          const expected = test.expected;
+          const lineNumber = test.line_number;
 
-        const emptyTestExpectations = {
-          name,
-          reconciled: {},
-          results: [],
-          rollforwards: [],
-        };
+          const emptyTestExpectations = {
+            name,
+            reconciled: {},
+            results: [],
+            rollforwards: [],
+          };
 
-        const existingItemIndex = formattedTests.findIndex(
-          (item) => item.name === name
+          const existingItemIndex = formattedTests.findIndex(
+            (item) => item.name === name
+          );
+          const existingItem =
+            formattedTests[existingItemIndex] || emptyTestExpectations;
+
+          const testOutput = {
+            lineNumber,
+            expected,
+            outcome,
+          };
+
+          const testExpectations = {
+            name,
+            reconciled: { ...existingItem.reconciled },
+            results: [...existingItem.results],
+            rollforwards: [...existingItem.rollforwards],
+          };
+
+          switch (type) {
+            case "reconciled":
+              testExpectations.reconciled = testOutput;
+              break;
+            case "results":
+              const resultName = test.result.split(".")[1];
+              testOutput.resultName = resultName;
+              testExpectations.results.push(testOutput);
+              break;
+            case "rollforward":
+              const rollforwardName = test.result.split(".").slice(1);
+              testOutput.rollforwardName = rollforwardName;
+              testExpectations.rollforwards.push(testOutput);
+              break;
+          }
+
+          if (existingItemIndex !== -1) {
+            formattedTests[existingItemIndex] = testExpectations;
+          } else {
+            formattedTests.push(testExpectations);
+          }
+        });
+
+        spinner.clear();
+        console.log("");
+
+        console.error(
+          chalk.red(
+            `${formattedTests.length} TEST${
+              formattedTests.length > 1 ? "S" : ""
+            } FAILED`
+          )
         );
-        const existingItem =
-          formattedTests[existingItemIndex] || emptyTestExpectations;
 
-        const testOutput = {
-          lineNumber,
-          expected,
-          outcome,
-        };
-
-        const testExpectations = {
-          name,
-          reconciled: { ...existingItem.reconciled },
-          results: [...existingItem.results],
-          rollforwards: [...existingItem.rollforwards],
-        };
-
-        switch (type) {
-          case "reconciled":
-            testExpectations.reconciled = testOutput;
-            break;
-          case "results":
-            const resultName = test.result.split(".")[1];
-            testOutput.resultName = resultName;
-            testExpectations.results.push(testOutput);
-            break;
-          case "rollforward":
-            const rollforwardName = test.result.split(".").slice(1);
-            testOutput.rollforwardName = rollforwardName;
-            testExpectations.rollforwards.push(testOutput);
-            break;
-        }
-
-        if (existingItemIndex !== -1) {
-          formattedTests[existingItemIndex] = testExpectations;
-        } else {
-          formattedTests.push(testExpectations);
-        }
-      });
-
-      spinner.clear();
-      console.log("");
-
-      console.error(
-        chalk.red(
-          `${formattedTests.length} TEST${
-            formattedTests.length > 1 ? "S" : ""
-          } FAILED`
-        )
-      );
-
-      formattedTests.forEach((test) => {
-        console.log(
-          "---------------------------------------------------------------"
-        );
-        console.log(test.name);
-
-        // Display success messages of test
-        if (Object.keys(test.reconciled).length === 0) {
-          console.log(chalk.green("Reconciliation expectation passed"));
-        }
-
-        if (test.results.length === 0) {
-          console.log(chalk.green("All result expectations passed"));
-        }
-
-        if (test.rollforwards.length === 0) {
-          console.log(chalk.green("All rollforward expectations passed"));
-        }
-
-        // Display error messages of test
-        if (Object.keys(test.reconciled).length > 0) {
-          console.log(chalk.red("Reconciliation expectation failed"));
-          console.log(`At line number ${test.reconciled.lineNumber}`);
+        formattedTests.forEach((test) => {
           console.log(
-            `got ${chalk.blue.bold(
-              test.reconciled.outcome
-            )} but expected ${chalk.blue.bold(test.reconciled.expected)}`
+            "---------------------------------------------------------------"
           );
-          console.log("");
-        }
+          console.log(chalk.bold(test.name));
 
-        if (test.results.length > 0) {
-          console.log(
-            chalk.red(
-              `${test.results.length} result expectation${
-                test.results.length > 1 ? "s" : ""
-              } failed`
-            )
-          );
-          test.results.forEach((expectation) => {
-            console.log(`At line number ${expectation.lineNumber}`);
+          // Display success messages of test
+          if (Object.keys(test.reconciled).length === 0) {
+            console.log(chalk.green("Reconciliation expectation passed"));
+          }
+
+          if (test.results.length === 0) {
+            console.log(chalk.green("All result expectations passed"));
+          }
+
+          if (test.rollforwards.length === 0) {
+            console.log(chalk.green("All rollforward expectations passed"));
+          }
+
+          // Display error messages of test
+          if (Object.keys(test.reconciled).length > 0) {
+            console.log(chalk.red("Reconciliation expectation failed"));
+            console.log(`At line number ${test.reconciled.lineNumber}`);
             console.log(
-              `For result ${chalk.blue.bold(
-                expectation.resultName
-              )} got ${chalk.blue.bold(expectation.outcome)} (${chalk.italic(
-                typeof expectation.outcome
-              )}) but expected ${chalk.blue.bold(
-                expectation.expected
-              )} (${chalk.italic(typeof expectation.expected)})`
+              `got ${chalk.blue.bold(
+                test.reconciled.outcome
+              )} but expected ${chalk.blue.bold(test.reconciled.expected)}`
             );
-          });
-          console.log("");
-        }
+            console.log("");
+          }
 
-        if (test.rollforwards.length > 0) {
-          console.log(
-            chalk.red(
-              `${test.rollforwards.length} rollforward expectation${
-                test.rollforwards.length > 1 ? "s" : ""
-              } failed`
-            )
-          );
-          test.rollforwards.forEach((expectation) => {
-            console.log(`At line number ${expectation.lineNumber}`);
+          if (test.results.length > 0) {
             console.log(
-              `For rollforward ${chalk.blue.bold(
-                expectation.rollforwardName
-              )} got ${chalk.blue.bold(expectation.outcome)} (${chalk.italic(
-                typeof expectation.outcome
-              )}) but expected ${chalk.blue.bold(
-                expectation.expected
-              )} (${chalk.italic(typeof expectation.expected)})`
+              chalk.red(
+                `${test.results.length} result expectation${
+                  test.results.length > 1 ? "s" : ""
+                } failed`
+              )
             );
-          });
-          console.log("");
-        }
-      });
-      console.error(
-        chalk.red(
-          `${formattedTests.length} TEST${
-            formattedTests.length > 1 ? "S" : ""
-          } FAILED`
-        )
-      );
-      process.exit(1);
-    } else {
-      if (testRun.status == "completed") {
-        console.log("ALL TESTS PASSED");
-        process.exit(0);
+            test.results.forEach((expectation) => {
+              console.log(`At line number ${expectation.lineNumber}`);
+              console.log(
+                `For result ${chalk.blue.bold(
+                  expectation.resultName
+                )} got ${chalk.blue.bold(expectation.outcome)} (${chalk.italic(
+                  typeof expectation.outcome
+                )}) but expected ${chalk.blue.bold(
+                  expectation.expected
+                )} (${chalk.italic(typeof expectation.expected)})`
+              );
+            });
+            console.log("");
+          }
+
+          if (test.rollforwards.length > 0) {
+            console.log(
+              chalk.red(
+                `${test.rollforwards.length} rollforward expectation${
+                  test.rollforwards.length > 1 ? "s" : ""
+                } failed`
+              )
+            );
+            test.rollforwards.forEach((expectation) => {
+              console.log(`At line number ${expectation.lineNumber}`);
+              console.log(
+                `For rollforward ${chalk.blue.bold(
+                  expectation.rollforwardName
+                )} got ${chalk.blue.bold(expectation.outcome)} (${chalk.italic(
+                  typeof expectation.outcome
+                )}) but expected ${chalk.blue.bold(
+                  expectation.expected
+                )} (${chalk.italic(typeof expectation.expected)})`
+              );
+            });
+            console.log("");
+          }
+        });
       }
     }
   } catch (error) {
