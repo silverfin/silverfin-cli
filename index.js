@@ -1,6 +1,9 @@
 const SF = require("./api/sf_api");
 const fsUtils = require("./fs_utils");
 const fs = require("fs");
+const { spinner } = require("./resources/spinner");
+const chalk = require("chalk");
+const pkg = require("./package.json");
 
 const RECONCILIATION_FIELDS_TO_SYNC = [
   "id",
@@ -25,14 +28,29 @@ const RECONCILIATION_FIELDS_TO_PUSH = [
   "text_configuration",
 ];
 
-function fsErrorHandler(error) {
+// Uncaught Errors. Open Issue in GitHub
+function uncaughtErrors(error) {
+  if (error.stack) {
+    console.error("");
+    console.error(
+      `!!! Please open an issue including this log on ${pkg.bugs.url}`
+    );
+    console.error("");
+    console.error(error.message);
+    console.error(`silverfin: v${pkg.version}, node: ${process.version}`);
+    console.error("");
+    console.error(error.stack);
+  }
+  process.exit(1);
+}
+
+function errorHandler(error) {
   if (error.code == "ENOENT") {
     console.log(
       `The path ${error.path} was not found, please ensure you've imported all required files`
     );
   } else {
-    console.log("");
-    console.log(error);
+    uncaughtErrors(error);
   }
 }
 
@@ -159,7 +177,7 @@ async function persistReconciliationText(handle) {
       version_comment: "Update published using the API",
     });
   } catch (error) {
-    fsErrorHandler(error);
+    errorHandler(error);
   }
 }
 
@@ -228,7 +246,7 @@ async function persistSharedPart(name) {
       version_comment: "Testing Cli",
     });
   } catch (error) {
-    fsErrorHandler(error);
+    errorHandler(error);
   }
 }
 
@@ -239,8 +257,8 @@ function refreshSharedPartsUsed(handle) {
     const relativePath = `./reconciliation_texts/${handle}`;
     const configReconciliation = fsUtils.readConfig(relativePath);
     configReconciliation.shared_parts = [];
-    fs.readdir(`./shared_parts`, (err, allSharedParts) => {
-      if (err) throw err;
+    fs.readdir(`./shared_parts`, (error, allSharedParts) => {
+      if (error) throw error;
       for (sharedPartDir of allSharedParts) {
         let sharedPartPath = `./shared_parts/${sharedPartDir}`;
         let dir = fs.statSync(sharedPartPath, () => {});
@@ -263,7 +281,7 @@ function refreshSharedPartsUsed(handle) {
       fsUtils.writeConfig(relativePath, configReconciliation);
     });
   } catch (error) {
-    fsErrorHandler(error);
+    errorHandler(error);
   }
 }
 
@@ -314,7 +332,7 @@ async function addSharedPartToReconciliation(
       fsUtils.writeConfig(relativePathSharedPart, configSharedPart);
     }
   } catch (error) {
-    fsErrorHandler(error);
+    errorHandler(error);
   }
 }
 
@@ -356,7 +374,7 @@ async function removeSharedPartFromReconciliation(
       fsUtils.writeConfig(relativePathSharedPart, configSharedPart);
     }
   } catch (error) {
-    fsErrorHandler(error);
+    errorHandler(error);
   }
 }
 
@@ -366,35 +384,214 @@ async function runTests(handle) {
     const config = fsUtils.readConfig(relativePath);
     const testPath = `${relativePath}/${config.test}`;
     const testContent = fs.readFileSync(testPath, "utf-8");
+    const templateContent = constructReconciliationText(handle);
+    templateContent.handle = handle;
+    templateContent.reconciliation_type = config.reconciliation_type;
+    const sharedParts = fsUtils.getSharedParts(handle);
+    if (sharedParts.length !== 0) {
+      templateContent.text_shared_parts = [];
+      for (sharedPart of sharedParts) {
+        let sharedPartContent = fs.readFileSync(
+          `shared_parts/${sharedPart}/${sharedPart}.liquid`,
+          "utf-8"
+        );
+        templateContent.text_shared_parts.push({
+          name: sharedPart,
+          content: sharedPartContent,
+        });
+      }
+    }
 
     const testParams = {
-      template: constructReconciliationText(handle),
+      template: templateContent,
       tests: testContent,
     };
 
     const testRunResponse = await SF.createTestRun(testParams);
     const testRunId = testRunResponse.data;
+
     let testRun = { status: "started" };
     const pollingDelay = 2000;
 
+    spinner.spin("Running tests..");
     while (testRun.status === "started") {
-      await new Promise((resolve) => setTimeout(resolve, pollingDelay));
+      await new Promise((resolve) => {
+        setTimeout(resolve, pollingDelay);
+      });
       const response = await SF.fetchTestRun(testRunId);
       testRun = response.data;
     }
+    spinner.stop();
 
-    if (testRun.status !== "completed") {
-      console.error(testRun.error_message);
-      process.exit(1);
+    // Possible status: started, completed, test_error, internal_error
+    if (testRun.status === "internal_error") {
+      console.log(
+        "Internal error. Try to run the test again or contact support if the issue persists."
+      );
     }
 
-    if (testRun.result.length !== 0) {
-      console.error("Tests Failed");
-      console.error(testRun.result);
-      process.exit(1);
+    if (testRun.status === "test_error") {
+      console.log("Ran into an error an couldn't complete test run");
+      console.log(chalk.red(testRun.error_message));
+    }
+
+    if (testRun.status === "completed") {
+      if (testRun.result.length === 0) {
+        console.log(chalk.green("ALL TESTS HAVE PASSED"));
+      } else {
+        // Test run successfully but return errors
+        spinner.spin("Processing test results..");
+        spinner.stop();
+        const formattedTests = [];
+
+        testRun.result.map((test) => {
+          const name = test.test;
+          const type = test.result.split(".")[0];
+          const outcome = test.got;
+          const expected = test.expected;
+          const lineNumber = test.line_number;
+
+          const emptyTestExpectations = {
+            name,
+            reconciled: {},
+            results: [],
+            rollforwards: [],
+          };
+
+          const existingItemIndex = formattedTests.findIndex(
+            (item) => item.name === name
+          );
+          const existingItem =
+            formattedTests[existingItemIndex] || emptyTestExpectations;
+
+          const testOutput = {
+            lineNumber,
+            expected,
+            outcome,
+          };
+
+          const testExpectations = {
+            name,
+            reconciled: { ...existingItem.reconciled },
+            results: [...existingItem.results],
+            rollforwards: [...existingItem.rollforwards],
+          };
+
+          switch (type) {
+            case "reconciled":
+              testExpectations.reconciled = testOutput;
+              break;
+            case "results":
+              const resultName = test.result.split(".")[1];
+              testOutput.resultName = resultName;
+              testExpectations.results.push(testOutput);
+              break;
+            case "rollforward":
+              const rollforwardName = test.result.split(".").slice(1);
+              testOutput.rollforwardName = rollforwardName;
+              testExpectations.rollforwards.push(testOutput);
+              break;
+          }
+
+          if (existingItemIndex !== -1) {
+            formattedTests[existingItemIndex] = testExpectations;
+          } else {
+            formattedTests.push(testExpectations);
+          }
+        });
+
+        spinner.clear();
+        console.log("");
+
+        console.error(
+          chalk.red(
+            `${formattedTests.length} TEST${
+              formattedTests.length > 1 ? "S" : ""
+            } FAILED`
+          )
+        );
+
+        formattedTests.forEach((test) => {
+          console.log(
+            "---------------------------------------------------------------"
+          );
+          console.log(chalk.bold(test.name));
+
+          // Display success messages of test
+          if (Object.keys(test.reconciled).length === 0) {
+            console.log(chalk.green("Reconciliation expectation passed"));
+          }
+
+          if (test.results.length === 0) {
+            console.log(chalk.green("All result expectations passed"));
+          }
+
+          if (test.rollforwards.length === 0) {
+            console.log(chalk.green("All rollforward expectations passed"));
+          }
+
+          // Display error messages of test
+          if (Object.keys(test.reconciled).length > 0) {
+            console.log(chalk.red("Reconciliation expectation failed"));
+            console.log(`At line number ${test.reconciled.lineNumber}`);
+            console.log(
+              `got ${chalk.blue.bold(
+                test.reconciled.outcome
+              )} but expected ${chalk.blue.bold(test.reconciled.expected)}`
+            );
+            console.log("");
+          }
+
+          if (test.results.length > 0) {
+            console.log(
+              chalk.red(
+                `${test.results.length} result expectation${
+                  test.results.length > 1 ? "s" : ""
+                } failed`
+              )
+            );
+            test.results.forEach((expectation) => {
+              console.log(`At line number ${expectation.lineNumber}`);
+              console.log(
+                `For result ${chalk.blue.bold(
+                  expectation.resultName
+                )} got ${chalk.blue.bold(expectation.outcome)} (${chalk.italic(
+                  typeof expectation.outcome
+                )}) but expected ${chalk.blue.bold(
+                  expectation.expected
+                )} (${chalk.italic(typeof expectation.expected)})`
+              );
+            });
+            console.log("");
+          }
+
+          if (test.rollforwards.length > 0) {
+            console.log(
+              chalk.red(
+                `${test.rollforwards.length} rollforward expectation${
+                  test.rollforwards.length > 1 ? "s" : ""
+                } failed`
+              )
+            );
+            test.rollforwards.forEach((expectation) => {
+              console.log(`At line number ${expectation.lineNumber}`);
+              console.log(
+                `For rollforward ${chalk.blue.bold(
+                  expectation.rollforwardName
+                )} got ${chalk.blue.bold(expectation.outcome)} (${chalk.italic(
+                  typeof expectation.outcome
+                )}) but expected ${chalk.blue.bold(
+                  expectation.expected
+                )} (${chalk.italic(typeof expectation.expected)})`
+              );
+            });
+            console.log("");
+          }
+        });
+      }
     }
   } catch (error) {
-    fsErrorHandler(error);
+    errorHandler(error);
   }
 }
 
@@ -414,4 +611,5 @@ module.exports = {
   removeSharedPartFromReconciliation,
   runTests,
   authorize,
+  uncaughtErrors,
 };

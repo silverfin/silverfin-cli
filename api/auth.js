@@ -15,7 +15,6 @@ class Config {
       const fileData = fs.readFileSync(this.path, "utf-8");
       this.data = JSON.parse(fileData);
     } catch (err) {
-      console.log("File not founded. Creating new Config file.");
       this.data = {};
     }
   }

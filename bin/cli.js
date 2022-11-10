@@ -10,7 +10,11 @@ const program = new Command();
 let firmIdDefault = undefined;
 if (process.env.SF_FIRM_ID) {
   firmIdDefault = process.env.SF_FIRM_ID;
-  console.log(`Firm ID to be used: ${firmIdDefault}`);
+}
+function checkDefaultFirm(firmUsed) {
+  if (firmUsed === firmIdDefault) {
+    console.log(`Firm ID to be used: ${firmIdDefault}`);
+  }
 }
 
 // Version
@@ -18,27 +22,13 @@ if (pkg.version) {
   program.version(pkg.version);
 }
 
-// Uncaught Errors. Open Issue in GitHub
-function uncaughtErrors(err) {
-  if (err.stack) {
-    console.error("");
-    console.error(
-      `!!! Please open an issue including this log on ${pkg.bugs.url}`
-    );
-    console.error("");
-    console.error(err.message);
-    console.error(`silverfin: v${pkg.version}, node: ${process.version}`);
-    console.error("");
-    console.error(err.stack);
-  }
-  process.exit(1);
-}
+// Uncaught Errors
 process
   .on("uncaughtException", (err) => {
-    uncaughtErrors(err);
+    toolkit.uncaughtErrors(err);
   })
   .on("unhandledRejection", (err) => {
-    uncaughtErrors(err);
+    toolkit.uncaughtErrors(err);
   });
 
 // Prompt Confirmation
@@ -71,6 +61,7 @@ program
     if (!options.yes) {
       promptConfirmation();
     }
+    checkDefaultFirm(options.firm);
     firmId = options.firm;
     toolkit.importExistingReconciliationByHandle(options.handle);
   });
@@ -93,6 +84,7 @@ program
     if (!options.yes) {
       promptConfirmation();
     }
+    checkDefaultFirm(options.firm);
     firmId = options.firm;
     toolkit.persistReconciliationText(options.handle);
   });
@@ -111,6 +103,7 @@ program
     if (!options.yes) {
       promptConfirmation();
     }
+    checkDefaultFirm(options.firm);
     firmId = options.firm;
     toolkit.importExistingReconciliations();
   });
@@ -133,6 +126,7 @@ program
     if (!options.yes) {
       promptConfirmation();
     }
+    checkDefaultFirm(options.firm);
     firmId = options.firm;
     toolkit.importExistingSharedPartByName(options.handle);
   });
@@ -155,6 +149,7 @@ program
     if (!options.yes) {
       promptConfirmation();
     }
+    checkDefaultFirm(options.firm);
     firmId = options.firm;
     toolkit.persistSharedPart(options.handle);
   });
@@ -173,6 +168,7 @@ program
     if (!options.yes) {
       promptConfirmation();
     }
+    checkDefaultFirm(options.firm);
     firmId = options.firm;
     toolkit.importExistingSharedParts();
   });
@@ -195,6 +191,7 @@ program
     if (!options.yes) {
       promptConfirmation();
     }
+    checkDefaultFirm(options.firm);
     firmId = options.firm;
     toolkit.refreshSharedPartsUsed(options.handle);
   });
@@ -221,6 +218,7 @@ program
     if (!options.yes) {
       promptConfirmation();
     }
+    checkDefaultFirm(options.firm);
     firmId = options.firm;
     toolkit.addSharedPartToReconciliation(
       options.sharedPart,
@@ -250,6 +248,7 @@ program
     if (!options.yes) {
       promptConfirmation();
     }
+    checkDefaultFirm(options.firm);
     firmId = options.firm;
     toolkit.removeSharedPartFromReconciliation(
       options.sharedPart,
@@ -273,19 +272,9 @@ program
     "Specify the reconciliation to be used (mandatory)"
   )
   .action((options) => {
+    checkDefaultFirm(options.firm);
     firmId = options.firm;
     toolkit.runTests(options.handle);
-  });
-
-// Create Liquid Test
-program
-  .command("create-test")
-  .description(
-    "Create Liquid Test (YAML file) from an existing reconciliation in a company file"
-  )
-  .requiredOption("-u, --url <url>", "Specify the url to be used (mandatory)")
-  .action(() => {
-    // TO BE DONE
   });
 
 // Authorize APP

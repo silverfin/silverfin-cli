@@ -13,12 +13,18 @@ function createFolders(relativePath) {
   createFolder(`${relativePath}/text_parts`);
 }
 
+const errorCallback = (error) => {
+  if (error) {
+    console.log("An error occurred when creating the liquid testing file");
+    console.log(error);
+  }
+};
+
 async function createLiquidTestFiles(
   relativePath,
   testFilenameRoot,
   testContent
 ) {
-  const emptyCallback = () => {};
   // Liquid Test: YAML
   if (
     !fs.existsSync(`${relativePath}/tests/${testFilenameRoot}_liquid_test.yml`)
@@ -26,25 +32,41 @@ async function createLiquidTestFiles(
     fs.writeFile(
       `${relativePath}/tests/${testFilenameRoot}_liquid_test.yml`,
       testContent,
-      emptyCallback
+      (error) => {
+        if (error) {
+          errorCallback(error);
+        } else {
+          if (relativePath) {
+            console.log(`Liquid testing YAML file created for ${relativePath}`);
+          }
+        }
+      }
+    );
+  } else {
+    console.log(
+      `Liquid testing file ${testFilenameRoot}_liquid_test.yml already exists, so the file content was not overwritten`
     );
   }
+
   // Liquid Test: Readme
   if (!fs.existsSync(`${relativePath}/tests/README.md`)) {
     const readmeLiquidTests = fs.readFileSync(
       path.resolve(__dirname, "./resources/liquid_tests/README.md"),
       "UTF-8"
     );
-    fs.writeFileSync(`${relativePath}/tests/README.md`, readmeLiquidTests);
-  }
-
-  if (relativePath) {
-    console.log(`Liquid testing file(s) created for ${relativePath}`);
+    fs.writeFile(
+      `${relativePath}/tests/README.md`,
+      readmeLiquidTests,
+      (error) => {
+        errorCallback(error);
+      }
+    );
   }
 }
 
 async function createTemplateFiles(relativePath, textMain, textParts) {
   const emptyCallback = () => {};
+
   // Template: Main
   fs.writeFile(`${relativePath}/main.liquid`, textMain, emptyCallback);
   // Template: Parts
@@ -88,6 +110,48 @@ function readConfig(relativePath) {
   return config;
 }
 
+// Get an array with all the reconciliations or all shared parts
+function getTemplatePaths(relativePath) {
+  if (
+    relativePath !== "shared_parts" &&
+    relativePath !== "reconciliation_texts"
+  ) {
+    throw "relativePath should be shared_parts or reconciliation_texts";
+  }
+  let templatesArray = [];
+  let allTemplates = fs.readdirSync(`./${relativePath}`);
+  for (templateDir of allTemplates) {
+    let templatePath = `./${relativePath}/${templateDir}`;
+    let dir = fs.statSync(templatePath, () => {});
+    if (dir.isDirectory()) {
+      let configPath = `${templatePath}/config.json`;
+      if (fs.existsSync(configPath)) {
+        templatesArray.push(templatePath);
+      }
+    }
+  }
+  return templatesArray;
+}
+
+// Get an array with all the shared parts (name) used in a specific reconciliation (handle)
+function getSharedParts(handle) {
+  const reconciliationConfig = readConfig(`reconciliation_texts/${handle}`);
+  const reconciliationID = reconciliationConfig.id;
+  const allSharedPartsPaths = getTemplatePaths("shared_parts");
+  const sharedPartsPresent = [];
+  for (sharedPartPath of allSharedPartsPaths) {
+    let sharedPartConfig = readConfig(sharedPartPath);
+    const usedInReconciliation = (reconciliation) =>
+      reconciliation.id === reconciliationID;
+    let reconciliationIndex =
+      sharedPartConfig.used_in.findIndex(usedInReconciliation);
+    if (reconciliationIndex !== -1) {
+      sharedPartsPresent.push(sharedPartConfig.name);
+    }
+  }
+  return sharedPartsPresent;
+}
+
 module.exports = {
   writeConfig,
   createTemplateFiles,
@@ -96,4 +160,6 @@ module.exports = {
   createFolder,
   createFolders,
   readConfig,
+  getTemplatePaths,
+  getSharedParts,
 };
