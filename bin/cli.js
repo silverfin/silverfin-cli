@@ -22,27 +22,13 @@ if (pkg.version) {
   program.version(pkg.version);
 }
 
-// Uncaught Errors. Open Issue in GitHub
-function uncaughtErrors(err) {
-  if (err.stack) {
-    console.error("");
-    console.error(
-      `!!! Please open an issue including this log on ${pkg.bugs.url}`
-    );
-    console.error("");
-    console.error(err.message);
-    console.error(`silverfin: v${pkg.version}, node: ${process.version}`);
-    console.error("");
-    console.error(err.stack);
-  }
-  process.exit(1);
-}
+// Uncaught Errors
 process
   .on("uncaughtException", (err) => {
-    uncaughtErrors(err);
+    toolkit.uncaughtErrors(err);
   })
   .on("unhandledRejection", (err) => {
-    uncaughtErrors(err);
+    toolkit.uncaughtErrors(err);
   });
 
 // Prompt Confirmation

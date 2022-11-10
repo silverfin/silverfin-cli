@@ -3,6 +3,7 @@ const fsUtils = require("./fs_utils");
 const fs = require("fs");
 const spinner = require("./resources/spinner");
 const chalk = require("chalk");
+const pkg = require("./package.json");
 
 const RECONCILIATION_FIELDS_TO_SYNC = [
   "id",
@@ -27,14 +28,29 @@ const RECONCILIATION_FIELDS_TO_PUSH = [
   "text_configuration",
 ];
 
-function fsErrorHandler(error) {
+// Uncaught Errors. Open Issue in GitHub
+function uncaughtErrors(error) {
+  if (error.stack) {
+    console.error("");
+    console.error(
+      `!!! Please open an issue including this log on ${pkg.bugs.url}`
+    );
+    console.error("");
+    console.error(error.message);
+    console.error(`silverfin: v${pkg.version}, node: ${process.version}`);
+    console.error("");
+    console.error(error.stack);
+  }
+  process.exit(1);
+}
+
+function errorHandler(error) {
   if (error.code == "ENOENT") {
     console.log(
       `The path ${error.path} was not found, please ensure you've imported all required files`
     );
   } else {
-    console.log("");
-    console.log(error);
+    uncaughtErrors(error);
   }
 }
 
@@ -161,7 +177,7 @@ async function persistReconciliationText(handle) {
       version_comment: "Update published using the API",
     });
   } catch (error) {
-    fsErrorHandler(error);
+    errorHandler(error);
   }
 }
 
@@ -230,7 +246,7 @@ async function persistSharedPart(name) {
       version_comment: "Testing Cli",
     });
   } catch (error) {
-    fsErrorHandler(error);
+    errorHandler(error);
   }
 }
 
@@ -241,8 +257,8 @@ function refreshSharedPartsUsed(handle) {
     const relativePath = `./reconciliation_texts/${handle}`;
     const configReconciliation = fsUtils.readConfig(relativePath);
     configReconciliation.shared_parts = [];
-    fs.readdir(`./shared_parts`, (err, allSharedParts) => {
-      if (err) throw err;
+    fs.readdir(`./shared_parts`, (error, allSharedParts) => {
+      if (error) throw error;
       for (sharedPartDir of allSharedParts) {
         let sharedPartPath = `./shared_parts/${sharedPartDir}`;
         let dir = fs.statSync(sharedPartPath, () => {});
@@ -265,7 +281,7 @@ function refreshSharedPartsUsed(handle) {
       fsUtils.writeConfig(relativePath, configReconciliation);
     });
   } catch (error) {
-    fsErrorHandler(error);
+    errorHandler(error);
   }
 }
 
@@ -316,7 +332,7 @@ async function addSharedPartToReconciliation(
       fsUtils.writeConfig(relativePathSharedPart, configSharedPart);
     }
   } catch (error) {
-    fsErrorHandler(error);
+    errorHandler(error);
   }
 }
 
@@ -358,7 +374,7 @@ async function removeSharedPartFromReconciliation(
       fsUtils.writeConfig(relativePathSharedPart, configSharedPart);
     }
   } catch (error) {
-    fsErrorHandler(error);
+    errorHandler(error);
   }
 }
 
@@ -575,7 +591,7 @@ async function runTests(handle) {
       }
     }
   } catch (error) {
-    fsErrorHandler(error);
+    errorHandler(error);
   }
 }
 
@@ -595,4 +611,5 @@ module.exports = {
   removeSharedPartFromReconciliation,
   runTests,
   authorize,
+  uncaughtErrors,
 };
