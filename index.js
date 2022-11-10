@@ -319,7 +319,6 @@ async function addSharedPartToReconciliation(
       });
       fsUtils.writeConfig(relativePathReconciliation, configReconciliation);
     }
-
     const reconciliationIndex = configSharedPart.used_in.findIndex(
       (reconciliationText) => reconciliationText.id === configReconciliation.id
     );

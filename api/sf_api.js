@@ -183,7 +183,7 @@ async function fetchReconciliationTexts(page = 1, refreshToken = true) {
   setAxiosDefaults();
   try {
     const response = await axios.get(`reconciliations`, {
-      params: { page: page, per_page: 200 },
+      params: { page: page, per_page: 2000 },
     });
     responseSuccessHandler(response);
     return response;
@@ -244,11 +244,104 @@ async function updateReconciliationText(id, attributes, refreshToken = true) {
   }
 }
 
+async function getReconciliationDetails(
+  companyId,
+  periodId,
+  reconciliationId,
+  refreshToken = true
+) {
+  setAxiosDefaults();
+  try {
+    const response = await axios.get(
+      `/companies/${companyId}/periods/${periodId}/reconciliations/${reconciliationId}`
+    );
+    responseSuccessHandler(response);
+    return response;
+  } catch (error) {
+    const callbackParameters = {
+      companyId: companyId,
+      periodId: periodId,
+      reconciliationId: reconciliationId,
+      refreshToken: false,
+    };
+    const response = await responseErrorHandler(
+      error,
+      refreshToken,
+      getReconciliationDetails,
+      callbackParameters
+    );
+    return response;
+  }
+}
+
+async function getReconciliationCustom(
+  companyId,
+  periodId,
+  reconciliationId,
+  page = 1,
+  refreshToken = true
+) {
+  setAxiosDefaults();
+  try {
+    const response = await axios.get(
+      `/companies/${companyId}/periods/${periodId}/reconciliations/${reconciliationId}/custom`,
+      { params: { page: page, per_page: 2000 } }
+    );
+    responseSuccessHandler(response);
+    return response;
+  } catch (error) {
+    const callbackParameters = {
+      companyId: companyId,
+      periodId: periodId,
+      reconciliationId: reconciliationId,
+      page: page,
+      refreshToken: false,
+    };
+    const response = await responseErrorHandler(
+      error,
+      refreshToken,
+      getReconciliationCustom,
+      callbackParameters
+    );
+    return response;
+  }
+}
+
+async function getReconciliationResults(
+  companyId,
+  periodId,
+  reconciliationId,
+  refreshToken = true
+) {
+  setAxiosDefaults();
+  try {
+    const response = await axios.get(
+      `/companies/${companyId}/periods/${periodId}/reconciliations/${reconciliationId}/results`
+    );
+    responseSuccessHandler(response);
+    return response;
+  } catch (error) {
+    const callbackParameters = {
+      companyId: companyId,
+      periodId: periodId,
+      reconciliationId: reconciliationId,
+      refreshToken: false,
+    };
+    const response = await responseErrorHandler(
+      error,
+      refreshToken,
+      getReconciliationResults,
+      callbackParameters
+    );
+    return response;
+  }
+}
+
 async function fetchSharedParts(page = 1, refreshToken = true) {
   setAxiosDefaults();
   try {
     const response = await axios.get(`shared_parts`, {
-      params: { page: page, per_page: 200 },
+      params: { page: page, per_page: 2000 },
     });
     responseSuccessHandler(response);
     return response;
@@ -414,7 +507,7 @@ async function getPeriods(companyId, page = 1, refreshToken = true) {
   setAxiosDefaults();
   try {
     const response = await axios.get(`/companies/${companyId}/periods`, {
-      params: { page: page, per_page: 200 },
+      params: { page: page, per_page: 2000 },
     });
     responseSuccessHandler(response);
     return response;
@@ -509,7 +602,7 @@ async function getWorkflowInformation(
   try {
     const response = await axios.get(
       `/companies/${companyId}/periods/${periodId}/workflows/${workflowId}/reconciliations`,
-      { params: { page: page, per_page: 200 } }
+      { params: { page: page, per_page: 2000 } }
     );
     responseSuccessHandler(response);
     return response;
