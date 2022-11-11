@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const toolkit = require("../index.js");
+const liquidTests = require("../liquid_test_generator/generator");
 const { Command } = require("commander");
 const prompt = require("prompt-sync")({ sigint: true });
 const pkg = require("../package.json");
@@ -275,6 +276,27 @@ program
     checkDefaultFirm(options.firm);
     firmId = options.firm;
     toolkit.runTests(options.handle);
+  });
+
+// Create Liquid Test
+program
+  .command("create-test")
+  .description(
+    "Create Liquid Test (YAML file) from an existing reconciliation in a company file"
+  )
+  .requiredOption("-u, --url <url>", "Specify the url to be used (mandatory)")
+  .option(
+    "--unreconciled",
+    "By default, the reconciled status will be set as true. Add this option to set it as false (optional)"
+  )
+  .option(
+    "-t, --test-name <testName>",
+    "Establish the name of the test. It should have no white-spaces (e.g. test_name)(optional)"
+  )
+  .action((options) => {
+    reconciledStatus = options.unreconciled ? false : true;
+    testName = options.testName ? options.testName : "test_name";
+    liquidTests.testGenerator(options.url);
   });
 
 // Authorize APP
