@@ -221,10 +221,7 @@ program
     }
     checkDefaultFirm(options.firm);
     firmId = options.firm;
-    toolkit.addSharedPartToReconciliation(
-      options.sharedPart,
-      options.reconciliation
-    );
+    toolkit.addSharedPartToReconciliation(options.sharedPart, options.handle);
   });
 
 // Remove shared part to reconciliation
@@ -253,7 +250,7 @@ program
     firmId = options.firm;
     toolkit.removeSharedPartFromReconciliation(
       options.sharedPart,
-      options.reconciliation
+      options.handle
     );
   });
 
