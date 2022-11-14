@@ -589,6 +589,9 @@ async function runTests(handle) {
         });
       }
     }
+    // Always return the response from Silverfin
+    // We use this in the VS-Code extension to process results
+    return testRun;
   } catch (error) {
     errorHandler(error);
   }
