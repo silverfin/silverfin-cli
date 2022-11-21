@@ -412,6 +412,12 @@ async function runTests(firmId, handle) {
       tests: testContent,
     };
 
+    // Empty YAML check
+    if (testContent.split("\n").length <= 1) {
+      console.log(`${handle}: there are no tests stored in the YAML file`);
+      process.exit(1);
+    }
+
     const testRunResponse = await SF.createTestRun(firmId, testParams);
     const testRunId = testRunResponse.data;
 
