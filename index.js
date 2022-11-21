@@ -108,16 +108,17 @@ function storeImportedReconciliation(reconciliationText) {
   fsUtils.writeConfig(relativePath, configContent);
 }
 
-async function importExistingReconciliationByHandle(handle) {
-  reconciliationText = await SF.findReconciliationText(handle);
+async function importExistingReconciliationByHandle(firmId, handle) {
+  reconciliationText = await SF.findReconciliationText(firmId, handle);
   if (!reconciliationText) {
     throw `${handle} wasn't found`;
   }
   storeImportedReconciliation(reconciliationText);
 }
 
-async function importExistingReconciliations(page = 1) {
-  const response = await SF.fetchReconciliationTexts(page);
+// Import all reconciliations
+async function importExistingReconciliations(firmId, page = 1) {
+  const response = await SF.fetchReconciliationTexts(firmId, page);
   const reconciliationsArray = response.data;
   if (reconciliationsArray.length == 0) {
     if (page == 1) {
@@ -128,7 +129,7 @@ async function importExistingReconciliations(page = 1) {
   reconciliationsArray.forEach(async (reconciliation) => {
     storeImportedReconciliation(reconciliation);
   });
-  importExistingReconciliations(page + 1);
+  importExistingReconciliations(firmId, page + 1);
 }
 
 function constructReconciliationText(handle) {
@@ -157,7 +158,7 @@ function constructReconciliationText(handle) {
   return attributes;
 }
 
-async function persistReconciliationText(handle) {
+async function persistReconciliationText(firmId, handle) {
   try {
     const relativePath = `./reconciliation_texts/${handle}`;
     const config = fsUtils.readConfig(relativePath);
@@ -166,13 +167,14 @@ async function persistReconciliationText(handle) {
       reconciliationTextId = config.id;
       console.log("Loaded from config");
     } else {
-      reconciliationTextId = { ...(await SF.findReconciliationText(handle)) }
-        .id;
+      reconciliationTextId = {
+        ...(await SF.findReconciliationText(firmId, handle)),
+      }.id;
     }
     if (!reconciliationTextId) {
       throw "Reconciliation not found";
     }
-    SF.updateReconciliationText(reconciliationTextId, {
+    SF.updateReconciliationText(firmId, reconciliationTextId, {
       ...constructReconciliationText(handle),
       version_comment: "Update published using the API",
     });
@@ -181,8 +183,8 @@ async function persistReconciliationText(handle) {
   }
 }
 
-async function importExistingSharedPartById(id) {
-  const sharedPart = await SF.fetchSharedPartById(id);
+async function importExistingSharedPartById(firmId, id) {
+  const sharedPart = await SF.fetchSharedPartById(firmId, id);
 
   if (!sharedPart) {
     throw `Shared part ${id} wasn't found.`;
@@ -209,16 +211,16 @@ async function importExistingSharedPartById(id) {
   fsUtils.writeConfig(relativePath, config);
 }
 
-async function importExistingSharedPartByName(name) {
-  const sharedPartByName = await SF.findSharedPart(name);
+async function importExistingSharedPartByName(firmId, name) {
+  const sharedPartByName = await SF.findSharedPart(firmId, name);
   if (!sharedPartByName) {
     throw `Shared part with name ${name} wasn't found.`;
   }
-  importExistingSharedPartById(sharedPartByName.id);
+  importExistingSharedPartById(firmId, sharedPartByName.id);
 }
 
-async function importExistingSharedParts(page = 1) {
-  const response = await SF.fetchSharedParts(page);
+async function importExistingSharedParts(firmId, page = 1) {
+  const response = await SF.fetchSharedParts(firmId, page);
   const sharedParts = response.data;
   if (sharedParts.length == 0) {
     if (page == 1) {
@@ -227,12 +229,12 @@ async function importExistingSharedParts(page = 1) {
     return;
   }
   sharedParts.forEach(async (sharedPart) => {
-    await importExistingSharedPartById(sharedPart.id);
+    await importExistingSharedPartById(firmId, sharedPart.id);
   });
-  importExistingSharedParts(page + 1);
+  importExistingSharedParts(firmId, page + 1);
 }
 
-async function persistSharedPart(name) {
+async function persistSharedPart(firmId, name) {
   try {
     const relativePath = `./shared_parts/${name}`;
     const config = fsUtils.readConfig(relativePath);
@@ -241,7 +243,7 @@ async function persistSharedPart(name) {
       `${relativePath}/${name}.liquid`,
       "utf-8"
     );
-    SF.updateSharedPart(config.id, {
+    SF.updateSharedPart(firmId, config.id, {
       ...attributes,
       version_comment: "Testing Cli",
     });
@@ -286,6 +288,7 @@ function refreshSharedPartsUsed(handle) {
 }
 
 async function addSharedPartToReconciliation(
+  firmId,
   sharedPartHandle,
   reconciliationHandle
 ) {
@@ -298,6 +301,7 @@ async function addSharedPartToReconciliation(
     const configSharedPart = fsUtils.readConfig(relativePathSharedPart);
 
     const response = await SF.addSharedPart(
+      firmId,
       configSharedPart.id,
       configReconciliation.id
     );
@@ -336,6 +340,7 @@ async function addSharedPartToReconciliation(
 }
 
 async function removeSharedPartFromReconciliation(
+  firmId,
   sharedPartHandle,
   reconciliationHandle
 ) {
@@ -348,6 +353,7 @@ async function removeSharedPartFromReconciliation(
     const configSharedPart = fsUtils.readConfig(relativePathSharedPart);
 
     const response = await SF.removeSharedPart(
+      firmId,
       configSharedPart.id,
       configReconciliation.id
     );
@@ -377,7 +383,7 @@ async function removeSharedPartFromReconciliation(
   }
 }
 
-async function runTests(handle) {
+async function runTests(firmId, handle) {
   try {
     const relativePath = `./reconciliation_texts/${handle}`;
     const config = fsUtils.readConfig(relativePath);
@@ -406,7 +412,7 @@ async function runTests(handle) {
       tests: testContent,
     };
 
-    const testRunResponse = await SF.createTestRun(testParams);
+    const testRunResponse = await SF.createTestRun(firmId, testParams);
     const testRunId = testRunResponse.data;
 
     let testRun = { status: "started" };
@@ -417,7 +423,7 @@ async function runTests(handle) {
       await new Promise((resolve) => {
         setTimeout(resolve, pollingDelay);
       });
-      const response = await SF.fetchTestRun(testRunId);
+      const response = await SF.fetchTestRun(firmId, testRunId);
       testRun = response.data;
     }
     spinner.stop();

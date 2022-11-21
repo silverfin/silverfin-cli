@@ -64,8 +64,7 @@ program
       promptConfirmation();
     }
     checkDefaultFirm(options.firm);
-    firmId = options.firm;
-    toolkit.importExistingReconciliationByHandle(options.handle);
+    toolkit.importExistingReconciliationByHandle(options.firm, options.handle);
   });
 
 // Update a single reconciliation
@@ -87,8 +86,7 @@ program
       promptConfirmation();
     }
     checkDefaultFirm(options.firm);
-    firmId = options.firm;
-    toolkit.persistReconciliationText(options.handle);
+    toolkit.persistReconciliationText(options.firm, options.handle);
   });
 
 // Import all reconciliations
@@ -106,8 +104,7 @@ program
       promptConfirmation();
     }
     checkDefaultFirm(options.firm);
-    firmId = options.firm;
-    toolkit.importExistingReconciliations();
+    toolkit.importExistingReconciliations(options.firm);
   });
 
 // Import a single shared part
@@ -129,8 +126,7 @@ program
       promptConfirmation();
     }
     checkDefaultFirm(options.firm);
-    firmId = options.firm;
-    toolkit.importExistingSharedPartByName(options.handle);
+    toolkit.importExistingSharedPartByName(options.firm, options.handle);
   });
 
 // Update a single shared part
@@ -152,8 +148,7 @@ program
       promptConfirmation();
     }
     checkDefaultFirm(options.firm);
-    firmId = options.firm;
-    toolkit.persistSharedPart(options.handle);
+    toolkit.persistSharedPart(options.firm, options.handle);
   });
 
 // Import all shared parts
@@ -171,8 +166,7 @@ program
       promptConfirmation();
     }
     checkDefaultFirm(options.firm);
-    firmId = options.firm;
-    toolkit.importExistingSharedParts();
+    toolkit.importExistingSharedParts(options.firm);
   });
 
 // Update shared parts used in a reconciliation
@@ -194,8 +188,7 @@ program
       promptConfirmation();
     }
     checkDefaultFirm(options.firm);
-    firmId = options.firm;
-    toolkit.refreshSharedPartsUsed(options.handle);
+    toolkit.refreshSharedPartsUsed(options.firm, options.handle);
   });
 
 // Add shared part to reconciliation
@@ -221,8 +214,11 @@ program
       promptConfirmation();
     }
     checkDefaultFirm(options.firm);
-    firmId = options.firm;
-    toolkit.addSharedPartToReconciliation(options.sharedPart, options.handle);
+    toolkit.addSharedPartToReconciliation(
+      options.firm,
+      options.sharedPart,
+      options.handle
+    );
   });
 
 // Remove shared part to reconciliation
@@ -248,8 +244,8 @@ program
       promptConfirmation();
     }
     checkDefaultFirm(options.firm);
-    firmId = options.firm;
     toolkit.removeSharedPartFromReconciliation(
+      options.firm,
       options.sharedPart,
       options.handle
     );
@@ -272,8 +268,7 @@ program
   )
   .action((options) => {
     checkDefaultFirm(options.firm);
-    firmId = options.firm;
-    toolkit.runTests(options.handle);
+    toolkit.runTests(options.firm, options.handle);
   });
 
 // Create Liquid Test
