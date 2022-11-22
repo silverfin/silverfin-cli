@@ -300,8 +300,8 @@ program
 program
   .command("authorize")
   .description("Authorize the CLI by entering your Silverfin API credentials")
-  .action(() => {
-    toolkit.authorize();
+  .action((options) => {
+    toolkit.authorize(firmIdDefault);
   });
 
 // Repositories Statistics
@@ -313,7 +313,8 @@ program
   )
   .action((options) => {
     stats.generateStatsOverview(options.since);
-    
+  });
+
 // Set/Get FIRM ID
 program
   .command("config")

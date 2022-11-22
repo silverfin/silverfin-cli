@@ -20,17 +20,20 @@ if (missingVariables.length) {
   process.exit(1);
 }
 
-async function authorizeApp() {
+async function authorizeApp(firmId = undefined) {
   try {
+    console.log(
+      `Note: if you need to exit this process you can press "Ctrl/Cmmd + C"`
+    );
     const redirectUri = "urn%3Aietf%3Awg%3Aoauth%3A2.0%3Aoob";
     const scope =
       "user%3Aprofile+user%3Aemail+webhooks+administration%3Aread+administration%3Awrite+permanent_documents%3Aread+permanent_documents%3Awrite+communication%3Aread+communication%3Awrite+financials%3Aread+financials%3Awrite+financials%3Atransactions%3Aread+financials%3Atransactions%3Awrite+links+workflows%3Aread";
 
     let firmIdPrompt;
-    if (process.env.SF_FIRM_ID) {
+    if (firmId) {
       firmIdPrompt = prompt(
-        `Enter the firm ID: (leave blank to use ${process.env.SF_FIRM_ID})`,
-        { value: process.env.SF_FIRM_ID }
+        `Enter the firm ID: (leave blank to use ${firmId})`,
+        { value: firmId }
       );
     } else {
       firmIdPrompt = prompt("Enter the firm ID: ");

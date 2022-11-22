@@ -610,8 +610,8 @@ async function runTests(firmId, handle) {
   }
 }
 
-function authorize() {
-  SF.authorizeApp();
+function authorize(firmId = undefined) {
+  SF.authorizeApp(firmId);
 }
 
 function setDefaultFirmID(firmId) {

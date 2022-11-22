@@ -119,6 +119,9 @@ function getTemplatePaths(relativePath) {
     throw "relativePath should be shared_parts or reconciliation_texts";
   }
   let templatesArray = [];
+  if (!fs.existsSync(`./${relativePath}`)) {
+    return templatesArray;
+  }
   let allTemplates = fs.readdirSync(`./${relativePath}`);
   for (templateDir of allTemplates) {
     let templatePath = `./${relativePath}/${templateDir}`;
