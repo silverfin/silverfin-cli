@@ -15,10 +15,11 @@ class Config {
       const fileData = fs.readFileSync(this.path, "utf-8");
       this.data = JSON.parse(fileData);
     } catch (err) {
-      this.data = {};
+      this.data = { defaultFirmIDs: {} };
     }
   }
 
+  // Write file
   saveConfig() {
     fs.writeFileSync(
       this.path,
@@ -35,6 +36,7 @@ class Config {
   }
 
   // Store new tokens to config
+  // { firmId: {accessToken: string, refreshToken: string}}
   storeNewTokens(responseTokens, firmId) {
     if (responseTokens) {
       this.data[firmId] = {
@@ -44,8 +46,35 @@ class Config {
       this.saveConfig();
     }
   }
+
+  // Set default firm id
+  setFirmId(firmId) {
+    this.checkDefaultFirmsObject();
+    const currentDirectory = path.basename(process.cwd());
+    this.data.defaultFirmIDs[currentDirectory] = firmId;
+    this.saveConfig();
+  }
+
+  // Get default firm id
+  getFirmId() {
+    this.checkDefaultFirmsObject();
+    const currentDirectory = path.basename(process.cwd());
+    if (this.data.defaultFirmIDs.hasOwnProperty(currentDirectory)) {
+      return this.data.defaultFirmIDs[currentDirectory];
+    } else {
+      return null;
+    }
+  }
+
+  // Create DefaultFirmIDs (for legacy compatibility of existing files)
+  checkDefaultFirmsObject() {
+    if (!this.data.hasOwnProperty("defaultFirmIDs")) {
+      this.data.defaultFirmIDs = {};
+    }
+  }
 }
 
+// Iniatiate Object
 const config = new Config();
 
 module.exports = { config };

@@ -4,6 +4,7 @@ const fs = require("fs");
 const { spinner } = require("./resources/spinner");
 const chalk = require("chalk");
 const pkg = require("./package.json");
+const { config } = require("./api/auth");
 
 const RECONCILIATION_FIELDS_TO_SYNC = [
   "id",
@@ -613,6 +614,16 @@ function authorize() {
   SF.authorizeApp();
 }
 
+function setDefaultFirmID(firmId) {
+  config.setFirmId(firmId);
+  console.log(`Set firm id to: ${firmId}`);
+}
+
+function getDefaultFirmID() {
+  const firmId = config.getFirmId();
+  return firmId;
+}
+
 module.exports = {
   importExistingReconciliationByHandle,
   importExistingReconciliations,
@@ -626,4 +637,6 @@ module.exports = {
   runTests,
   authorize,
   uncaughtErrors,
+  setDefaultFirmID,
+  getDefaultFirmID,
 };

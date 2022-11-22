@@ -309,6 +309,23 @@ program
   )
   .action((options) => {
     stats.generateStatsOverview(options.since);
+    
+// Set/Get FIRM ID
+program
+  .command("config")
+  .description("Configuration options")
+  .option(
+    "-s, --set-firm <firmId>",
+    "Store a firm id to use it as default (setting a firm id will overwrite any existing data)"
+  )
+  .option("-g, --get-firm", "Check if there is any firm id already stored")
+  .action((options) => {
+    if (options.setFirm) {
+      toolkit.setDefaultFirmID(options.setFirm);
+    }
+    if (options.getFirm) {
+      toolkit.getDefaultFirmID();
+    }
   });
 
 program.parse();
