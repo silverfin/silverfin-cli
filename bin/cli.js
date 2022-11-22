@@ -8,9 +8,13 @@ const prompt = require("prompt-sync")({ sigint: true });
 const pkg = require("../package.json");
 const program = new Command();
 
-// Load firm id from ENV vars
+// Load default firm id from Config Object or ENV
 let firmIdDefault = undefined;
-if (process.env.SF_FIRM_ID) {
+let firmStoredConfig = toolkit.getDefaultFirmID();
+if (firmStoredConfig) {
+  firmIdDefault = firmStoredConfig;
+}
+if (!firmIdDefault && process.env.SF_FIRM_ID) {
   firmIdDefault = process.env.SF_FIRM_ID;
 }
 function checkDefaultFirm(firmUsed) {
@@ -324,7 +328,12 @@ program
       toolkit.setDefaultFirmID(options.setFirm);
     }
     if (options.getFirm) {
-      toolkit.getDefaultFirmID();
+      const storedFirmId = toolkit.getDefaultFirmID();
+      if (storedFirmId) {
+        console.log(`Firm id previously stored: ${storedFirmId}`);
+      } else {
+        console.log("There is no firm id previously stored");
+      }
     }
   });
 
