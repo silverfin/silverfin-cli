@@ -2,6 +2,7 @@
 
 const toolkit = require("../index.js");
 const liquidTests = require("../liquid_test_generator/generator");
+const stats = require("../stats_utils");
 const { Command } = require("commander");
 const prompt = require("prompt-sync")({ sigint: true });
 const pkg = require("../package.json");
@@ -302,6 +303,17 @@ program
   .description("Authorize the CLI by entering your Silverfin API credentials")
   .action(() => {
     toolkit.authorize();
+  });
+
+// Repositories Statistics
+program
+  .command("stats")
+  .description("Generate an overview with some statistics")
+  .requiredOption(
+    "-s, --since <date>, Specify the date which is going to be used to filter the data from (format: YYYY-MM-DD) (mandatory)"
+  )
+  .action((options) => {
+    stats.generateStatsOverview(options.since);
   });
 
 program.parse();
