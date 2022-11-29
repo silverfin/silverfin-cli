@@ -1,6 +1,6 @@
-const readline = require("readline");
 const process = require("process");
 const std = process.stdout;
+const readline = require("readline");
 
 class Spinner {
   constructor() {
@@ -42,6 +42,7 @@ class Spinner {
   clear() {
     readline.clearLine(process.stdout);
     readline.cursorTo(process.stdout, 0);
+    std.write("\u001B[?25h");
   }
 
   stop() {
