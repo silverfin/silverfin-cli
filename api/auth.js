@@ -47,6 +47,16 @@ class Config {
     }
   }
 
+  // Get Access Token
+  getTokens(firmId) {
+    this.checkDefaultFirmsObject();
+    if (this.data.hasOwnProperty(firmId)) {
+      return this.data[firmId];
+    } else {
+      return null;
+    }
+  }
+
   // Set default firm id
   setFirmId(firmId) {
     this.checkDefaultFirmsObject();

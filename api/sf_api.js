@@ -113,11 +113,12 @@ async function refreshTokens(firmId, accessToken, refreshToken) {
 }
 
 function setAxiosDefaults(firmId) {
-  if (config.data.hasOwnProperty(firmId)) {
+  const firmCredentials = config.getTokens(firmId);
+  if (firmCredentials) {
     axios.defaults.baseURL = `${baseURL}/api/v4/f/${firmId}`;
-    axios.defaults.headers.common["Authorization"] = `Bearer ${
-      config.data[String(firmId)].accessToken
-    }`;
+    axios.defaults.headers.common[
+      "Authorization"
+    ] = `Bearer ${firmCredentials.accessToken}`;
   } else {
     console.log(`Missing authorization for firm id: ${firmId}`);
     process.exit(1);
