@@ -202,7 +202,7 @@ async function importExistingSharedPartById(firmId, id) {
     sharedPart.data.text
   );
 
-  config = {
+  let config = {
     id: sharedPart.data.id,
     name: sharedPart.data.name,
     text: "main.liquid",

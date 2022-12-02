@@ -49,26 +49,38 @@ function promptConfirmation() {
   return true;
 }
 
-// Import a single reconciliation
+// Import reconciliations
 program
   .command("import-reconciliation")
-  .description("Import an existing reconciliation template")
+  .description("Import reconciliation templates")
   .requiredOption(
     "-f, --firm <firm-id>",
-    "Specify the firm to be used (mandatory)",
+    "Specify the firm to be used",
     firmIdDefault
   )
-  .requiredOption(
-    "-h, --handle <handle>",
-    "Specify the reconcilation to be used (mandatory)"
-  )
+  .option("-h, --handle <handle>", "Import a specific reconciliation")
+  .option("-a, --all", "Import all reconciliations")
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
+    // Check that only one of both options it's selected
+    if ((!options.handle && !options.all) || (options.handle && options.all)) {
+      console.log(
+        "Import shared part: you have to use either --handle or --all option"
+      );
+      process.exit(1);
+    }
     if (!options.yes) {
       promptConfirmation();
     }
     checkDefaultFirm(options.firm);
-    toolkit.importExistingReconciliationByHandle(options.firm, options.handle);
+    if (options.handle) {
+      toolkit.importExistingReconciliationByHandle(
+        options.firm,
+        options.handle
+      );
+    } else if (options.all) {
+      toolkit.importExistingReconciliations(options.firm);
+    }
   });
 
 // Update a single reconciliation
@@ -93,44 +105,35 @@ program
     toolkit.persistReconciliationText(options.firm, options.handle);
   });
 
-// Import all reconciliations
-program
-  .command("import-all-reconciliations")
-  .description("Import all reconciliations at once")
-  .requiredOption(
-    "-f, --firm <firm-id>",
-    "Specify the firm to be used (mandatory)",
-    firmIdDefault
-  )
-  .option("--yes", "Skip the prompt confirmation (optional)")
-  .action((options) => {
-    if (!options.yes) {
-      promptConfirmation();
-    }
-    checkDefaultFirm(options.firm);
-    toolkit.importExistingReconciliations(options.firm);
-  });
-
 // Import a single shared part
 program
   .command("import-shared-part")
   .description("Import an existing shared part")
   .requiredOption(
     "-f, --firm <firm-id>",
-    "Specify the firm to be used (mandatory)",
+    "Specify the firm to be used",
     firmIdDefault
   )
-  .requiredOption(
-    "-n, --name <handle>",
-    "Specify the shared part to be used (mandatory)"
-  )
+  .option("-n, --name <name>", "Import a specific shared part")
+  .option("-a, --all", "Import all shared parts")
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
+    // Check that only one of both options it's selected
+    if ((!options.name && !options.all) || (options.name && options.all)) {
+      console.log(
+        "Import reconciliation: you have to use either --name or --all option"
+      );
+      process.exit(1);
+    }
     if (!options.yes) {
       promptConfirmation();
     }
     checkDefaultFirm(options.firm);
-    toolkit.importExistingSharedPartByName(options.firm, options.name);
+    if (options.name) {
+      toolkit.importExistingSharedPartByName(options.firm, options.name);
+    } else if (options.all) {
+      toolkit.importExistingSharedParts(options.firm);
+    }
   });
 
 // Update a single shared part
@@ -153,24 +156,6 @@ program
     }
     checkDefaultFirm(options.firm);
     toolkit.persistSharedPart(options.firm, options.handle);
-  });
-
-// Import all shared parts
-program
-  .command("import-all-shared-parts")
-  .description("Import all shared parts at once")
-  .requiredOption(
-    "-f, --firm <firm-id>",
-    "Specify the firm to be used (mandatory)",
-    firmIdDefault
-  )
-  .option("--yes", "Skip the prompt confirmation (optional)")
-  .action((options) => {
-    if (!options.yes) {
-      promptConfirmation();
-    }
-    checkDefaultFirm(options.firm);
-    toolkit.importExistingSharedParts(options.firm);
   });
 
 // Update shared parts used in a reconciliation
