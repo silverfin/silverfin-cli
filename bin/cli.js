@@ -158,28 +158,6 @@ program
     toolkit.persistSharedPart(options.firm, options.handle);
   });
 
-// Update shared parts used in a reconciliation
-program
-  .command("shared-parts-used")
-  .description("Update the list of shared used for a specific reconciliation")
-  .requiredOption(
-    "-f, --firm <firm-id>",
-    "Specify the firm to be used (mandatory)",
-    firmIdDefault
-  )
-  .requiredOption(
-    "-h, --handle <handle>",
-    "Specify the reconciliation to be used (mandatory)"
-  )
-  .option("--yes", "Skip the prompt confirmation (optional)")
-  .action((options) => {
-    if (!options.yes) {
-      promptConfirmation();
-    }
-    checkDefaultFirm(options.firm);
-    toolkit.refreshSharedPartsUsed(options.firm, options.handle);
-  });
-
 // Add shared part to reconciliation
 program
   .command("add-shared-part")
@@ -238,6 +216,28 @@ program
       options.sharedPart,
       options.handle
     );
+  });
+
+// Update shared parts used in a reconciliation
+program
+  .command("shared-parts-used")
+  .description("Update the list of shared used for a specific reconciliation")
+  .requiredOption(
+    "-f, --firm <firm-id>",
+    "Specify the firm to be used (mandatory)",
+    firmIdDefault
+  )
+  .requiredOption(
+    "-h, --handle <handle>",
+    "Specify the reconciliation to be used (mandatory)"
+  )
+  .option("--yes", "Skip the prompt confirmation (optional)")
+  .action((options) => {
+    if (!options.yes) {
+      promptConfirmation();
+    }
+    checkDefaultFirm(options.firm);
+    toolkit.refreshSharedPartsUsed(options.firm, options.handle);
   });
 
 // Run Liquid Test
