@@ -121,7 +121,7 @@ program
     firmIdDefault
   )
   .requiredOption(
-    "-h, --handle <handle>",
+    "-n, --name <handle>",
     "Specify the shared part to be used (mandatory)"
   )
   .option("--yes", "Skip the prompt confirmation (optional)")
@@ -130,7 +130,7 @@ program
       promptConfirmation();
     }
     checkDefaultFirm(options.firm);
-    toolkit.importExistingSharedPartByName(options.firm, options.handle);
+    toolkit.importExistingSharedPartByName(options.firm, options.name);
   });
 
 // Update a single shared part
