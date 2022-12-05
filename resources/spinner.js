@@ -1,6 +1,6 @@
-const readline = require("readline");
 const process = require("process");
 const std = process.stdout;
+const readline = require("readline");
 
 class Spinner {
   constructor() {
