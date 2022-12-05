@@ -40,13 +40,10 @@ class Spinner {
   }
 
   clear() {
+    this.running = false;
     readline.clearLine(process.stdout);
     readline.cursorTo(process.stdout, 0);
-    std.write("\u001B[?25h");
-  }
-
-  stop() {
-    this.running = false;
+    std.write("\x1B[?25h");
   }
 }
 

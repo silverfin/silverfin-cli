@@ -8,9 +8,13 @@ const prompt = require("prompt-sync")({ sigint: true });
 const pkg = require("../package.json");
 const program = new Command();
 
-// Load firm id from ENV vars
+// Load default firm id from Config Object or ENV
 let firmIdDefault = undefined;
-if (process.env.SF_FIRM_ID) {
+let firmStoredConfig = toolkit.getDefaultFirmID();
+if (firmStoredConfig) {
+  firmIdDefault = firmStoredConfig;
+}
+if (!firmIdDefault && process.env.SF_FIRM_ID) {
   firmIdDefault = process.env.SF_FIRM_ID;
 }
 function checkDefaultFirm(firmUsed) {
@@ -45,27 +49,38 @@ function promptConfirmation() {
   return true;
 }
 
-// Import a single reconciliation
+// Import reconciliations
 program
   .command("import-reconciliation")
-  .description("Import an existing reconciliation template")
+  .description("Import reconciliation templates")
   .requiredOption(
     "-f, --firm <firm-id>",
-    "Specify the firm to be used (mandatory)",
+    "Specify the firm to be used",
     firmIdDefault
   )
-  .requiredOption(
-    "-h, --handle <handle>",
-    "Specify the reconcilation to be used (mandatory)"
-  )
+  .option("-h, --handle <handle>", "Import a specific reconciliation")
+  .option("-a, --all", "Import all reconciliations")
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
+    // Check that only one of both options it's selected
+    if ((!options.handle && !options.all) || (options.handle && options.all)) {
+      console.log(
+        "Import reconciliation: you have to use either --handle or --all option"
+      );
+      process.exit(1);
+    }
     if (!options.yes) {
       promptConfirmation();
     }
     checkDefaultFirm(options.firm);
-    firmId = options.firm;
-    toolkit.importExistingReconciliationByHandle(options.handle);
+    if (options.handle) {
+      toolkit.importExistingReconciliationByHandle(
+        options.firm,
+        options.handle
+      );
+    } else if (options.all) {
+      toolkit.importExistingReconciliations(options.firm);
+    }
   });
 
 // Update a single reconciliation
@@ -87,27 +102,7 @@ program
       promptConfirmation();
     }
     checkDefaultFirm(options.firm);
-    firmId = options.firm;
-    toolkit.persistReconciliationText(options.handle);
-  });
-
-// Import all reconciliations
-program
-  .command("import-all-reconciliations")
-  .description("Import all reconciliations at once")
-  .requiredOption(
-    "-f, --firm <firm-id>",
-    "Specify the firm to be used (mandatory)",
-    firmIdDefault
-  )
-  .option("--yes", "Skip the prompt confirmation (optional)")
-  .action((options) => {
-    if (!options.yes) {
-      promptConfirmation();
-    }
-    checkDefaultFirm(options.firm);
-    firmId = options.firm;
-    toolkit.importExistingReconciliations();
+    toolkit.persistReconciliationText(options.firm, options.handle);
   });
 
 // Import a single shared part
@@ -116,21 +111,29 @@ program
   .description("Import an existing shared part")
   .requiredOption(
     "-f, --firm <firm-id>",
-    "Specify the firm to be used (mandatory)",
+    "Specify the firm to be used",
     firmIdDefault
   )
-  .requiredOption(
-    "-h, --handle <handle>",
-    "Specify the shared part to be used (mandatory)"
-  )
+  .option("-n, --name <name>", "Import a specific shared part")
+  .option("-a, --all", "Import all shared parts")
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
+    // Check that only one of both options it's selected
+    if ((!options.name && !options.all) || (options.name && options.all)) {
+      console.log(
+        "Import shared part: you have to use either --name or --all option"
+      );
+      process.exit(1);
+    }
     if (!options.yes) {
       promptConfirmation();
     }
     checkDefaultFirm(options.firm);
-    firmId = options.firm;
-    toolkit.importExistingSharedPartByName(options.handle);
+    if (options.name) {
+      toolkit.importExistingSharedPartByName(options.firm, options.name);
+    } else if (options.all) {
+      toolkit.importExistingSharedParts(options.firm);
+    }
   });
 
 // Update a single shared part
@@ -152,50 +155,7 @@ program
       promptConfirmation();
     }
     checkDefaultFirm(options.firm);
-    firmId = options.firm;
-    toolkit.persistSharedPart(options.handle);
-  });
-
-// Import all shared parts
-program
-  .command("import-all-shared-parts")
-  .description("Import all shared parts at once")
-  .requiredOption(
-    "-f, --firm <firm-id>",
-    "Specify the firm to be used (mandatory)",
-    firmIdDefault
-  )
-  .option("--yes", "Skip the prompt confirmation (optional)")
-  .action((options) => {
-    if (!options.yes) {
-      promptConfirmation();
-    }
-    checkDefaultFirm(options.firm);
-    firmId = options.firm;
-    toolkit.importExistingSharedParts();
-  });
-
-// Update shared parts used in a reconciliation
-program
-  .command("shared-parts-used")
-  .description("Update the list of shared used for a specific reconciliation")
-  .requiredOption(
-    "-f, --firm <firm-id>",
-    "Specify the firm to be used (mandatory)",
-    firmIdDefault
-  )
-  .requiredOption(
-    "-h, --handle <handle>",
-    "Specify the reconciliation to be used (mandatory)"
-  )
-  .option("--yes", "Skip the prompt confirmation (optional)")
-  .action((options) => {
-    if (!options.yes) {
-      promptConfirmation();
-    }
-    checkDefaultFirm(options.firm);
-    firmId = options.firm;
-    toolkit.refreshSharedPartsUsed(options.handle);
+    toolkit.persistSharedPart(options.firm, options.handle);
   });
 
 // Add shared part to reconciliation
@@ -221,8 +181,11 @@ program
       promptConfirmation();
     }
     checkDefaultFirm(options.firm);
-    firmId = options.firm;
-    toolkit.addSharedPartToReconciliation(options.sharedPart, options.handle);
+    toolkit.addSharedPartToReconciliation(
+      options.firm,
+      options.sharedPart,
+      options.handle
+    );
   });
 
 // Remove shared part to reconciliation
@@ -248,11 +211,33 @@ program
       promptConfirmation();
     }
     checkDefaultFirm(options.firm);
-    firmId = options.firm;
     toolkit.removeSharedPartFromReconciliation(
+      options.firm,
       options.sharedPart,
       options.handle
     );
+  });
+
+// Update shared parts used in a reconciliation
+program
+  .command("shared-parts-used")
+  .description("Update the list of shared used for a specific reconciliation")
+  .requiredOption(
+    "-f, --firm <firm-id>",
+    "Specify the firm to be used (mandatory)",
+    firmIdDefault
+  )
+  .requiredOption(
+    "-h, --handle <handle>",
+    "Specify the reconciliation to be used (mandatory)"
+  )
+  .option("--yes", "Skip the prompt confirmation (optional)")
+  .action((options) => {
+    if (!options.yes) {
+      promptConfirmation();
+    }
+    checkDefaultFirm(options.firm);
+    toolkit.refreshSharedPartsUsed(options.firm, options.handle);
   });
 
 // Run Liquid Test
@@ -272,8 +257,7 @@ program
   )
   .action((options) => {
     checkDefaultFirm(options.firm);
-    firmId = options.firm;
-    toolkit.runTests(options.handle);
+    toolkit.runTests(options.firm, options.handle);
   });
 
 // Create Liquid Test
@@ -302,7 +286,7 @@ program
   .command("authorize")
   .description("Authorize the CLI by entering your Silverfin API credentials")
   .action(() => {
-    toolkit.authorize();
+    toolkit.authorize(firmIdDefault);
   });
 
 // Repositories Statistics
@@ -314,6 +298,38 @@ program
   )
   .action((options) => {
     stats.generateStatsOverview(options.since);
+  });
+
+// Set/Get FIRM ID
+program
+  .command("config")
+  .description("Configuration options")
+  .option(
+    "-s, --set-firm <firmId>",
+    "Store a firm id to use it as default (setting a firm id will overwrite any existing data)"
+  )
+  .option("-g, --get-firm", "Check if there is any firm id already stored")
+  .action((options) => {
+    if (
+      (!options.setFirm && !options.getFirm) ||
+      (options.setFirm && options.getFirm)
+    ) {
+      console.log(
+        "Configuration: You have to use either --get-firm or --set-firm option"
+      );
+      process.exit(1);
+    }
+    if (options.setFirm) {
+      toolkit.setDefaultFirmID(options.setFirm);
+    }
+    if (options.getFirm) {
+      const storedFirmId = toolkit.getDefaultFirmID();
+      if (storedFirmId) {
+        console.log(`Firm id previously stored: ${storedFirmId}`);
+      } else {
+        console.log("There is no firm id previously stored");
+      }
+    }
   });
 
 program.parse();

@@ -20,17 +20,20 @@ if (missingVariables.length) {
   process.exit(1);
 }
 
-async function authorizeApp() {
+async function authorizeApp(firmId = undefined) {
   try {
+    console.log(
+      `Note: if you need to exit this process you can press "Ctrl/Cmmd + C"`
+    );
     const redirectUri = "urn%3Aietf%3Awg%3Aoauth%3A2.0%3Aoob";
     const scope =
       "user%3Aprofile+user%3Aemail+webhooks+administration%3Aread+administration%3Awrite+permanent_documents%3Aread+permanent_documents%3Awrite+communication%3Aread+communication%3Awrite+financials%3Aread+financials%3Awrite+financials%3Atransactions%3Aread+financials%3Atransactions%3Awrite+links+workflows%3Aread";
 
     let firmIdPrompt;
-    if (process.env.SF_FIRM_ID) {
+    if (firmId) {
       firmIdPrompt = prompt(
-        `Enter the firm ID: (leave blank to use ${process.env.SF_FIRM_ID})`,
-        { value: process.env.SF_FIRM_ID }
+        `Enter the firm ID (leave blank to use ${firmId}): `,
+        { value: firmId }
       );
     } else {
       firmIdPrompt = prompt("Enter the firm ID: ");
@@ -109,12 +112,13 @@ async function refreshTokens(firmId, accessToken, refreshToken) {
   }
 }
 
-function setAxiosDefaults() {
-  if (config.data.hasOwnProperty(firmId)) {
+function setAxiosDefaults(firmId) {
+  const firmCredentials = config.getTokens(firmId);
+  if (firmCredentials) {
     axios.defaults.baseURL = `${baseURL}/api/v4/f/${firmId}`;
-    axios.defaults.headers.common["Authorization"] = `Bearer ${
-      config.data[String(firmId)].accessToken
-    }`;
+    axios.defaults.headers.common[
+      "Authorization"
+    ] = `Bearer ${firmCredentials.accessToken}`;
   } else {
     console.log(`Missing authorization for firm id: ${firmId}`);
     process.exit(1);
@@ -128,6 +132,7 @@ function responseSuccessHandler(response) {
 }
 
 async function responseErrorHandler(
+  firmId,
   error,
   refreshToken = false,
   callbackFunction,
@@ -179,8 +184,8 @@ async function responseErrorHandler(
   throw error;
 }
 
-async function fetchReconciliationTexts(page = 1, refreshToken = true) {
-  setAxiosDefaults();
+async function fetchReconciliationTexts(firmId, page = 1, refreshToken = true) {
+  setAxiosDefaults(firmId);
   try {
     const response = await axios.get(`reconciliations`, {
       params: { page: page, per_page: 2000 },
@@ -188,8 +193,13 @@ async function fetchReconciliationTexts(page = 1, refreshToken = true) {
     responseSuccessHandler(response);
     return response;
   } catch (error) {
-    const callbackParameters = { page: page, refreshToken: false };
+    const callbackParameters = {
+      firmId: firmId,
+      page: page,
+      refreshToken: false,
+    };
     const response = await responseErrorHandler(
+      firmId,
       error,
       refreshToken,
       fetchReconciliationTexts,
@@ -199,8 +209,8 @@ async function fetchReconciliationTexts(page = 1, refreshToken = true) {
   }
 }
 
-async function findReconciliationText(handle, page = 1) {
-  const response = await fetchReconciliationTexts(page);
+async function findReconciliationText(firmId, handle, page = 1) {
+  const response = await fetchReconciliationTexts(firmId, page);
   const reconciliations = response.data;
   // No data
   if (reconciliations.length == 0) {
@@ -218,23 +228,33 @@ async function findReconciliationText(handle, page = 1) {
       }
     }
   } else {
-    return findReconciliationText(handle, page + 1);
+    return findReconciliationText(firmId, handle, page + 1);
   }
 }
 
-async function updateReconciliationText(id, attributes, refreshToken = true) {
-  setAxiosDefaults();
+async function updateReconciliationText(
+  firmId,
+  reconciliationId,
+  attributes,
+  refreshToken = true
+) {
+  setAxiosDefaults(firmId);
   try {
-    const response = await axios.post(`reconciliations/${id}`, attributes);
+    const response = await axios.post(
+      `reconciliations/${reconciliationId}`,
+      attributes
+    );
     responseSuccessHandler(response);
     return response;
   } catch (error) {
     const callbackParameters = {
-      id: id,
+      firmId: firmId,
+      reconciliationId: reconciliationId,
       attributes: attributes,
       refreshToken: false,
     };
     const response = await responseErrorHandler(
+      firmId,
       error,
       refreshToken,
       updateReconciliationText,
@@ -245,12 +265,13 @@ async function updateReconciliationText(id, attributes, refreshToken = true) {
 }
 
 async function getReconciliationDetails(
+  firmId,
   companyId,
   periodId,
   reconciliationId,
   refreshToken = true
 ) {
-  setAxiosDefaults();
+  setAxiosDefaults(firmId);
   try {
     const response = await axios.get(
       `/companies/${companyId}/periods/${periodId}/reconciliations/${reconciliationId}`
@@ -259,12 +280,14 @@ async function getReconciliationDetails(
     return response;
   } catch (error) {
     const callbackParameters = {
+      firmId: firmId,
       companyId: companyId,
       periodId: periodId,
       reconciliationId: reconciliationId,
       refreshToken: false,
     };
     const response = await responseErrorHandler(
+      firmId,
       error,
       refreshToken,
       getReconciliationDetails,
@@ -275,13 +298,14 @@ async function getReconciliationDetails(
 }
 
 async function getReconciliationCustom(
+  firmId,
   companyId,
   periodId,
   reconciliationId,
   page = 1,
   refreshToken = true
 ) {
-  setAxiosDefaults();
+  setAxiosDefaults(firmId);
   try {
     const response = await axios.get(
       `/companies/${companyId}/periods/${periodId}/reconciliations/${reconciliationId}/custom`,
@@ -291,6 +315,7 @@ async function getReconciliationCustom(
     return response;
   } catch (error) {
     const callbackParameters = {
+      firmId: firmId,
       companyId: companyId,
       periodId: periodId,
       reconciliationId: reconciliationId,
@@ -298,6 +323,7 @@ async function getReconciliationCustom(
       refreshToken: false,
     };
     const response = await responseErrorHandler(
+      firmId,
       error,
       refreshToken,
       getReconciliationCustom,
@@ -308,12 +334,13 @@ async function getReconciliationCustom(
 }
 
 async function getReconciliationResults(
+  firmId,
   companyId,
   periodId,
   reconciliationId,
   refreshToken = true
 ) {
-  setAxiosDefaults();
+  setAxiosDefaults(firmId);
   try {
     const response = await axios.get(
       `/companies/${companyId}/periods/${periodId}/reconciliations/${reconciliationId}/results`
@@ -322,12 +349,14 @@ async function getReconciliationResults(
     return response;
   } catch (error) {
     const callbackParameters = {
+      firmId: firmId,
       companyId: companyId,
       periodId: periodId,
       reconciliationId: reconciliationId,
       refreshToken: false,
     };
     const response = await responseErrorHandler(
+      firmId,
       error,
       refreshToken,
       getReconciliationResults,
@@ -337,8 +366,8 @@ async function getReconciliationResults(
   }
 }
 
-async function fetchSharedParts(page = 1, refreshToken = true) {
-  setAxiosDefaults();
+async function fetchSharedParts(firmId, page = 1, refreshToken = true) {
+  setAxiosDefaults(firmId);
   try {
     const response = await axios.get(`shared_parts`, {
       params: { page: page, per_page: 2000 },
@@ -346,8 +375,13 @@ async function fetchSharedParts(page = 1, refreshToken = true) {
     responseSuccessHandler(response);
     return response;
   } catch (error) {
-    const callbackParameters = { page: page, refreshToken: false };
+    const callbackParameters = {
+      firmId: firmId,
+      page: page,
+      refreshToken: false,
+    };
     const response = await responseErrorHandler(
+      firmId,
       error,
       refreshToken,
       fetchSharedParts,
@@ -357,15 +391,20 @@ async function fetchSharedParts(page = 1, refreshToken = true) {
   }
 }
 
-async function fetchSharedPartById(id, refreshToken = true) {
-  setAxiosDefaults();
+async function fetchSharedPartById(firmId, sharedPartId, refreshToken = true) {
+  setAxiosDefaults(firmId);
   try {
-    const response = await axios.get(`shared_parts/${id}`);
+    const response = await axios.get(`shared_parts/${sharedPartId}`);
     responseSuccessHandler(response);
     return response;
   } catch (error) {
-    const callbackParameters = { id: id, refreshToken: false };
+    const callbackParameters = {
+      firmId: firmId,
+      sharedPartId: sharedPartId,
+      refreshToken: false,
+    };
     const response = await responseErrorHandler(
+      firmId,
       error,
       refreshToken,
       fetchSharedPartById,
@@ -375,35 +414,47 @@ async function fetchSharedPartById(id, refreshToken = true) {
   }
 }
 
-async function findSharedPart(name, page = 1) {
-  const response = await fetchSharedParts(page);
+async function findSharedPart(firmId, sharedPartName, page = 1) {
+  const response = await fetchSharedParts(firmId, page);
   const sharedParts = response.data;
   // No data
   if (sharedParts.length == 0) {
-    console.log(`Shared part ${name} not found`);
+    console.log(`Shared part ${sharedPartName} not found`);
     return;
   }
-  const sharedPart = sharedParts.find((element) => element["name"] === name);
+  const sharedPart = sharedParts.find(
+    (element) => element["name"] === sharedPartName
+  );
   if (sharedPart) {
     return sharedPart;
   } else {
-    return findSharedPart(name, page + 1);
+    return findSharedPart(firmId, sharedPartName, page + 1);
   }
 }
 
-async function updateSharedPart(id, attributes, refreshToken = true) {
-  setAxiosDefaults();
+async function updateSharedPart(
+  firmId,
+  sharedPartId,
+  attributes,
+  refreshToken = true
+) {
+  setAxiosDefaults(firmId);
   try {
-    const response = await axios.post(`shared_parts/${id}`, attributes);
+    const response = await axios.post(
+      `shared_parts/${sharedPartId}`,
+      attributes
+    );
     responseSuccessHandler(response);
     return response;
   } catch (error) {
     const callbackParameters = {
-      id: id,
+      firmId: firmId,
+      sharedPartId: sharedPartId,
       attributes: attributes,
       refreshToken: false,
     };
     const response = await responseErrorHandler(
+      firmId,
       error,
       refreshToken,
       updateSharedPart,
@@ -414,11 +465,12 @@ async function updateSharedPart(id, attributes, refreshToken = true) {
 }
 
 async function addSharedPart(
+  firmId,
   sharedPartId,
   reconciliationId,
   refreshToken = true
 ) {
-  setAxiosDefaults();
+  setAxiosDefaults(firmId);
   try {
     const response = await axios.post(
       `reconciliations/${reconciliationId}/shared_parts/${sharedPartId}`
@@ -427,11 +479,13 @@ async function addSharedPart(
     return response;
   } catch (error) {
     const callbackParameters = {
+      firmId: firmId,
       sharedPartId: sharedPartId,
       reconciliationId: reconciliationId,
       refreshToken: false,
     };
     const response = await responseErrorHandler(
+      firmId,
       error,
       refreshToken,
       updateSharedPart,
@@ -442,11 +496,12 @@ async function addSharedPart(
 }
 
 async function removeSharedPart(
+  firmId,
   sharedPartId,
   reconciliationId,
   refreshToken = true
 ) {
-  setAxiosDefaults();
+  setAxiosDefaults(firmId);
   try {
     const response = await axios.delete(
       `reconciliations/${reconciliationId}/shared_parts/${sharedPartId}`
@@ -455,11 +510,13 @@ async function removeSharedPart(
     return response;
   } catch (error) {
     const callbackParameters = {
+      firmId: firmId,
       sharedPartId: sharedPartId,
       reconciliationId: reconciliationId,
       refreshToken: false,
     };
     const response = await responseErrorHandler(
+      firmId,
       error,
       refreshToken,
       updateSharedPart,
@@ -469,14 +526,19 @@ async function removeSharedPart(
   }
 }
 
-async function createTestRun(attributes, refreshToken = true) {
-  setAxiosDefaults();
+async function createTestRun(firmId, attributes, refreshToken = true) {
+  setAxiosDefaults(firmId);
   try {
     const response = await axios.post("reconciliations/test", attributes);
     return response;
   } catch (error) {
-    const callbackParameters = { attributes: attributes, refreshToken: false };
+    const callbackParameters = {
+      firmId: firmId,
+      attributes: attributes,
+      refreshToken: false,
+    };
     const response = await responseErrorHandler(
+      firmId,
       error,
       refreshToken,
       createTestRun,
@@ -486,14 +548,19 @@ async function createTestRun(attributes, refreshToken = true) {
   }
 }
 
-async function fetchTestRun(id, refreshToken = true) {
-  setAxiosDefaults();
+async function fetchTestRun(firmId, testId, refreshToken = true) {
+  setAxiosDefaults(firmId);
   try {
-    const response = await axios.get(`reconciliations/test_runs/${id}`);
+    const response = await axios.get(`reconciliations/test_runs/${testId}`);
     return response;
   } catch (error) {
-    const callbackParameters = { id: id, refreshToken: false };
+    const callbackParameters = {
+      firmId: firmId,
+      testId: testId,
+      refreshToken: false,
+    };
     const response = await responseErrorHandler(
+      firmId,
       error,
       refreshToken,
       fetchTestRun,
@@ -503,8 +570,8 @@ async function fetchTestRun(id, refreshToken = true) {
   }
 }
 
-async function getPeriods(companyId, page = 1, refreshToken = true) {
-  setAxiosDefaults();
+async function getPeriods(firmId, companyId, page = 1, refreshToken = true) {
+  setAxiosDefaults(firmId);
   try {
     const response = await axios.get(`/companies/${companyId}/periods`, {
       params: { page: page, per_page: 2000 },
@@ -513,11 +580,13 @@ async function getPeriods(companyId, page = 1, refreshToken = true) {
     return response;
   } catch (error) {
     const callbackParameters = {
+      firmId: firmId,
       companyId: companyId,
       page: page,
       refreshToken: false,
     };
     const response = await responseErrorHandler(
+      firmId,
       error,
       refreshToken,
       getPeriods,
@@ -531,15 +600,20 @@ function findPeriod(periodId, periodsArray) {
   return periodsArray.find((period) => period.id == periodId);
 }
 
-async function getCompanyDrop(companyId, refreshToken = true) {
-  setAxiosDefaults();
+async function getCompanyDrop(firmId, companyId, refreshToken = true) {
+  setAxiosDefaults(firmId);
   try {
     const response = await axios.get(`/companies/${companyId}`);
     responseSuccessHandler(response);
     return response;
   } catch (error) {
-    const callbackParameters = { companyId: companyId, refreshToken: false };
+    const callbackParameters = {
+      firmId: firmId,
+      companyId: companyId,
+      refreshToken: false,
+    };
     const response = await responseErrorHandler(
+      firmId,
       error,
       refreshToken,
       getCompanyDrop,
@@ -549,15 +623,20 @@ async function getCompanyDrop(companyId, refreshToken = true) {
   }
 }
 
-async function getCompanyCustom(companyId, refreshToken = true) {
-  setAxiosDefaults();
+async function getCompanyCustom(firmId, companyId, refreshToken = true) {
+  setAxiosDefaults(firmId);
   try {
     const response = await axios.get(`/companies/${companyId}/custom`);
     responseSuccessHandler(response);
     return response;
   } catch (error) {
-    const callbackParameters = { companyId: companyId, refreshToken: false };
+    const callbackParameters = {
+      firmId: firmId,
+      companyId: companyId,
+      refreshToken: false,
+    };
     const response = await responseErrorHandler(
+      firmId,
       error,
       refreshToken,
       getCompanyCustom,
@@ -567,8 +646,8 @@ async function getCompanyCustom(companyId, refreshToken = true) {
   }
 }
 
-async function getWorkflows(companyId, periodId, refreshToken = true) {
-  setAxiosDefaults();
+async function getWorkflows(firmId, companyId, periodId, refreshToken = true) {
+  setAxiosDefaults(firmId);
   try {
     const response = await axios.get(
       `/companies/${companyId}/periods/${periodId}/workflows`
@@ -577,11 +656,13 @@ async function getWorkflows(companyId, periodId, refreshToken = true) {
     return response;
   } catch (error) {
     const callbackParameters = {
+      firmId: firmId,
       companyId: companyId,
       periodId: periodId,
       refreshToken: false,
     };
     const response = await responseErrorHandler(
+      firmId,
       error,
       refreshToken,
       getWorkflows,
@@ -592,13 +673,14 @@ async function getWorkflows(companyId, periodId, refreshToken = true) {
 }
 
 async function getWorkflowInformation(
+  firmId,
   companyId,
   periodId,
   workflowId,
   page = 1,
   refreshToken = true
 ) {
-  setAxiosDefaults();
+  setAxiosDefaults(firmId);
   try {
     const response = await axios.get(
       `/companies/${companyId}/periods/${periodId}/workflows/${workflowId}/reconciliations`,
@@ -608,6 +690,7 @@ async function getWorkflowInformation(
     return response;
   } catch (error) {
     const callbackParameters = {
+      firmId: firmId,
       companyId: companyId,
       periodId: periodId,
       workflowId: workflowId,
@@ -615,6 +698,7 @@ async function getWorkflowInformation(
       refreshToken: false,
     };
     const response = await responseErrorHandler(
+      firmId,
       error,
       refreshToken,
       getWorkflowInformation,
@@ -625,6 +709,7 @@ async function getWorkflowInformation(
 }
 
 async function findReconciliationInWorkflow(
+  firmId,
   reconciliationHandle,
   companyId,
   periodId,
@@ -632,6 +717,7 @@ async function findReconciliationInWorkflow(
   page = 1
 ) {
   const response = await getWorkflowInformation(
+    firmId,
     companyId,
     periodId,
     workflowId,
@@ -652,6 +738,7 @@ async function findReconciliationInWorkflow(
     return reconciliationText;
   } else {
     return findReconciliationInWorkflow(
+      firmId,
       reconciliationHandle,
       companyId,
       periodId,
@@ -662,15 +749,17 @@ async function findReconciliationInWorkflow(
 }
 
 async function findReconciliationInWorkflows(
+  firmId,
   reconciliationHandle,
   companyId,
   periodId
 ) {
   // Get data from all workflows
-  const responseWorkflows = await getWorkflows(companyId, periodId);
+  const responseWorkflows = await getWorkflows(firmId, companyId, periodId);
   // Check in each workflow
   for (workflow of responseWorkflows.data) {
     let reconciliationInformation = await findReconciliationInWorkflow(
+      firmId,
       reconciliationHandle,
       companyId,
       periodId,
@@ -688,12 +777,13 @@ async function findReconciliationInWorkflows(
 }
 
 async function getAccountDetails(
+  firmId,
   companyId,
   periodId,
   accountId,
   refreshToken = true
 ) {
-  setAxiosDefaults();
+  setAxiosDefaults(firmId);
   try {
     const response = await axios.get(
       `companies/${companyId}/periods/${periodId}/accounts/${accountId}`
@@ -702,12 +792,14 @@ async function getAccountDetails(
     return response;
   } catch (error) {
     const callbackParameters = {
+      firmId: firmId,
       companyId: companyId,
       periodId: periodId,
       accountId: accountId,
       refreshToken: false,
     };
     const response = await responseErrorHandler(
+      firmId,
       error,
       refreshToken,
       getAccountDetails,

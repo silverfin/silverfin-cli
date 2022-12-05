@@ -21,6 +21,7 @@ async function testGenerator(url) {
 
   // Get Reconciliation Details
   const responseDetails = await SF.getReconciliationDetails(
+    parameters.firmId,
     parameters.companyId,
     parameters.ledgerId,
     parameters.reconciliationId
@@ -30,6 +31,7 @@ async function testGenerator(url) {
   // Get Workflow Information
   const starredStatus = {
     ...SF.findReconciliationInWorkflow(
+      parameters.firmId,
       reconciliationHandle,
       parameters.companyId,
       parameters.ledgerId,
@@ -38,7 +40,10 @@ async function testGenerator(url) {
   }.starred;
 
   // Get period data
-  const responsePeriods = await SF.getPeriods(parameters.companyId);
+  const responsePeriods = await SF.getPeriods(
+    parameters.firmId,
+    parameters.companyId
+  );
   const currentPeriodData = SF.findPeriod(
     parameters.ledgerId,
     responsePeriods.data
@@ -72,6 +77,7 @@ async function testGenerator(url) {
 
   // Get all the text properties (Customs from current template)
   const responseCustom = await SF.getReconciliationCustom(
+    parameters.firmId,
     parameters.companyId,
     parameters.ledgerId,
     parameters.reconciliationId
@@ -86,6 +92,7 @@ async function testGenerator(url) {
 
   // Get all the results generated in current template
   const responseResults = await SF.getReconciliationResults(
+    parameters.firmId,
     parameters.companyId,
     parameters.ledgerId,
     parameters.reconciliationId
@@ -94,6 +101,7 @@ async function testGenerator(url) {
 
   // Get the code of the template
   const reconciliationCode = await SF.findReconciliationText(
+    parameters.firmId,
     reconciliationHandle
   );
 
@@ -119,10 +127,16 @@ async function testGenerator(url) {
   if (sharedPartsUsed && sharedPartsUsed.length != 0) {
     for (sharedPartName of sharedPartsUsed) {
       // Look for shared part id
-      let sharedPartResponse = await SF.findSharedPart(sharedPartName);
+      let sharedPartResponse = await SF.findSharedPart(
+        parameters.firmId,
+        sharedPartName
+      );
       let sharedPartId = sharedPartResponse.id;
       // Get shared part details
-      let sharedPartDetails = await SF.fetchSharedPartById(sharedPartId);
+      let sharedPartDetails = await SF.fetchSharedPartById(
+        parameters.firmId,
+        sharedPartId
+      );
       // Look for nested shared parts (in that case, add them to this same loop)
       let nestedSharedParts = Utils.lookForSharedPartsInLiquid(
         sharedPartDetails.data
@@ -155,6 +169,7 @@ async function testGenerator(url) {
       try {
         // Find reconciliation in Workflow to get id (depdeency template can be in a different Workflow)
         let reconciliation = await SF.findReconciliationInWorkflows(
+          parameters.firmId,
           handle,
           parameters.companyId,
           parameters.ledgerId
@@ -162,6 +177,7 @@ async function testGenerator(url) {
         if (reconciliation) {
           // Fetch results
           let reconciliationResults = await SF.getReconciliationResults(
+            parameters.firmId,
             parameters.companyId,
             parameters.ledgerId,
             reconciliation.id
@@ -206,6 +222,7 @@ async function testGenerator(url) {
       try {
         // Find reconciliation in Workflow to get id (depdeency template can be in a different Workflow)
         let reconciliation = await SF.findReconciliationInWorkflows(
+          parameters.firmId,
           handle,
           parameters.companyId,
           parameters.ledgerId
@@ -213,6 +230,7 @@ async function testGenerator(url) {
         if (reconciliation) {
           // Fetch test properties
           let reconciliationCustomResponse = await SF.getReconciliationCustom(
+            parameters.firmId,
             parameters.companyId,
             parameters.ledgerId,
             reconciliation.id
@@ -262,7 +280,10 @@ async function testGenerator(url) {
 
   // Get Company Data - company drop
   if (companyObj.standardDropElements.length !== 0) {
-    const responseCompanyDrop = await SF.getCompanyDrop(parameters.companyId);
+    const responseCompanyDrop = await SF.getCompanyDrop(
+      parameters.firmId,
+      parameters.companyId
+    );
     const companyData = responseCompanyDrop.data; // { foo: bar, baz: bat ... }
 
     for (drop of companyObj.standardDropElements) {
@@ -277,6 +298,7 @@ async function testGenerator(url) {
   // Get Company Data - custom drop
   if (companyObj.customDropElements.length !== 0) {
     const responseCompanyCustom = await SF.getCompanyCustom(
+      parameters.firmId,
       parameters.companyId
     );
     const companyCustom = responseCompanyCustom.data; // [ { namespace: foo, key: bar, value: baz }... ]
@@ -309,6 +331,7 @@ async function testGenerator(url) {
       // Current Period
       try {
         let accountResponse = await SF.getAccountDetails(
+          parameters.firmId,
           parameters.companyId,
           parameters.ledgerId,
           accountId
