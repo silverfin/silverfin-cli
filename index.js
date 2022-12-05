@@ -433,7 +433,6 @@ async function runTests(firmId, handle) {
       const response = await SF.fetchTestRun(firmId, testRunId);
       testRun = response.data;
     }
-    spinner.stop();
 
     // Possible status: started, completed, test_error, internal_error
     if (testRun.status === "internal_error") {
@@ -451,9 +450,6 @@ async function runTests(firmId, handle) {
       if (testRun.result.length === 0) {
         console.log(chalk.green("ALL TESTS HAVE PASSED"));
       } else {
-        // Test run successfully but return errors
-        spinner.spin("Processing test results..");
-        spinner.stop();
         const formattedTests = [];
 
         testRun.result.map((test) => {
@@ -512,7 +508,6 @@ async function runTests(firmId, handle) {
           }
         });
 
-        spinner.clear();
         console.log("");
 
         console.error(
@@ -602,6 +597,8 @@ async function runTests(firmId, handle) {
         });
       }
     }
+
+    spinner.clear();
     // Always return the response from Silverfin
     // We use this in the VS-Code extension to process results
     return testRun;

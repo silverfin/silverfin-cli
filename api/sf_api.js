@@ -32,7 +32,7 @@ async function authorizeApp(firmId = undefined) {
     let firmIdPrompt;
     if (firmId) {
       firmIdPrompt = prompt(
-        `Enter the firm ID: (leave blank to use ${firmId})`,
+        `Enter the firm ID (leave blank to use ${firmId}): `,
         { value: firmId }
       );
     } else {

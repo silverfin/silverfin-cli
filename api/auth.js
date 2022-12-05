@@ -84,7 +84,7 @@ class Config {
   }
 }
 
-// Iniatiate Object
+// Initiate Object
 const config = new Config();
 
 module.exports = { config };
