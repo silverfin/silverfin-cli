@@ -65,7 +65,7 @@ program
     // Check that only one of both options it's selected
     if ((!options.handle && !options.all) || (options.handle && options.all)) {
       console.log(
-        "Import shared part: you have to use either --handle or --all option"
+        "Import reconciliation: you have to use either --handle or --all option"
       );
       process.exit(1);
     }
@@ -121,7 +121,7 @@ program
     // Check that only one of both options it's selected
     if ((!options.name && !options.all) || (options.name && options.all)) {
       console.log(
-        "Import reconciliation: you have to use either --name or --all option"
+        "Import shared part: you have to use either --name or --all option"
       );
       process.exit(1);
     }
@@ -285,7 +285,7 @@ program
 program
   .command("authorize")
   .description("Authorize the CLI by entering your Silverfin API credentials")
-  .action((options) => {
+  .action(() => {
     toolkit.authorize(firmIdDefault);
   });
 
@@ -310,6 +310,15 @@ program
   )
   .option("-g, --get-firm", "Check if there is any firm id already stored")
   .action((options) => {
+    if (
+      (!options.setFirm && !options.getFirm) ||
+      (options.setFirm && options.getFirm)
+    ) {
+      console.log(
+        "Configuration: You have to use either --get-firm or --set-firm option"
+      );
+      process.exit(1);
+    }
     if (options.setFirm) {
       toolkit.setDefaultFirmID(options.setFirm);
     }
