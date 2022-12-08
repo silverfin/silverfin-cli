@@ -58,14 +58,21 @@ program
     "Specify the firm to be used",
     firmIdDefault
   )
-  .option("-h, --handle <handle>", "Import a specific reconciliation")
+  .option("-h, --handle <handle>", "Import a specific reconciliation by handle")
+  .option("-i, --id <id>", "Import a specific reconciliation by id")
   .option("-a, --all", "Import all reconciliations")
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
-    // Check that only one of both options it's selected
-    if ((!options.handle && !options.all) || (options.handle && options.all)) {
+    // Check that only one of the options it's selected
+    const uniqueParameters = ["handle", "id", "all"];
+    const optionsToCheck = Object.keys(options).filter((element) => {
+      if (uniqueParameters.includes(element)) {
+        return true;
+      }
+    });
+    if (optionsToCheck.length !== 1) {
       console.log(
-        "Import reconciliation: you have to use either --handle or --all option"
+        "Import reconciliation: you have to use either --handle, --id or --all option"
       );
       process.exit(1);
     }
@@ -78,6 +85,8 @@ program
         options.firm,
         options.handle
       );
+    } else if (options.id) {
+      toolkit.importExistingReconciliationById(options.firm, options.id);
     } else if (options.all) {
       toolkit.importExistingReconciliations(options.firm);
     }

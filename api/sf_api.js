@@ -232,6 +232,25 @@ async function findReconciliationText(firmId, handle, page = 1) {
   }
 }
 
+async function findReconciliationTextById(firmId, reconciliationId, page = 1) {
+  const response = await fetchReconciliationTexts(firmId, page);
+  const reconciliations = response.data;
+  // No data
+  if (reconciliations.length == 0) {
+    console.log(`Reconciliation ${reconciliationId} not found`);
+    return;
+  }
+  let reconciliationText = reconciliations.filter(
+    (element) => element["id"] === Number(reconciliationId)
+  )[0];
+  // Only return reconciliations were liquid code is not hidden
+  if (reconciliationText && reconciliationText.hasOwnProperty("text")) {
+    return reconciliationText;
+  } else {
+    return findReconciliationText(firmId, reconciliationId, page + 1);
+  }
+}
+
 async function updateReconciliationText(
   firmId,
   reconciliationId,
@@ -814,6 +833,7 @@ module.exports = {
   fetchReconciliationTexts,
   updateReconciliationText,
   findReconciliationText,
+  findReconciliationTextById,
   getReconciliationDetails,
   getReconciliationCustom,
   getReconciliationResults,

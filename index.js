@@ -110,9 +110,20 @@ function storeImportedReconciliation(reconciliationText) {
 }
 
 async function importExistingReconciliationByHandle(firmId, handle) {
-  reconciliationText = await SF.findReconciliationText(firmId, handle);
+  const reconciliationText = await SF.findReconciliationText(firmId, handle);
   if (!reconciliationText) {
     throw `${handle} wasn't found`;
+  }
+  storeImportedReconciliation(reconciliationText);
+}
+
+async function importExistingReconciliationById(firmId, reconciliationId) {
+  const reconciliationText = await SF.findReconciliationTextById(
+    firmId,
+    reconciliationId
+  );
+  if (!reconciliationText) {
+    throw `${reconciliationId} wasn't found`;
   }
   storeImportedReconciliation(reconciliationText);
 }
@@ -623,6 +634,7 @@ function getDefaultFirmID() {
 
 module.exports = {
   importExistingReconciliationByHandle,
+  importExistingReconciliationById,
   importExistingReconciliations,
   persistReconciliationText,
   importExistingSharedPartByName,
