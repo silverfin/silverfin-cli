@@ -450,11 +450,15 @@ async function runTests(firmId, handle) {
       console.log(
         "Internal error. Try to run the test again or contact support if the issue persists."
       );
+      spinner.clear();
+      process.exit(1);
     }
 
     if (testRun.status === "test_error") {
       console.log("Ran into an error an couldn't complete test run");
       console.log(chalk.red(testRun.error_message));
+      spinner.clear();
+      process.exit(1);
     }
 
     if (testRun.status === "completed") {
