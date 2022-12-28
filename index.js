@@ -239,18 +239,11 @@ async function persistReconciliationText(firmId, handle) {
   try {
     const relativePath = `./reconciliation_texts/${handle}`;
     const config = fsUtils.readConfig(relativePath);
-    let reconciliationTextId;
-    if (config && config.id[firmId]) {
-      reconciliationTextId = config.id[firmId];
-      console.log("Loaded from config");
-    } else {
-      reconciliationTextId = {
-        ...(await SF.findReconciliationText(firmId, handle)),
-      }.id;
+    if (!config || !config.id[firmId]) {
+      console.log(`Reconciliation ${handle}: ID is missing. Aborted`);
+      process.exit(1);
     }
-    if (!reconciliationTextId) {
-      throw "Reconciliation not found";
-    }
+    let reconciliationTextId = (reconciliationTextId = config.id[firmId]);
     SF.updateReconciliationText(firmId, reconciliationTextId, {
       ...constructReconciliationText(handle),
       version_comment: "Update published using the API",
@@ -341,6 +334,10 @@ async function persistSharedPart(firmId, name) {
   try {
     const relativePath = `./shared_parts/${name}`;
     const config = fsUtils.readConfig(relativePath);
+    if (!config || !config.id[firmId]) {
+      console.log(`Shared part ${name}: ID is missing. Aborted`);
+      process.exit(1);
+    }
     const attributes = {};
     attributes.text = fs.readFileSync(
       `${relativePath}/${name}.liquid`,
