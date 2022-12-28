@@ -208,6 +208,7 @@ async function getAllTemplatesId(firmId, type) {
   }
 }
 
+// Recreate reconciliation (main and text parts)
 function constructReconciliationText(handle) {
   const relativePath = `./reconciliation_texts/${handle}`;
   const config = fsUtils.readConfig(relativePath);
@@ -392,6 +393,7 @@ async function newSharedPartsAll(firmId) {
   }
 }
 
+// Link a shared part to a reconciliation
 async function addSharedPartToReconciliation(
   firmId,
   sharedPartHandle,
@@ -402,7 +404,6 @@ async function addSharedPartToReconciliation(
     const configReconciliation = await fsUtils.readConfig(
       relativePathReconciliation
     );
-    configReconciliation.shared_parts = configReconciliation.shared_parts || [];
 
     const relativePathSharedPart = `./shared_parts/${sharedPartHandle}`;
     const configSharedPart = await fsUtils.readConfig(relativePathSharedPart);
@@ -425,26 +426,10 @@ async function addSharedPartToReconciliation(
         `Shared part "${sharedPartHandle}" added to "${reconciliationHandle}" reconciliation text.`
       );
 
-      const sharedPartIndex = configReconciliation.shared_parts.findIndex(
-        (sharedPart) => sharedPartHandle === sharedPart.name
-      );
       const reconciliationIndex = configSharedPart.used_in.findIndex(
         (reconciliationText) =>
           reconciliationHandle === reconciliationText.handle
       );
-
-      // Not stored yet
-      if (sharedPartIndex === -1) {
-        configReconciliation.shared_parts.push({
-          id: { [firmId]: configSharedPart.id[firmId] },
-          name: sharedPartHandle,
-        });
-      }
-      // Previously stored
-      if (sharedPartIndex !== -1) {
-        configReconciliation.shared_parts[sharedPartIndex].id[firmId] =
-          configSharedPart.id[firmId];
-      }
 
       // Not stored yet
       if (reconciliationIndex === -1) {
@@ -497,7 +482,6 @@ async function removeSharedPartFromReconciliation(
   try {
     const relativePathReconciliation = `./reconciliation_texts/${reconciliationHandle}`;
     const configReconciliation = fsUtils.readConfig(relativePathReconciliation);
-    configReconciliation.shared_parts = configReconciliation.shared_parts || [];
 
     const relativePathSharedPart = `./shared_parts/${sharedPartHandle}`;
     const configSharedPart = fsUtils.readConfig(relativePathSharedPart);
@@ -511,14 +495,6 @@ async function removeSharedPartFromReconciliation(
       console.log(
         `Shared part "${sharedPartHandle}" removed from "${reconciliationHandle}" reconciliation text.`
       );
-    }
-
-    const sharedPartIndex = configReconciliation.shared_parts.findIndex(
-      (sharedPart) => sharedPart.id[firmId] === configSharedPart.id[firmId]
-    );
-    if (sharedPartIndex !== -1) {
-      configReconciliation.shared_parts.splice(sharedPartIndex, 1);
-      fsUtils.writeConfig(relativePathReconciliation, configReconciliation);
     }
 
     const reconciliationIndex = configSharedPart.used_in.findIndex(
