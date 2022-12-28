@@ -63,7 +63,14 @@ function errorHandler(error) {
 }
 
 function storeImportedReconciliation(firmId, reconciliationText) {
-  const handle = reconciliationText.handle || reconciliationText.id;
+  if (!reconciliationText.handle) {
+    console.log(
+      `Reconciliation has no handle, add a handle before importing it. Skipped`
+    );
+    return;
+  }
+
+  const handle = reconciliationText.handle;
 
   if (!reconciliationText.text) {
     console.log(
