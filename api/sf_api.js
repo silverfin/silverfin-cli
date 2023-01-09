@@ -221,7 +221,7 @@ async function findReconciliationText(firmId, handle, page = 1) {
     (element) => element["handle"] === handle
   );
   if (reconciliationTexts.length != 0) {
-    for (reconciliationText of reconciliationTexts) {
+    for (let reconciliationText of reconciliationTexts) {
       // Only return reconciliations were liquid code is not hidden
       if (reconciliationText.hasOwnProperty("text")) {
         return reconciliationText;
@@ -247,7 +247,7 @@ async function findReconciliationTextById(firmId, reconciliationId, page = 1) {
   if (reconciliationText && reconciliationText.hasOwnProperty("text")) {
     return reconciliationText;
   } else {
-    return findReconciliationText(firmId, reconciliationId, page + 1);
+    return findReconciliationTextById(firmId, reconciliationId, page + 1);
   }
 }
 
