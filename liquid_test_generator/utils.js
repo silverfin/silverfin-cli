@@ -35,7 +35,10 @@ function extractURL(url) {
     } else if (parts.indexOf("account_entry") !== -1) {
       type = "accountId";
     } else {
-      throw "Not possible to identify if it's a reconciliation text or account entry.";
+      console.log(
+        "Not possible to identify if it's a reconciliation text or account entry."
+      );
+      process.exit(1);
     }
     return {
       firmId: parts[0],
@@ -45,7 +48,10 @@ function extractURL(url) {
       [type]: parts[7],
     };
   } catch (err) {
-    console.error(err);
+    console.log(
+      "The URL provided is not correct. Double check it and run the command again."
+    );
+    process.exit(1);
   }
 }
 
@@ -107,7 +113,7 @@ function getCompanyDependencies(reconcilationObject, reconciliationHandle) {
   const reCompanySearch = RegExp(/company\.\w+(?:\.\w+\.\w+)?/g); // company.foo or company.custom.foo.bar
 
   // No main part ?
-  if (!reconcilationObject.text) {
+  if (!reconcilationObject || !reconcilationObject.text) {
     console.log(
       `Reconciliation "${reconciliationHandle}": no liquid code found`
     );
@@ -156,7 +162,7 @@ function searchForResultsFromDependenciesInLiquid(
   ); // period.reconciliations.handle.results.result_name
 
   // No main part ?
-  if (!reconcilationObject.text) {
+  if (!reconcilationObject || !reconcilationObject.text) {
     console.log(
       `Reconciliation "${reconciliationHandle}": no liquid code found`
     );
@@ -253,7 +259,7 @@ function searchForCustomsFromDependenciesInLiquid(
   ); // period.reconciliations.handle.custom.namespace.key
 
   // No main part ?
-  if (!reconcilationObject.text) {
+  if (!reconcilationObject || !reconcilationObject.text) {
     console.log(
       `Reconciliation "${reconciliationHandle}": no liquid code found`
     );
@@ -304,7 +310,7 @@ function lookForSharedPartsInLiquid(reconcilationObject, reconciliationHandle) {
   const reSharedParts = RegExp(/shared\/\w+/g); // shared/shared_part_name
 
   // No main part ?
-  if (!reconcilationObject.text) {
+  if (!reconcilationObject || !reconcilationObject.text) {
     console.log(
       `Reconciliation "${reconciliationHandle}": no liquid code found`
     );
