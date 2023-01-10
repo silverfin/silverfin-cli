@@ -227,9 +227,8 @@ async function findReconciliationText(firmId, handle, page = 1) {
         return reconciliationText;
       }
     }
-  } else {
-    return findReconciliationText(firmId, handle, page + 1);
   }
+  return findReconciliationText(firmId, handle, page + 1);
 }
 
 async function findReconciliationTextById(firmId, reconciliationId, page = 1) {
