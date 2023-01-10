@@ -12,7 +12,9 @@ async function testGenerator(url) {
 
   // Check if firm is authhorized
   if (!config.data.hasOwnProperty(parameters.firmId)) {
-    throw `You have no authorization to access firm id ${parameters.firmId}`;
+    console.error(
+      `You have no authorization to access firm id ${parameters.firmId}`
+    );
   }
   firmId = parameters.firmId;
 
