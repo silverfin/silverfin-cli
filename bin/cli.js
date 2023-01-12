@@ -49,6 +49,19 @@ function promptConfirmation() {
   return true;
 }
 
+// Check unique options
+function checkUniqueOption(uniqueParameters = [], options) {
+  const optionsToCheck = Object.keys(options).filter((element) => {
+    if (uniqueParameters.includes(element)) {
+      return true;
+    }
+  });
+  if (optionsToCheck.length !== 1) {
+    console.log("Only one option can be used");
+    process.exit(1);
+  }
+}
+
 // Import reconciliations
 program
   .command("import-reconciliation")
@@ -318,16 +331,9 @@ program
     "Store a firm id to use it as default (setting a firm id will overwrite any existing data)"
   )
   .option("-g, --get-firm", "Check if there is any firm id already stored")
+  .option("-l, --list-all", "List all the firm IDs stored")
   .action((options) => {
-    if (
-      (!options.setFirm && !options.getFirm) ||
-      (options.setFirm && options.getFirm)
-    ) {
-      console.log(
-        "Configuration: You have to use either --get-firm or --set-firm option"
-      );
-      process.exit(1);
-    }
+    checkUniqueOption(["setFirm", "getFirm", "listAll"], options);
     if (options.setFirm) {
       toolkit.setDefaultFirmID(options.setFirm);
     }
@@ -337,6 +343,13 @@ program
         console.log(`Firm id previously stored: ${storedFirmId}`);
       } else {
         console.log("There is no firm id previously stored");
+      }
+    }
+    if (options.listAll) {
+      const ids = toolkit.listStoredIds() || [];
+      if (ids) {
+        console.log("List of authorized firms");
+        ids.forEach((element) => console.log("- " + element));
       }
     }
   });
