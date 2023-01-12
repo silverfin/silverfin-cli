@@ -49,6 +49,19 @@ function promptConfirmation() {
   return true;
 }
 
+// Convert variable name into flag name to show in message (listAll -> list-all)
+function formatOption(inputString) {
+  return inputString
+    .split("")
+    .map((character) => {
+      if (character == character.toUpperCase()) {
+        return "-" + character.toLowerCase();
+      } else {
+        return character;
+      }
+    })
+    .join("");
+}
 // Check unique options
 function checkUniqueOption(uniqueParameters = [], options) {
   const optionsToCheck = Object.keys(options).filter((element) => {
@@ -57,7 +70,13 @@ function checkUniqueOption(uniqueParameters = [], options) {
     }
   });
   if (optionsToCheck.length !== 1) {
-    console.log("Only one option can be used");
+    let formattedParameters = uniqueParameters.map((parameter) =>
+      formatOption(parameter)
+    );
+    console.log(
+      "Only one of the following options must be used: " +
+        formattedParameters.join(", ")
+    );
     process.exit(1);
   }
 }
@@ -76,19 +95,7 @@ program
   .option("-a, --all", "Import all reconciliations")
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
-    // Check that only one of the options it's selected
-    const uniqueParameters = ["handle", "id", "all"];
-    const optionsToCheck = Object.keys(options).filter((element) => {
-      if (uniqueParameters.includes(element)) {
-        return true;
-      }
-    });
-    if (optionsToCheck.length !== 1) {
-      console.log(
-        "Import reconciliation: you have to use either --handle, --id or --all option"
-      );
-      process.exit(1);
-    }
+    checkUniqueOption(["handle", "id", "all"], options);
     if (!options.yes) {
       promptConfirmation();
     }
@@ -140,13 +147,7 @@ program
   .option("-a, --all", "Import all shared parts")
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
-    // Check that only one of both options it's selected
-    if ((!options.name && !options.all) || (options.name && options.all)) {
-      console.log(
-        "Import shared part: you have to use either --name or --all option"
-      );
-      process.exit(1);
-    }
+    checkUniqueOption(["name", "all"], options);
     if (!options.yes) {
       promptConfirmation();
     }
