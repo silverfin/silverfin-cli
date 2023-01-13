@@ -395,69 +395,77 @@ async function removeSharedPartFromReconciliation(
   }
 }
 
-async function runTests(firmId, handle) {
-  try {
-    const relativePath = `./reconciliation_texts/${handle}`;
-    const config = fsUtils.readConfig(relativePath);
-    const testPath = `${relativePath}/${config.test}`;
-    const testContent = fs.readFileSync(testPath, "utf-8");
-    const templateContent = constructReconciliationText(handle);
-    templateContent.handle = handle;
-    templateContent.reconciliation_type = config.reconciliation_type;
-    const sharedParts = fsUtils.getSharedParts(handle);
-    if (sharedParts.length !== 0) {
-      templateContent.text_shared_parts = [];
-      for (sharedPart of sharedParts) {
-        let sharedPartContent = fs.readFileSync(
-          `shared_parts/${sharedPart}/${sharedPart}.liquid`,
-          "utf-8"
-        );
-        templateContent.text_shared_parts.push({
-          name: sharedPart,
-          content: sharedPartContent,
-        });
-      }
-    }
-
-    const testParams = {
-      template: templateContent,
-      tests: testContent,
-    };
-
-    // Empty YAML check
-    if (testContent.split("\n").length <= 1) {
-      console.log(`${handle}: there are no tests stored in the YAML file`);
-      process.exit(1);
-    }
-
-    const testRunResponse = await SF.createTestRun(firmId, testParams);
-    const testRunId = testRunResponse.data;
-
-    let testRun = { status: "started" };
-    const pollingDelay = 2000;
-
-    spinner.spin("Running tests..");
-    while (testRun.status === "started") {
-      await new Promise((resolve) => {
-        setTimeout(resolve, pollingDelay);
+function buildTestParams(handle) {
+  const relativePath = `./reconciliation_texts/${handle}`;
+  const config = fsUtils.readConfig(relativePath);
+  const testPath = `${relativePath}/${config.test}`;
+  const testContent = fs.readFileSync(testPath, "utf-8");
+  const templateContent = constructReconciliationText(handle);
+  templateContent.handle = handle;
+  templateContent.reconciliation_type = config.reconciliation_type;
+  const sharedParts = fsUtils.getSharedParts(handle);
+  if (sharedParts.length !== 0) {
+    templateContent.text_shared_parts = [];
+    for (let sharedPart of sharedParts) {
+      let sharedPartContent = fs.readFileSync(
+        `shared_parts/${sharedPart}/${sharedPart}.liquid`,
+        "utf-8"
+      );
+      templateContent.text_shared_parts.push({
+        name: sharedPart,
+        content: sharedPartContent,
       });
-      const response = await SF.fetchTestRun(firmId, testRunId);
-      testRun = response.data;
     }
+  }
+  const testParams = {
+    template: templateContent,
+    tests: testContent,
+  };
+  // Empty YAML check
+  if (testContent.split("\n").length <= 1) {
+    console.log(`${handle}: there are no tests stored in the YAML file`);
+    process.exit(1);
+  }
+  return testParams;
+}
 
-    // Possible status: started, completed, test_error, internal_error
-    if (testRun.status === "internal_error") {
+async function fetchResult(firmId, testRunId) {
+  let testRun = { status: "started" };
+  const pollingDelay = 2000;
+  const waitingLimit = 20000;
+
+  spinner.spin("Running tests..");
+  let waitingTime = 0;
+  while (testRun.status === "started") {
+    await new Promise((resolve) => {
+      setTimeout(resolve, pollingDelay);
+    });
+    const response = await SF.fetchTestRun(firmId, testRunId);
+    testRun = response.data;
+    waitingTime += pollingDelay;
+    if (waitingTime >= waitingLimit) {
+      spinner.clear();
+      console.log("Timeout. Try to run your test again");
+      break;
+    }
+  }
+  spinner.clear();
+  return testRun;
+}
+
+function processTestRunResponse(testRun) {
+  // Possible status: started, completed, test_error, internal_error
+  switch (testRun.status) {
+    case "internal_error":
       console.log(
         "Internal error. Try to run the test again or contact support if the issue persists."
       );
-    }
-
-    if (testRun.status === "test_error") {
+      break;
+    case "test_error":
       console.log("Ran into an error an couldn't complete test run");
       console.log(chalk.red(testRun.error_message));
-    }
-
-    if (testRun.status === "completed") {
+      break;
+    case "completed":
       if (testRun.result.length === 0) {
         console.log(chalk.green("ALL TESTS HAVE PASSED"));
       } else {
@@ -607,9 +615,17 @@ async function runTests(firmId, handle) {
           }
         });
       }
-    }
+      break;
+  }
+}
 
-    spinner.clear();
+async function runTests(firmId, handle) {
+  try {
+    const testParams = buildTestParams(handle);
+    const testRunResponse = await SF.createTestRun(firmId, testParams);
+    const testRunId = testRunResponse.data;
+    const testRun = await fetchResult(firmId, testRunId);
+    processTestRunResponse(testRun);
     // Always return the response from Silverfin
     // We use this in the VS-Code extension to process results
     return testRun;
