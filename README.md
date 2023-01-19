@@ -14,57 +14,29 @@ A command-line tool for Silverfin template development.
 
 To use this CLI tool you first need to register an API application within Silverfin. You will get a `client_id` and `secret`.
 
-## Install package manager
+## Node
 
-Install `npm` with Homebrew:
+To make use of this CLI, you will need to have Node.js installed
+You can check if you already have it by running `node --version`
+If not you can download it from the [official website](https://nodejs.org/)
 
-```
-brew install node
-```
+## Install the CLI
 
-Install `yarn` globally:
-
-```
-npm install --global yarn
-```
-
-## Add sf-toolkit package
-
-Create `package.json` by running the following command and run through the prompts:
+It is recommended to install the CLI globally by doing:
 
 ```
-yarn init
+npm install -g https://github.com/silverfin/sf-toolkit.git
 ```
 
-Install `sf-toolkit` as a dependency of your project:
-
-```
-yarn add https://github.com/silverfin/sf-toolkit.git
-```
-
-## Add scripts to packages.json
-
-You can add this `scripts` section to the `packages.json`, where we define `silverfin` as an alias to call our CLI.
-
-```
-  "scripts": {
-    "silverfin": "node ./node_modules/sf_toolkit/bin/cli.js"
-  },
-```
+If you prefer, you could opt to add the CLI as a dependency to each of your projects containing a Liquid repository.
 
 ## Add your API credentials as environmental variables
 
-You could use a new `.env` local file, or add them to an existing file in your system (e.g. `~/.bash-profile`, `~/.bashrc` or `~/.zshrc`)
+Add them to an existing file in your system (e.g. `~/.bash-profile`, `~/.bashrc` or `~/.zshrc`)
 
 ```
 export SF_API_CLIENT_ID=...
 export SF_API_SECRET=...
-```
-
-If you are only using one firm, you could set it up as an environmental variable. That way, you won't need to pass the `--firm <firmid>` option every time you run a command.
-
-```
-export SF_FIRM_ID=...
 ```
 
 In case you need to use a different host, you can also set it up as an environmental variable. By default it would be `https://live.getsilverfin.com`.
@@ -75,65 +47,19 @@ export SF_HOST=...
 
 # How to use it
 
-## Help
+By installing the CLI globally, you will be able to run it simply with the command `silverfin`
 
-You can always get extra information by adding `--help` flag. For example:
+For example, you can run `silverfin --help` to confirm that your CLI is up and running, and get extra information about all the available commands and options for each of them.
 
 ```
-yarn silverfin --help
-yarn silverfin import-reconciliation --help
+silverfin --help
+silverfin import-reconciliation --help
 ```
 
 ## Authorize the CLI
 
-```
-yarn silverfin authorize
-```
-
-## Import an existing reconciliation
+The first time your are going to work with the CLI, you will need to authorize it's access. This can be done using the following command:
 
 ```
-yarn silverfin import-reconciliation --firm <firm-id> --handle <handle>
-```
-
-## Update an existing reconciliation
-
-```
-yarn silverfin update-reconciliation --firm <firm-id> --handle <handle>
-```
-
-## Import all existing reconciliations
-
-```
-yarn silverfin import-all-reconciliations --firm <firm-id>
-```
-
-## Import an existing shared part
-
-```
-yarn silverfin import-shared-part --firm <firm-id> --handle <handle>
-```
-
-## Update an existing shared part
-
-```
-yarn silverfin update-shared-part --firm <firm-id> --handle <handle>
-```
-
-## Import all existing shared parts
-
-```
-yarn silverfin import-all-shared-parts --firm <firm-id>
-```
-
-## Run a Liquid Test
-
-```
-yarn silverfin run-test --firm <firm-id> --handle <handle>
-```
-
-## Create a Liquid Test
-
-```
-yarn silverfin create-test --url <url>
+silverfin authorize
 ```
