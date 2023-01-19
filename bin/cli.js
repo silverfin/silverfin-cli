@@ -8,7 +8,6 @@ const prompt = require("prompt-sync")({ sigint: true });
 const pkg = require("../package.json");
 const cliUpdates = require("../resources/cliUpdates");
 const program = new Command();
-const { exec } = require("child_process");
 
 // Load default firm id from Config Object or ENV
 let firmIdDefault = undefined;
@@ -365,21 +364,7 @@ if (pkg.repository && pkg.repository.url) {
     .command("update")
     .description("Update the CLI to the latest version")
     .action(() => {
-      console.log(`Updating npm package from GitHub repository...`);
-      exec(
-        `sudo npm install -g ${pkg.repository.url}`,
-        (error, stdout, stderr) => {
-          if (error) {
-            console.log(`Error: ${error.message}`);
-            return;
-          }
-          if (stderr) {
-            console.log(`Error: ${stderr}`);
-            return;
-          }
-          console.log(`${stdout}`);
-        }
-      );
+      cliUpdates.performUpdate();
     });
 }
 

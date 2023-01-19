@@ -1,5 +1,8 @@
 const axios = require("axios");
 const pkg = require("../package.json");
+const chalk = require("chalk");
+const { exec } = require("child_process");
+
 const PACKAGE_URL =
   "https://raw.githubusercontent.com/silverfin/sf-toolkit/main/package.json";
 
@@ -21,15 +24,35 @@ async function checkVersions() {
   }
   if (latestVersion > currentVersion) {
     console.log(`--------------`);
-    console.log(`There is a new version available of this CLI`);
     console.log(
-      `Current version: ${currentVersion}. Latest version: ${latestVersion}`
+      "There is a new version available of this CLI (" +
+        chalk.red(`${currentVersion}`) +
+        " ->  " +
+        chalk.green(`${latestVersion}`) +
+        ")"
     );
     console.log(
-      `You can update to the latest version by running "silverfin update"`
+      "Run " +
+        chalk.italic.bold(`silverfin update`) +
+        " to get the latest version"
     );
     console.log(`--------------`);
   }
 }
 
-module.exports = { checkVersions };
+async function performUpdate() {
+  console.log(`Updating npm package from GitHub repository...`);
+  exec(`sudo npm install -g ${pkg.repository.url}`, (error, stdout, stderr) => {
+    if (error) {
+      console.log(`Error: ${error.message}`);
+      return;
+    }
+    if (stderr) {
+      console.log(`Error: ${stderr}`);
+      return;
+    }
+    console.log(`${stdout}`);
+  });
+}
+
+module.exports = { checkVersions, performUpdate };
