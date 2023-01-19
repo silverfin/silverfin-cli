@@ -1,12 +1,16 @@
 {
   "name": "sf_toolkit",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Command line tool for Silverfin template development",
   "main": "index.js",
   "license": "MIT",
   "private": false,
   "bin": {
     "silverfin": "./bin/cli.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/silverfin/sf-toolkit.git"
   },
   "homepage": "https://github.com/silverfin/sf-toolkit#readme",
   "bugs": {

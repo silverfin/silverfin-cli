@@ -6,6 +6,7 @@ const stats = require("../stats_utils");
 const { Command } = require("commander");
 const prompt = require("prompt-sync")({ sigint: true });
 const pkg = require("../package.json");
+const cliUpdates = require("../resources/cliUpdates");
 const program = new Command();
 
 // Load default firm id from Config Object or ENV
@@ -21,11 +22,6 @@ function checkDefaultFirm(firmUsed) {
   if (firmUsed === firmIdDefault) {
     console.log(`Firm ID to be used: ${firmIdDefault}`);
   }
-}
-
-// Version
-if (pkg.version) {
-  program.version(pkg.version);
 }
 
 // Uncaught Errors
@@ -79,6 +75,13 @@ function checkUniqueOption(uniqueParameters = [], options) {
     );
     process.exit(1);
   }
+}
+
+program.name("silverfin");
+
+// Version
+if (pkg.version) {
+  program.version(pkg.version);
 }
 
 // Import reconciliations
@@ -355,4 +358,20 @@ program
     }
   });
 
-program.parse();
+// Update the CLI
+if (pkg.repository && pkg.repository.url) {
+  program
+    .command("update")
+    .description("Update the CLI to the latest version")
+    .action(() => {
+      cliUpdates.performUpdate();
+    });
+}
+
+// Initiate CLI
+(async function () {
+  // Check if there is a new version available
+  await cliUpdates.checkVersions();
+
+  program.parse();
+})();
