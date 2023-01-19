@@ -6,7 +6,9 @@ const stats = require("../stats_utils");
 const { Command } = require("commander");
 const prompt = require("prompt-sync")({ sigint: true });
 const pkg = require("../package.json");
+const cliUpdates = require("../resources/cliUpdates");
 const program = new Command();
+const { exec } = require("child_process");
 
 // Load default firm id from Config Object or ENV
 let firmIdDefault = undefined;
@@ -21,11 +23,6 @@ function checkDefaultFirm(firmUsed) {
   if (firmUsed === firmIdDefault) {
     console.log(`Firm ID to be used: ${firmIdDefault}`);
   }
-}
-
-// Version
-if (pkg.version) {
-  program.version(pkg.version);
 }
 
 // Uncaught Errors
@@ -79,6 +76,13 @@ function checkUniqueOption(uniqueParameters = [], options) {
     );
     process.exit(1);
   }
+}
+
+program.name("silverfin");
+
+// Version
+if (pkg.version) {
+  program.version(pkg.version);
 }
 
 // Import reconciliations
@@ -355,4 +359,34 @@ program
     }
   });
 
-program.parse();
+// Update the CLI
+if (pkg.repository && pkg.repository.url) {
+  program
+    .command("update")
+    .description("Update the CLI to the latest version")
+    .action(() => {
+      console.log(`Updating npm package from GitHub repository...`);
+      exec(
+        `sudo npm install -g ${pkg.repository.url}`,
+        (error, stdout, stderr) => {
+          if (error) {
+            console.log(`Error: ${error.message}`);
+            return;
+          }
+          if (stderr) {
+            console.log(`Error: ${stderr}`);
+            return;
+          }
+          console.log(`${stdout}`);
+        }
+      );
+    });
+}
+
+// Initiate CLI
+(async function () {
+  // Check if there is a new version available
+  await cliUpdates.checkVersions();
+
+  program.parse();
+})();
