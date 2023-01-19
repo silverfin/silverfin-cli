@@ -632,6 +632,10 @@ function getDefaultFirmID() {
   return firmId;
 }
 
+function listStoredIds() {
+  return config.storedIds();
+}
+
 module.exports = {
   importExistingReconciliationByHandle,
   importExistingReconciliationById,
@@ -648,4 +652,5 @@ module.exports = {
   uncaughtErrors,
   setDefaultFirmID,
   getDefaultFirmID,
+  listStoredIds,
 };

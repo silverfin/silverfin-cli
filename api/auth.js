@@ -82,6 +82,13 @@ class Config {
       this.data.defaultFirmIDs = {};
     }
   }
+
+  // Return IDs which have a pair of tokens stored
+  storedIds() {
+    return Object.keys(this.data).filter(
+      (element) => element !== "defaultFirmIDs"
+    );
+  }
 }
 
 // Initiate Object

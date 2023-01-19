@@ -49,6 +49,38 @@ function promptConfirmation() {
   return true;
 }
 
+// Convert variable name into flag name to show in message (listAll -> list-all)
+function formatOption(inputString) {
+  return inputString
+    .split("")
+    .map((character) => {
+      if (character == character.toUpperCase()) {
+        return "-" + character.toLowerCase();
+      } else {
+        return character;
+      }
+    })
+    .join("");
+}
+// Check unique options
+function checkUniqueOption(uniqueParameters = [], options) {
+  const optionsToCheck = Object.keys(options).filter((element) => {
+    if (uniqueParameters.includes(element)) {
+      return true;
+    }
+  });
+  if (optionsToCheck.length !== 1) {
+    let formattedParameters = uniqueParameters.map((parameter) =>
+      formatOption(parameter)
+    );
+    console.log(
+      "Only one of the following options must be used: " +
+        formattedParameters.join(", ")
+    );
+    process.exit(1);
+  }
+}
+
 // Import reconciliations
 program
   .command("import-reconciliation")
@@ -63,19 +95,7 @@ program
   .option("-a, --all", "Import all reconciliations")
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
-    // Check that only one of the options it's selected
-    const uniqueParameters = ["handle", "id", "all"];
-    const optionsToCheck = Object.keys(options).filter((element) => {
-      if (uniqueParameters.includes(element)) {
-        return true;
-      }
-    });
-    if (optionsToCheck.length !== 1) {
-      console.log(
-        "Import reconciliation: you have to use either --handle, --id or --all option"
-      );
-      process.exit(1);
-    }
+    checkUniqueOption(["handle", "id", "all"], options);
     if (!options.yes) {
       promptConfirmation();
     }
@@ -127,13 +147,7 @@ program
   .option("-a, --all", "Import all shared parts")
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
-    // Check that only one of both options it's selected
-    if ((!options.name && !options.all) || (options.name && options.all)) {
-      console.log(
-        "Import shared part: you have to use either --name or --all option"
-      );
-      process.exit(1);
-    }
+    checkUniqueOption(["name", "all"], options);
     if (!options.yes) {
       promptConfirmation();
     }
@@ -318,16 +332,9 @@ program
     "Store a firm id to use it as default (setting a firm id will overwrite any existing data)"
   )
   .option("-g, --get-firm", "Check if there is any firm id already stored")
+  .option("-l, --list-all", "List all the firm IDs stored")
   .action((options) => {
-    if (
-      (!options.setFirm && !options.getFirm) ||
-      (options.setFirm && options.getFirm)
-    ) {
-      console.log(
-        "Configuration: You have to use either --get-firm or --set-firm option"
-      );
-      process.exit(1);
-    }
+    checkUniqueOption(["setFirm", "getFirm", "listAll"], options);
     if (options.setFirm) {
       toolkit.setDefaultFirmID(options.setFirm);
     }
@@ -337,6 +344,13 @@ program
         console.log(`Firm id previously stored: ${storedFirmId}`);
       } else {
         console.log("There is no firm id previously stored");
+      }
+    }
+    if (options.listAll) {
+      const ids = toolkit.listStoredIds() || [];
+      if (ids) {
+        console.log("List of authorized firms");
+        ids.forEach((element) => console.log("- " + element));
       }
     }
   });
