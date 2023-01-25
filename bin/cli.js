@@ -404,19 +404,7 @@ program
   .option("-a, --all", "Fetch the ID for every reconciliation")
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
-    // Check that only one of the options it's selected
-    const uniqueParameters = ["handle", "all"];
-    const optionsToCheck = Object.keys(options).filter((element) => {
-      if (uniqueParameters.includes(element)) {
-        return true;
-      }
-    });
-    if (optionsToCheck.length !== 1) {
-      console.log(
-        "Get reconciliation id: you have to use either --handle or --all option"
-      );
-      process.exit(1);
-    }
+    checkUniqueOption(["handle", "all"], options);
     if (!options.yes) {
       promptConfirmation();
     }
@@ -445,19 +433,7 @@ program
   .option("-a, --all", "Fetch the ID for every shared part")
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
-    // Check that only one of the options it's selected
-    const uniqueParameters = ["name", "all"];
-    const optionsToCheck = Object.keys(options).filter((element) => {
-      if (uniqueParameters.includes(element)) {
-        return true;
-      }
-    });
-    if (optionsToCheck.length !== 1) {
-      console.log(
-        "Get reconciliation id: you have to use either --handle or --all option"
-      );
-      process.exit(1);
-    }
+    checkUniqueOption(["name", "all"], options);
     if (!options.yes) {
       promptConfirmation();
     }
