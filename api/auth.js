@@ -68,11 +68,10 @@ class Config {
   getFirmId() {
     this.checkDefaultFirmsObject();
     const currentDirectory = path.basename(process.cwd());
-    if (this.data.defaultFirmIDs.hasOwnProperty(currentDirectory)) {
-      return this.data.defaultFirmIDs[currentDirectory];
-    } else {
+    if (!this.data.defaultFirmIDs.hasOwnProperty(currentDirectory)) {
       return null;
     }
+    return this.data.defaultFirmIDs[currentDirectory];
   }
 
   // Create DefaultFirmIDs (for legacy compatibility of existing files)
