@@ -402,6 +402,7 @@ function buildTestParams(handle) {
   const testContent = fs.readFileSync(testPath, "utf-8");
   const templateContent = constructReconciliationText(handle);
   templateContent.handle = handle;
+  templateContent.html_render = true;
   templateContent.reconciliation_type = config.reconciliation_type;
   const sharedParts = fsUtils.getSharedParts(handle);
   if (sharedParts.length !== 0) {
@@ -453,6 +454,31 @@ async function fetchResult(firmId, testRunId) {
   return testRun;
 }
 
+function listErrors(items, type) {
+  const itemsKeys = Object.keys(items);
+  console.log(
+    chalk.red(
+      `${itemsKeys.length} ${type} expectation${
+        itemsKeys.length > 1 ? "s" : ""
+      } failed`
+    )
+  );
+  itemsKeys.forEach((itemName) => {
+    let itemDetails = items[itemName];
+    console.log(`At line number ${itemDetails.line_number}`);
+    console.log(
+      `For ${type} ${chalk.blue.bold(itemName)} got ${chalk.blue.bold(
+        itemDetails.got
+      )} (${chalk.italic(
+        typeof itemDetails.got
+      )}) but expected ${chalk.blue.bold(itemDetails.expected)} (${chalk.italic(
+        typeof itemDetails.expected
+      )})`
+    );
+  });
+  console.log("");
+}
+
 function processTestRunResponse(testRun) {
   // Possible status: started, completed, test_error, internal_error
   switch (testRun.status) {
@@ -466,156 +492,71 @@ function processTestRunResponse(testRun) {
       console.log(chalk.red(testRun.error_message));
       break;
     case "completed":
-      if (testRun.result.length === 0) {
+      if (Object.keys(testRun.tests).length === 0) {
         console.log(chalk.green("ALL TESTS HAVE PASSED"));
       } else {
-        const formattedTests = [];
-
-        testRun.result.map((test) => {
-          const name = test.test;
-          const type = test.result.split(".")[0];
-          const outcome = test.got;
-          const expected = test.expected;
-          const lineNumber = test.line_number;
-
-          const emptyTestExpectations = {
-            name,
-            reconciled: {},
-            results: [],
-            rollforwards: [],
-          };
-
-          const existingItemIndex = formattedTests.findIndex(
-            (item) => item.name === name
-          );
-          const existingItem =
-            formattedTests[existingItemIndex] || emptyTestExpectations;
-
-          const testOutput = {
-            lineNumber,
-            expected,
-            outcome,
-          };
-
-          const testExpectations = {
-            name,
-            reconciled: { ...existingItem.reconciled },
-            results: [...existingItem.results],
-            rollforwards: [...existingItem.rollforwards],
-          };
-
-          switch (type) {
-            case "reconciled":
-              testExpectations.reconciled = testOutput;
-              break;
-            case "results":
-              const resultName = test.result.split(".")[1];
-              testOutput.resultName = resultName;
-              testExpectations.results.push(testOutput);
-              break;
-            case "rollforward":
-              const rollforwardName = test.result.split(".").slice(1);
-              testOutput.rollforwardName = rollforwardName;
-              testExpectations.rollforwards.push(testOutput);
-              break;
-          }
-
-          if (existingItemIndex !== -1) {
-            formattedTests[existingItemIndex] = testExpectations;
-          } else {
-            formattedTests.push(testExpectations);
-          }
-        });
-
         console.log("");
 
-        console.error(
+        console.log(
           chalk.red(
-            `${formattedTests.length} TEST${
-              formattedTests.length > 1 ? "S" : ""
+            `${Object.keys(testRun.tests).length} TEST${
+              Object.keys(testRun.tests).length > 1 ? "S" : ""
             } FAILED`
           )
         );
 
-        formattedTests.forEach((test) => {
+        const tests = Object.keys(testRun.tests);
+        tests.forEach((testName) => {
           console.log(
             "---------------------------------------------------------------"
           );
-          console.log(chalk.bold(test.name));
+          console.log(chalk.bold(testName));
+
+          let testElements = testRun.tests[testName];
 
           // Display success messages of test
-          if (Object.keys(test.reconciled).length === 0) {
+          if (testElements.reconciled === null) {
             console.log(chalk.green("Reconciliation expectation passed"));
           }
 
-          if (test.results.length === 0) {
+          if (Object.keys(testElements.results).length === 0) {
             console.log(chalk.green("All result expectations passed"));
           }
 
-          if (test.rollforwards.length === 0) {
+          if (Object.keys(testElements.rollforwards).length === 0) {
             console.log(chalk.green("All rollforward expectations passed"));
           }
 
           // Display error messages of test
-          if (Object.keys(test.reconciled).length > 0) {
+
+          // Reconciled
+          if (testElements.reconciled !== null) {
             console.log(chalk.red("Reconciliation expectation failed"));
-            console.log(`At line number ${test.reconciled.lineNumber}`);
+            console.log(
+              `At line number ${testElements.reconciled.line_number}`
+            );
             console.log(
               `got ${chalk.blue.bold(
-                test.reconciled.outcome
-              )} but expected ${chalk.blue.bold(test.reconciled.expected)}`
+                testElements.reconciled.got
+              )} but expected ${chalk.blue.bold(
+                testElements.reconciled.expected
+              )}`
             );
             console.log("");
           }
 
-          if (test.results.length > 0) {
-            console.log(
-              chalk.red(
-                `${test.results.length} result expectation${
-                  test.results.length > 1 ? "s" : ""
-                } failed`
-              )
-            );
-            test.results.forEach((expectation) => {
-              console.log(`At line number ${expectation.lineNumber}`);
-              console.log(
-                `For result ${chalk.blue.bold(
-                  expectation.resultName
-                )} got ${chalk.blue.bold(expectation.outcome)} (${chalk.italic(
-                  typeof expectation.outcome
-                )}) but expected ${chalk.blue.bold(
-                  expectation.expected
-                )} (${chalk.italic(typeof expectation.expected)})`
-              );
-            });
-            console.log("");
+          // Results
+          if (Object.keys(testElements.results).length > 0) {
+            listErrors(testElements.results, "result");
           }
 
-          if (test.rollforwards.length > 0) {
-            console.log(
-              chalk.red(
-                `${test.rollforwards.length} rollforward expectation${
-                  test.rollforwards.length > 1 ? "s" : ""
-                } failed`
-              )
-            );
-            test.rollforwards.forEach((expectation) => {
-              console.log(`At line number ${expectation.lineNumber}`);
-              console.log(
-                `For rollforward ${chalk.blue.bold(
-                  expectation.rollforwardName
-                )} got ${chalk.blue.bold(expectation.outcome)} (${chalk.italic(
-                  typeof expectation.outcome
-                )}) but expected ${chalk.blue.bold(
-                  expectation.expected
-                )} (${chalk.italic(typeof expectation.expected)})`
-              );
-            });
-            console.log("");
+          // Rollforwards
+          if (Object.keys(testElements.rollforwards).length > 0) {
+            listErrors(testElements.rollforwards, "rollforward");
           }
         });
+        break;
       }
-      break;
   }
 }
 
