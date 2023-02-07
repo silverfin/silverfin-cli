@@ -6,6 +6,9 @@ const chalk = require("chalk");
 const pkg = require("./package.json");
 const { config } = require("./api/auth");
 const yaml = require("yaml");
+const axios = require("axios");
+const open = require("open");
+const path = require("path");
 
 const RECONCILIATION_FIELDS_TO_SYNC = [
   "id",
@@ -408,7 +411,7 @@ function findTestRows(testContent) {
   return indexes;
 }
 
-function buildTestParams(handle, testName = "") {
+function buildTestParams(handle, testName = "", html_render = false) {
   const relativePath = `./reconciliation_texts/${handle}`;
   const config = fsUtils.readConfig(relativePath);
   const testPath = `${relativePath}/${config.test}`;
@@ -422,7 +425,7 @@ function buildTestParams(handle, testName = "") {
 
   const templateContent = constructReconciliationText(handle);
   templateContent.handle = handle;
-  templateContent.html_render = true;
+  templateContent.html_render = html_render ? true : false;
   templateContent.reconciliation_type = config.reconciliation_type;
   const sharedParts = fsUtils.getSharedParts(handle);
   if (sharedParts.length !== 0) {
@@ -445,6 +448,10 @@ function buildTestParams(handle, testName = "") {
   // Include only one test
   if (testName) {
     const indexes = findTestRows(testContent);
+    if (!Object.keys(indexes).includes(testName)) {
+      console.log(`Test ${testName} not found in YAML`);
+      process.exit(1);
+    }
     testParams.test_line = indexes[testName] + 1;
   }
   return testParams;
@@ -617,16 +624,81 @@ function processTestRunResponse(testRun) {
   }
 }
 
-async function runTests(firmId, handle, testName = "") {
+// Path to store HTML exports
+function resolveHTMLPath(testName) {
+  const homedir = require("os").homedir();
+  const folderPath = path.resolve(homedir, ".silverfin/html_exports");
+  const filePath = path.resolve(folderPath, `${testName}.html`);
+  fsUtils.createFolder(folderPath);
+  return filePath;
+}
+
+// Retrieve HTML, store it and open it in the default browser if needed
+async function getHTML(url, testName, openBrowser = false) {
+  const filePath = resolveHTMLPath(testName);
+  const htmlResponse = await axios.get(url);
+  if (htmlResponse.status === 200) {
+    fs.writeFileSync(filePath, htmlResponse.data);
+    if (openBrowser) {
+      await open(filePath);
+    }
+  }
+}
+
+async function deleteExistingHTMLs() {
   try {
-    const testParams = buildTestParams(handle, testName);
+    const homedir = require("os").homedir();
+    const folderPath = path.resolve(homedir, ".silverfin/html_exports");
+    if (!fs.existsSync(folderPath)) {
+      return;
+    }
+    const files = fs.readdirSync(folderPath);
+    files.forEach((fileName) => {
+      const filePath = path.resolve(folderPath, fileName);
+      fs.unlinkSync(filePath);
+    });
+  } catch (err) {}
+}
+
+async function handleHTMLfiles(testName = "", testRun) {
+  deleteExistingHTMLs();
+  if (testName) {
+    // Only one test
+    await getHTML(testRun.tests[testName].html, testName, true);
+  } else {
+    // All tests
+    const testNames = Object.keys(testRun.tests);
+    testNames.forEach(async (testName) => {
+      await getHTML(testRun.tests[testName].html, testName, true);
+    });
+  }
+}
+
+// Used by VSCode Extension
+async function runTests(firmId, handle, testName = "", html_render = false) {
+  try {
+    const testParams = buildTestParams(handle, testName, html_render);
     const testRunResponse = await SF.createTestRun(firmId, testParams);
     const testRunId = testRunResponse.data;
     const testRun = await fetchResult(firmId, testRunId);
-    processTestRunResponse(testRun);
-    // Always return the response from Silverfin
-    // We use this in the VS-Code extension to process results
     return testRun;
+  } catch (error) {
+    errorHandler(error);
+  }
+}
+
+async function runTestsWithOutput(
+  firmId,
+  handle,
+  testName = "",
+  html_render = false
+) {
+  try {
+    const testRun = await runTests(firmId, handle, testName, html_render);
+    processTestRunResponse(testRun);
+    if (html_render) {
+      handleHTMLfiles(testName, testRun);
+    }
   } catch (error) {
     errorHandler(error);
   }
@@ -662,6 +734,10 @@ module.exports = {
   addSharedPartToReconciliation,
   removeSharedPartFromReconciliation,
   runTests,
+  runTestsWithOutput,
+  getHTML,
+  resolveHTMLPath,
+  checkAllTestsErrorsPresent,
   authorize,
   uncaughtErrors,
   setDefaultFirmID,
