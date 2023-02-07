@@ -281,9 +281,15 @@ program
     "-h, --handle <handle>",
     "Specify the reconciliation to be used (mandatory)"
   )
+  .option(
+    "-t, --test <test-name>",
+    "Specify the name of the test to be run (optional)",
+    ""
+  )
   .action((options) => {
     checkDefaultFirm(options.firm);
-    toolkit.runTests(options.firm, options.handle);
+
+    toolkit.runTests(options.firm, options.handle, options.test);
   });
 
 // Create Liquid Test

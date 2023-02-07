@@ -5,6 +5,7 @@ const { spinner } = require("./resources/spinner");
 const chalk = require("chalk");
 const pkg = require("./package.json");
 const { config } = require("./api/auth");
+const yaml = require("yaml");
 
 const RECONCILIATION_FIELDS_TO_SYNC = [
   "id",
@@ -395,11 +396,30 @@ async function removeSharedPartFromReconciliation(
   }
 }
 
-function buildTestParams(handle) {
+function findTestRows(testContent) {
+  const testYAML = yaml.parse(testContent);
+  const testNames = Object.keys(testYAML);
+  const testRows = testContent.split("\n");
+  const indexes = {};
+  testNames.forEach((testName) => {
+    let index = testRows.findIndex((element) => element.includes(testName));
+    indexes[testName] = index;
+  });
+  return indexes;
+}
+
+function buildTestParams(handle, testName = "") {
   const relativePath = `./reconciliation_texts/${handle}`;
   const config = fsUtils.readConfig(relativePath);
   const testPath = `${relativePath}/${config.test}`;
   const testContent = fs.readFileSync(testPath, "utf-8");
+
+  // Empty YAML check
+  if (testContent.split("\n").length <= 1) {
+    console.log(`${handle}: there are no tests stored in the YAML file`);
+    process.exit(1);
+  }
+
   const templateContent = constructReconciliationText(handle);
   templateContent.handle = handle;
   templateContent.html_render = true;
@@ -422,10 +442,10 @@ function buildTestParams(handle) {
     template: templateContent,
     tests: testContent,
   };
-  // Empty YAML check
-  if (testContent.split("\n").length <= 1) {
-    console.log(`${handle}: there are no tests stored in the YAML file`);
-    process.exit(1);
+  // Include only one test
+  if (testName) {
+    const indexes = findTestRows(testContent);
+    testParams.test_line = indexes[testName] + 1;
   }
   return testParams;
 }
@@ -597,9 +617,9 @@ function processTestRunResponse(testRun) {
   }
 }
 
-async function runTests(firmId, handle) {
+async function runTests(firmId, handle, testName = "") {
   try {
-    const testParams = buildTestParams(handle);
+    const testParams = buildTestParams(handle, testName);
     const testRunResponse = await SF.createTestRun(firmId, testParams);
     const testRunId = testRunResponse.data;
     const testRun = await fetchResult(firmId, testRunId);
