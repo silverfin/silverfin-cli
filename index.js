@@ -479,6 +479,34 @@ function listErrors(items, type) {
   console.log("");
 }
 
+// Find at least one error in the all tests
+function checkAllTestsErrorsPresent(testsFeedback) {
+  let errorsPresent = false;
+  const testNames = Object.keys(testsFeedback);
+  for (let testName of testNames) {
+    if (errorsPresent) {
+      break;
+    }
+    errorsPresent = checkTestErrorsPresent(testName, testsFeedback);
+  }
+  return errorsPresent;
+}
+
+function checkTestErrorsPresent(testName, testsFeedback) {
+  let errorsPresent = false;
+  const SECTIONS = ["reconciled", "results", "rollforwards"];
+  let testSections = Object.keys(testsFeedback[testName]);
+  // Look for reconciled, results or rollforwards
+  // We could have only html for successful tests
+  for (let section of testSections) {
+    if (SECTIONS.includes(section)) {
+      errorsPresent = true;
+      break;
+    }
+  }
+  return errorsPresent;
+}
+
 function processTestRunResponse(testRun) {
   // Possible status: started, completed, test_error, internal_error
   switch (testRun.status) {
@@ -492,7 +520,8 @@ function processTestRunResponse(testRun) {
       console.log(chalk.red(testRun.error_message));
       break;
     case "completed":
-      if (Object.keys(testRun.tests).length === 0) {
+      const errorsPresent = checkAllTestsErrorsPresent(testRun.tests);
+      if (errorsPresent === false) {
         console.log(chalk.green("ALL TESTS HAVE PASSED"));
       } else {
         console.log("");
@@ -507,6 +536,14 @@ function processTestRunResponse(testRun) {
 
         const tests = Object.keys(testRun.tests);
         tests.forEach((testName) => {
+          let testErrorsPresent = checkTestErrorsPresent(
+            testName,
+            testRun.tests
+          );
+          // No errors in this test
+          if (!testErrorsPresent) {
+            return;
+          }
           console.log(
             "---------------------------------------------------------------"
           );
