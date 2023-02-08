@@ -87,7 +87,7 @@ async function createTemplateFiles(relativePath, textMain, textParts) {
 
 async function createLiquidFile(relativePath, fileName, textContent) {
   const emptyCallback = () => {};
-  fs.writeFile(
+  fs.writeFileSync(
     `${relativePath}/${fileName}.liquid`,
     textContent,
     emptyCallback
@@ -111,6 +111,8 @@ function readConfig(relativePath) {
 }
 
 function createConfigIfMissing(relativePath) {
+  createFolder(relativePath);
+
   if (!fs.existsSync(`${relativePath}/config.json`)) {
     const config = { id: {} };
     writeConfig(relativePath, config);
@@ -145,7 +147,7 @@ function getTemplatePaths(relativePath) {
 }
 
 // Get the handle/name of a reconciliation/shared part by it's ID
-function findHandleByID(type, id) {
+function findHandleByID(firmId, type, id) {
   if (type !== "shared_parts" && type !== "reconciliation_texts") {
     throw "type should be shared_parts or reconciliation_texts";
   }

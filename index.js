@@ -114,9 +114,17 @@ function storeImportedReconciliation(firmId, reconciliationText) {
     return acc;
   }, {});
 
+  // Check for existing ids in the config for other firms
+  let existingConfig = {};
+
+  if (fs.existsSync(`${relativePath}/config.json`)) {
+    existingConfig = fsUtils.readConfig(relativePath);
+  }
+
   const configContent = {
     ...attributes,
     id: {
+      ...existingConfig.id,
       [firmId]: reconciliationText.id,
     },
     text: "main.liquid",
@@ -198,7 +206,7 @@ async function updateTemplateID(firmId, type, handle) {
 async function getAllTemplatesId(firmId, type) {
   try {
     let templatesArray = fsUtils.getTemplatePaths(type); // shared_parts or reconciliation_texts
-    for (configPath of templatesArray) {
+    for (let configPath of templatesArray) {
       let configTemplate = fsUtils.readConfig(configPath);
       let handle = configTemplate.handle || configTemplate.name;
       await updateTemplateID(firmId, type, handle);
@@ -243,7 +251,7 @@ async function persistReconciliationText(firmId, handle) {
       console.log(`Reconciliation ${handle}: ID is missing. Aborted`);
       process.exit(1);
     }
-    let reconciliationTextId = (reconciliationTextId = config.id[firmId]);
+    let reconciliationTextId = config.id[firmId];
     SF.updateReconciliationText(firmId, reconciliationTextId, {
       ...constructReconciliationText(handle),
       version_comment: "Update published using the API",
@@ -271,11 +279,26 @@ async function importExistingSharedPartById(firmId, id) {
     sharedPart.data.text
   );
 
+  let existingConfig;
+
+  if (!fs.existsSync(`${relativePath}/config.json`)) {
+    existingConfig = fsUtils.createConfigIfMissing(relativePath);
+  }
+  existingConfig = fsUtils.readConfig(relativePath);
+
   // Adjust ID and find reconciliation handle
-  let used_in = [];
-  for (reconciliation of sharedPart.data.used_in) {
+  let used_in = existingConfig.used_in ? existingConfig.used_in : [];
+  // Remove old format IDs
+  // OLD: "id": 1234
+  // NEW: "id": { "100": 1234 }
+  used_in = used_in.filter(
+    (reconcilation) => typeof reconcilation.id !== "number"
+  );
+
+  for (let reconciliation of sharedPart.data.used_in) {
     // Search in repository
-    let reconHandle = fsUtils.findHandleByID(
+    let reconHandle = await fsUtils.findHandleByID(
+      firmId,
       "reconciliation_texts",
       reconciliation.id
     );
@@ -292,13 +315,25 @@ async function importExistingSharedPartById(firmId, id) {
       }
     }
     reconId = reconciliation.id;
-    reconciliation.id = {};
-    reconciliation.id[firmId] = reconId;
-    used_in.push(reconciliation);
+    // Check if there's already an existing used_in configuration for other firms
+    const existingReconciliationConfig = used_in.findIndex(
+      (existingUsedRecon) => existingUsedRecon.handle == reconciliation.handle
+    );
+
+    if (existingReconciliationConfig !== -1) {
+      reconciliation.id = {
+        ...used_in[existingReconciliationConfig].id,
+        [firmId]: reconciliation.id,
+      };
+      used_in[existingReconciliationConfig] = reconciliation;
+    } else {
+      reconciliation.id = { [firmId]: reconciliation.id };
+      used_in.push(reconciliation);
+    }
   }
 
   const config = {
-    id: { [firmId]: sharedPart.data.id },
+    id: { ...existingConfig.id, [firmId]: sharedPart.data.id },
     name: sharedPart.data.name,
     text: "main.liquid",
     used_in: used_in,
@@ -312,7 +347,7 @@ async function importExistingSharedPartByName(firmId, name) {
   if (!sharedPartByName) {
     throw `Shared part with name ${name} wasn't found.`;
   }
-  await importExistingSharedPartById(firmId, sharedPartByName.id);
+  return importExistingSharedPartById(firmId, sharedPartByName.id);
 }
 
 async function importExistingSharedParts(firmId, page = 1) {
@@ -345,7 +380,7 @@ async function persistSharedPart(firmId, name) {
     );
     SF.updateSharedPart(firmId, config.id[firmId], {
       ...attributes,
-      version_comment: "Testing Cli",
+      version_comment: "Update published using the API",
     });
   } catch (error) {
     errorHandler(error);
@@ -356,22 +391,34 @@ async function newSharedPart(firmId, name) {
   try {
     const existingSharedPart = await SF.findSharedPart(firmId, name);
     if (existingSharedPart) {
-      console.log(`Shared part ${name} already exists. Skip it's creation`);
+      console.log(`Shared part ${name} already exists. Skipping its creation`);
       return;
     }
     const relativePath = `./shared_parts/${name}`;
+
+    fsUtils.createFolder(`./shared_parts`);
+
     fsUtils.createConfigIfMissing(relativePath);
     const config = fsUtils.readConfig(relativePath);
-    const attributes = {};
-    attributes.text = fs.readFileSync(
-      `${relativePath}/${name}.liquid`,
-      "utf-8"
-    );
-    attributes.name = name;
+
+    if (!fs.existsSync(`${relativePath}/${name}.liquid`)) {
+      fsUtils.createLiquidFile(
+        relativePath,
+        name,
+        "{% comment %}SHARED PART CONTENT{% endcomment %}"
+      );
+    }
+
+    const attributes = {
+      name,
+      text: fs.readFileSync(`${relativePath}/${name}.liquid`, "utf-8"),
+    };
+
     const response = await SF.createSharedPart(firmId, {
       ...attributes,
-      version_comment: "Creating shared part with the Cli",
+      version_comment: "Created using the API",
     });
+
     // Store new firm id
     if (response && response.status == 201) {
       config.id[firmId] = response.data.id;
@@ -384,7 +431,7 @@ async function newSharedPart(firmId, name) {
 
 async function newSharedPartsAll(firmId) {
   const sharedPartsArray = fsUtils.getTemplatePaths("shared_parts");
-  for (sharedPartPath of sharedPartsArray) {
+  for (let sharedPartPath of sharedPartsArray) {
     const sharedPartName = sharedPartPath.split("/")[2];
     await newSharedPart(firmId, sharedPartName);
   }
@@ -423,10 +470,17 @@ async function addSharedPartToReconciliation(
         `Shared part "${sharedPartHandle}" added to "${reconciliationHandle}" reconciliation text.`
       );
 
-      const reconciliationIndex = configSharedPart.used_in.findIndex(
-        (reconciliationText) =>
-          reconciliationHandle === reconciliationText.handle
-      );
+      let reconciliationIndex;
+
+      if (!configSharedPart.used_in) {
+        reconciliationIndex = -1;
+        configSharedPart.used_in = [];
+      } else {
+        reconciliationIndex = configSharedPart.used_in.findIndex(
+          (reconciliationText) =>
+            reconciliationHandle === reconciliationText.handle
+        );
+      }
 
       // Not stored yet
       if (reconciliationIndex === -1) {
@@ -436,6 +490,7 @@ async function addSharedPartToReconciliation(
           handle: reconciliationHandle,
         });
       }
+
       // Previously stored
       if (reconciliationIndex !== -1) {
         configSharedPart.used_in[reconciliationIndex].id[firmId] =
@@ -455,9 +510,9 @@ async function addSharedPartToReconciliation(
 // Try to add the shared part to each reconciliation listed in 'used_in'
 async function addAllSharedPartsToAllReconciliation(firmId) {
   const sharedPartsArray = fsUtils.getTemplatePaths("shared_parts");
-  for (sharedPartPath of sharedPartsArray) {
+  for (let sharedPartPath of sharedPartsArray) {
     let configSharedPart = fsUtils.readConfig(sharedPartPath);
-    for (reconciliation of configSharedPart.used_in) {
+    for (let reconciliation of configSharedPart.used_in) {
       if (reconciliation.handle) {
         if (fs.existsSync(`./reconciliation_texts/${reconciliation.handle}`)) {
           await addSharedPartToReconciliation(
@@ -499,7 +554,13 @@ async function removeSharedPartFromReconciliation(
         reconciliationText.id[firmId] === configReconciliation.id[firmId]
     );
     if (reconciliationIndex !== -1) {
-      configSharedPart.used_in.splice(reconciliationIndex, 1);
+      const reconciliationText = configSharedPart.used_in[reconciliationIndex];
+
+      if (Object.keys(reconciliationText.id).length === 1) {
+        configSharedPart.used_in.splice(reconciliationIndex, 1);
+      } else {
+        delete reconciliationText.id[firmId];
+      }
       fsUtils.writeConfig(relativePathSharedPart, configSharedPart);
     }
   } catch (error) {

@@ -146,17 +146,17 @@ program
     "Specify the firm to be used",
     firmIdDefault
   )
-  .option("-n, --name <name>", "Import a specific shared part")
+  .option("-s, --shared-part <name>", "Import a specific shared part")
   .option("-a, --all", "Import all shared parts")
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
-    checkUniqueOption(["name", "all"], options);
+    checkUniqueOption(["sharedPart", "all"], options);
     if (!options.yes) {
       promptConfirmation();
     }
     checkDefaultFirm(options.firm);
-    if (options.name) {
-      toolkit.importExistingSharedPartByName(options.firm, options.name);
+    if (options.sharedPart) {
+      toolkit.importExistingSharedPartByName(options.firm, options.sharedPart);
     } else if (options.all) {
       toolkit.importExistingSharedParts(options.firm);
     }
@@ -172,7 +172,7 @@ program
     firmIdDefault
   )
   .requiredOption(
-    "-n, --name <name>",
+    "-s, --shared-part <name>",
     "Specify the shared part to be used (mandatory)"
   )
   .option("--yes", "Skip the prompt confirmation (optional)")
@@ -181,7 +181,7 @@ program
       promptConfirmation();
     }
     checkDefaultFirm(options.firm);
-    toolkit.persistSharedPart(options.firm, options.name);
+    toolkit.persistSharedPart(options.firm, options.sharedPart);
   });
 
 // Create new shared parts
@@ -193,32 +193,16 @@ program
     "Specify the firm to be used",
     firmIdDefault
   )
-  .option("-n, --name <name>", "Specify the shared part to be used")
+  .option("-s, --shared-part <name>", "Specify the shared part to be used")
   .option(
     "-a, --all",
     "Try to create all the shared parts stored in the repository"
   )
-  .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
-    // Check that only one of the options it's selected
-    const uniqueParameters = ["name", "all"];
-    const optionsToCheck = Object.keys(options).filter((element) => {
-      if (uniqueParameters.includes(element)) {
-        return true;
-      }
-    });
-    if (optionsToCheck.length !== 1) {
-      console.log(
-        "Create shared part: you have to use either --name or --all option"
-      );
-      process.exit(1);
-    }
-    if (!options.yes) {
-      promptConfirmation();
-    }
+    checkUniqueOption(["sharedPart", "all"], options);
     checkDefaultFirm(options.firm);
-    if (options.name) {
-      toolkit.newSharedPart(options.firm, options.name);
+    if (options.sharedPart) {
+      toolkit.newSharedPart(options.firm, options.sharedPart);
     } else if (options.all) {
       toolkit.newSharedPartsAll(options.firm);
     }
@@ -252,6 +236,26 @@ program
       options.sharedPart,
       options.handle
     );
+  });
+
+// Add all shared parts
+program
+  .command("add-all-shared-parts")
+  .description(
+    "Add all shared parts to all reconciliations (based on the config file of shared parts and the handles assigned there to each reconciliation)"
+  )
+  .requiredOption(
+    "-f, --firm <firm-id>",
+    "Specify the firm to be used",
+    firmIdDefault
+  )
+  .option("--yes", "Skip the prompt confirmation (optional)")
+  .action((options) => {
+    if (!options.yes) {
+      promptConfirmation();
+    }
+    checkDefaultFirm(options.firm);
+    toolkit.addAllSharedPartsToAllReconciliation(options.firm);
   });
 
 // Remove shared part to reconciliation
@@ -331,13 +335,13 @@ program
     "By default, the reconciled status will be set as true. Add this option to set it as false (optional)"
   )
   .option(
-    "-t, --test-name <testName>",
+    "-t, --test <test-name>",
     "Establish the name of the test. It should have no white-spaces (e.g. test_name)(optional)"
   )
   .action((options) => {
     reconciledStatus = options.unreconciled ? false : true;
-    testName = options.testName ? options.testName : "test_name";
-    liquidTests.testGenerator(options.url);
+    let testName = options.test ? options.test : "test_name";
+    liquidTests.testGenerator(options.url, testName);
   });
 
 // Authorize APP
@@ -429,40 +433,24 @@ program
     "Specify the firm to be used",
     firmIdDefault
   )
-  .option("-n, --name <name>", "Fetch the shared part ID by name")
+  .option("-s, --shared-part <name>", "Fetch the shared part ID by name")
   .option("-a, --all", "Fetch the ID for every shared part")
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
-    checkUniqueOption(["name", "all"], options);
+    checkUniqueOption(["sharedPart", "all"], options);
     if (!options.yes) {
       promptConfirmation();
     }
     checkDefaultFirm(options.firm);
-    if (options.name) {
-      toolkit.updateTemplateID(options.firm, "shared_parts", options.name);
+    if (options.sharedPart) {
+      toolkit.updateTemplateID(
+        options.firm,
+        "shared_parts",
+        options.sharedPart
+      );
     } else if (options.all) {
       toolkit.getAllTemplatesId(options.firm, "shared_parts");
     }
-  });
-
-// Add all shared parts
-program
-  .command("add-all-shared-parts")
-  .description(
-    "Add all shared parts to all reconciliations (based on the config file of shared parts)"
-  )
-  .requiredOption(
-    "-f, --firm <firm-id>",
-    "Specify the firm to be used",
-    firmIdDefault
-  )
-  .option("--yes", "Skip the prompt confirmation (optional)")
-  .action((options) => {
-    if (!options.yes) {
-      promptConfirmation();
-    }
-    checkDefaultFirm(options.firm);
-    toolkit.addAllSharedPartsToAllReconciliation(options.firm);
   });
 
 // Update the CLI

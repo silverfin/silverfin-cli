@@ -156,7 +156,7 @@ async function responseErrorHandler(
       `Response Error (401): ${JSON.stringify(error.response.data.error)}`
     );
     if (refreshToken) {
-      let firmTokens = config.getTokens(firmId);
+      const firmTokens = config.getTokens(firmId);
       // Get a new pair of tokens
       await refreshTokens(
         firmId,

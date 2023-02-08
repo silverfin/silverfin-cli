@@ -3,7 +3,7 @@ const { config } = require("../api/auth");
 const Utils = require("./utils");
 
 // MainProcess
-async function testGenerator(url) {
+async function testGenerator(url, testName) {
   // Liquid Test Object
   const liquidTestObject = Utils.createBaseLiquidTest(testName);
 
