@@ -9,6 +9,9 @@ const yaml = require("yaml");
 const axios = require("axios");
 const open = require("open");
 const path = require("path");
+const { exec, execSync } = require("child_process");
+const isWsl = require("is-wsl");
+const commandExistsSync = require("command-exists").sync;
 
 const RECONCILIATION_FIELDS_TO_SYNC = [
   "id",
@@ -640,7 +643,23 @@ async function getHTML(url, testName, openBrowser = false) {
   if (htmlResponse.status === 200) {
     fs.writeFileSync(filePath, htmlResponse.data);
     if (openBrowser) {
-      await open(filePath);
+      if (isWsl) {
+        if (commandExistsSync("wsl-open")) {
+          exec(`wsl-open ${filePath}`);
+        } else {
+          console.log(
+            "In order to automatically open HTML files on WSL, we need to install the wsl-open script."
+          );
+          console.log(
+            "You might be prompted for your password in order for us to install 'sudo npm install -g wsl-open'"
+          );
+          execSync("sudo npm install -g wsl-open");
+          console.log("Installed wsl-open script");
+          exec(`wsl-open ${filePath}`);
+        }
+      } else {
+        await open(filePath);
+      }
     }
   }
 }
