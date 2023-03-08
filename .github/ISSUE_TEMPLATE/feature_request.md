@@ -9,6 +9,7 @@ assignees: ''
 
 **Is your feature request related to a problem? Please describe.**
 A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
+*Please keep in mind that this repository, together with the submitted issues, is public.*
 
 **Describe the solution you'd like**
 A clear and concise description of what you want to happen.

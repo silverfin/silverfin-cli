@@ -9,6 +9,7 @@ assignees: ''
 
 **Describe the bug**
 A clear and concise description of what the bug is.
+*Please keep in mind that this repository, together with the submitted issues, is public.*
 
 **To Reproduce**
 Steps to reproduce the behavior:
