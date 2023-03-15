@@ -144,14 +144,14 @@ async function responseErrorHandler(
   // Valid Request. Not Found
   if (error.response.status === 404) {
     console.log(
-      `Response Data error: ${JSON.stringify(error.response.data.error)}`
+      `Response Error (404): ${JSON.stringify(error.response.data.error)}`
     );
     return;
   }
   // No access credentials
   if (error.response.status === 401) {
     console.log(
-      `Response Data error: ${JSON.stringify(error.response.data.error)}`
+      `Response Error (401): ${JSON.stringify(error.response.data.error)}`
     );
     if (refreshToken) {
       // Get a new pair of tokens
@@ -164,20 +164,20 @@ async function responseErrorHandler(
       return callbackFunction(...Object.values(callbackParameters));
     } else {
       console.log(
-        `API calls failed, try to run the authorization process again`
+        `Error 401: API calls failed, try to run the authorization process again`
       );
       process.exit(1);
     }
   }
   // Unprocessable Entity
   if (error.response.status === 422) {
-    console.log(`Response Data: ${JSON.stringify(error.response.data)}`);
+    console.log(`Response Error (422): ${JSON.stringify(error.response.data)}`);
     console.log(`You don't have the rights to update the previous parameters`);
     process.exit(1);
   }
   // Forbidden
   if (error.response.status === 403) {
-    console.log("Forbidden access. Terminating process");
+    console.log("Error (403): Forbidden access. Terminating process");
     process.exit(1);
   }
   // Not handled
