@@ -249,6 +249,11 @@ async function persistReconciliationText(firmId, handle) {
     const config = fsUtils.readConfig(relativePath);
     if (!config || !config.id[firmId]) {
       console.log(`Reconciliation ${handle}: ID is missing. Aborted`);
+      console.log(
+        `Try running: ${chalk.bold(
+          `silverfin get-reconciliation-id --handle ${handle}`
+        )} or ${chalk.bold(`silverfin get-reconciliation-id --all`)}`
+      );
       process.exit(1);
     }
     let reconciliationTextId = config.id[firmId];
@@ -371,6 +376,11 @@ async function persistSharedPart(firmId, name) {
     const config = fsUtils.readConfig(relativePath);
     if (!config || !config.id[firmId]) {
       console.log(`Shared part ${name}: ID is missing. Aborted`);
+      console.log(
+        `Try running: ${chalk.bold(
+          `silverfin get-shared-part-id --shared-part ${name}`
+        )} or ${chalk.bold(`silverfin get-shared-part-id --all`)}`
+      );
       process.exit(1);
     }
     const attributes = {};
