@@ -404,7 +404,7 @@ async function removeSharedPartFromReconciliation(
 }
 
 function findTestRows(testContent) {
-  const testYAML = yaml.parse(testContent);
+  const testYAML = yaml.parse(testContent, (options = { maxAliasCount: -1 }));
   const testNames = Object.keys(testYAML);
   const testRows = testContent.split("\n");
   const indexes = {};
@@ -463,8 +463,8 @@ function buildTestParams(handle, testName = "", html_render = false) {
 
 async function fetchResult(firmId, testRunId) {
   let testRun = { status: "started" };
-  const pollingDelay = 2000;
-  const waitingLimit = 20000;
+  let pollingDelay = 1000;
+  const waitingLimit = 500000;
 
   spinner.spin("Running tests..");
   let waitingTime = 0;
@@ -475,6 +475,7 @@ async function fetchResult(firmId, testRunId) {
     const response = await SF.fetchTestRun(firmId, testRunId);
     testRun = response.data;
     waitingTime += pollingDelay;
+    pollingDelay *= 1.05;
     if (waitingTime >= waitingLimit) {
       spinner.clear();
       console.log("Timeout. Try to run your test again");
