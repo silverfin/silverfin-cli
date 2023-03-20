@@ -50,11 +50,10 @@ class Config {
   // Get Access Token
   getTokens(firmId) {
     this.checkDefaultFirmsObject();
-    if (this.data.hasOwnProperty(firmId)) {
-      return this.data[firmId];
-    } else {
+    if (!this.data.hasOwnProperty(firmId)) {
       return null;
     }
+    return this.data[firmId];
   }
 
   // Set default firm id
@@ -69,11 +68,10 @@ class Config {
   getFirmId() {
     this.checkDefaultFirmsObject();
     const currentDirectory = path.basename(process.cwd());
-    if (this.data.defaultFirmIDs.hasOwnProperty(currentDirectory)) {
-      return this.data.defaultFirmIDs[currentDirectory];
-    } else {
+    if (!this.data.defaultFirmIDs.hasOwnProperty(currentDirectory)) {
       return null;
     }
+    return this.data.defaultFirmIDs[currentDirectory];
   }
 
   // Create DefaultFirmIDs (for legacy compatibility of existing files)

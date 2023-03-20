@@ -156,11 +156,12 @@ async function responseErrorHandler(
       `Response Error (401): ${JSON.stringify(error.response.data.error)}`
     );
     if (refreshToken) {
+      const firmTokens = config.getTokens(firmId);
       // Get a new pair of tokens
       await refreshTokens(
         firmId,
-        config.data[String(firmId)].accessToken,
-        config.data[String(firmId)].refreshToken
+        firmTokens.accessToken,
+        firmTokens.refreshToken
       );
       //  Call the original function again
       return callbackFunction(...Object.values(callbackParameters));
@@ -241,9 +242,9 @@ async function findReconciliationTextById(firmId, reconciliationId, page = 1) {
     console.log(`Reconciliation ${reconciliationId} not found`);
     return;
   }
-  let reconciliationText = reconciliations.filter(
+  const reconciliationText = reconciliations.find(
     (element) => element["id"] === Number(reconciliationId)
-  )[0];
+  );
   // Only return reconciliations were liquid code is not hidden
   if (reconciliationText && reconciliationText.hasOwnProperty("text")) {
     return reconciliationText;
@@ -478,6 +479,27 @@ async function updateSharedPart(
       error,
       refreshToken,
       updateSharedPart,
+      callbackParameters
+    );
+    return response;
+  }
+}
+
+async function createSharedPart(firmId, attributes, refreshToken = true) {
+  setAxiosDefaults(firmId);
+  try {
+    const response = await axios.post(`shared_parts`, attributes);
+    responseSuccessHandler(response);
+    return response;
+  } catch (error) {
+    const callbackParameters = {
+      attributes: attributes,
+      refreshToken: false,
+    };
+    const response = await responseErrorHandler(
+      error,
+      refreshToken,
+      createSharedPart,
       callbackParameters
     );
     return response;
@@ -842,6 +864,7 @@ module.exports = {
   fetchSharedPartById,
   findSharedPart,
   updateSharedPart,
+  createSharedPart,
   addSharedPart,
   removeSharedPart,
   fetchTestRun,

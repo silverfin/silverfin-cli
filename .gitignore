@@ -2,6 +2,8 @@
 node_modules
 .env
 config.json
+
+# Template directories
 reconciliation_texts
 shared_parts
 account_templates

@@ -87,7 +87,7 @@ async function createTemplateFiles(relativePath, textMain, textParts) {
 
 async function createLiquidFile(relativePath, fileName, textContent) {
   const emptyCallback = () => {};
-  fs.writeFile(
+  fs.writeFileSync(
     `${relativePath}/${fileName}.liquid`,
     textContent,
     emptyCallback
@@ -97,7 +97,7 @@ async function createLiquidFile(relativePath, fileName, textContent) {
 
 function writeConfig(relativePath, config) {
   emptyCallback = () => {};
-  fs.writeFile(
+  fs.writeFileSync(
     `${relativePath}/config.json`,
     JSON.stringify(config, null, 2),
     emptyCallback
@@ -110,7 +110,17 @@ function readConfig(relativePath) {
   return config;
 }
 
+function createConfigIfMissing(relativePath) {
+  createFolder(relativePath);
+
+  if (!fs.existsSync(`${relativePath}/config.json`)) {
+    const config = { id: {} };
+    writeConfig(relativePath, config);
+  }
+}
+
 // Get an array with all the reconciliations or all shared parts
+// Based on the existence of a config.json file
 function getTemplatePaths(relativePath) {
   if (
     relativePath !== "shared_parts" &&
@@ -136,6 +146,20 @@ function getTemplatePaths(relativePath) {
   return templatesArray;
 }
 
+// Get the handle/name of a reconciliation/shared part by it's ID
+function findHandleByID(firmId, type, id) {
+  if (type !== "shared_parts" && type !== "reconciliation_texts") {
+    throw "type should be shared_parts or reconciliation_texts";
+  }
+  let templatesArray = getTemplatePaths(type);
+  for (let templatePath of templatesArray) {
+    let config = readConfig(templatePath);
+    if (config.id[firmId] === id) {
+      return config.handle || config.name;
+    }
+  }
+}
+
 // Get an array with all the shared parts (name) used in a specific reconciliation (handle)
 function getSharedParts(handle) {
   const reconciliationConfig = readConfig(`reconciliation_texts/${handle}`);
@@ -156,13 +180,15 @@ function getSharedParts(handle) {
 }
 
 module.exports = {
+  readConfig,
   writeConfig,
+  createConfigIfMissing,
   createTemplateFiles,
   createLiquidTestFiles,
   createLiquidFile,
   createFolder,
   createFolders,
-  readConfig,
   getTemplatePaths,
+  findHandleByID,
   getSharedParts,
 };

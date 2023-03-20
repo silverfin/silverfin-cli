@@ -135,7 +135,6 @@ async function generateStatsOverview(sinceDate) {
     fs.mkdirSync("stats");
   }
   if (!fs.existsSync(csvPath)) {
-    console.log(process.cwd());
     fs.writeFileSync(csvPath, constRowHeader, (err) => {
       console.log(err);
     });
