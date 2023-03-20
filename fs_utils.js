@@ -161,15 +161,26 @@ function findHandleByID(firmId, type, id) {
 }
 
 // Get an array with all the shared parts (name) used in a specific reconciliation (handle)
-function getSharedParts(handle) {
+function getSharedParts(firmId, handle) {
   const reconciliationConfig = readConfig(`reconciliation_texts/${handle}`);
-  const reconciliationID = reconciliationConfig.id;
+  // TODO: reconciliationConfig.id is the old syntax, remove it when all configs are updated
+  // We should only rely on the new syntax
+  // Keep: const reconciliationId = reconciliationConfig.id[firmId];
+  const reconciliationID = reconciliationConfig.id[firmId]
+    ? reconciliationConfig.id[firmId]
+    : reconciliationConfig.id;
   const allSharedPartsPaths = getTemplatePaths("shared_parts");
   const sharedPartsPresent = [];
   for (sharedPartPath of allSharedPartsPaths) {
     let sharedPartConfig = readConfig(sharedPartPath);
-    const usedInReconciliation = (reconciliation) =>
-      reconciliation.id === reconciliationID;
+    function usedInReconciliation(reconciliation) {
+      // Remove all syntax: reconciliation.id === reconciliationID;
+      // Keep: return reconciliation.id[firmId] === reconciliationID;
+      return reconciliation.id[firmId]
+        ? reconciliation.id[firmId] === reconciliationID
+        : reconciliation.id === reconciliationID;
+    }
+    // Find if it is used in the reconciliation
     let reconciliationIndex =
       sharedPartConfig.used_in.findIndex(usedInReconciliation);
     if (reconciliationIndex !== -1) {

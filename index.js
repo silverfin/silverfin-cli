@@ -590,7 +590,7 @@ function findTestRows(testContent) {
   return indexes;
 }
 
-function buildTestParams(handle, testName = "", html_render = false) {
+function buildTestParams(firmId, handle, testName = "", html_render = false) {
   const relativePath = `./reconciliation_texts/${handle}`;
   const config = fsUtils.readConfig(relativePath);
   const testPath = `${relativePath}/${config.test}`;
@@ -606,7 +606,7 @@ function buildTestParams(handle, testName = "", html_render = false) {
   templateContent.handle = handle;
   templateContent.html_render = html_render ? true : false;
   templateContent.reconciliation_type = config.reconciliation_type;
-  const sharedParts = fsUtils.getSharedParts(handle);
+  const sharedParts = fsUtils.getSharedParts(firmId, handle);
   if (sharedParts.length !== 0) {
     templateContent.text_shared_parts = [];
     for (let sharedPart of sharedParts) {
@@ -873,7 +873,7 @@ async function handleHTMLfiles(testName = "", testRun) {
 // Used by VSCode Extension
 async function runTests(firmId, handle, testName = "", html_render = false) {
   try {
-    const testParams = buildTestParams(handle, testName, html_render);
+    const testParams = buildTestParams(firmId, handle, testName, html_render);
     const testRunResponse = await SF.createTestRun(firmId, testParams);
     const testRunId = testRunResponse.data;
     const testRun = await fetchResult(firmId, testRunId);
