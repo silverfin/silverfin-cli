@@ -110,11 +110,18 @@ function readConfig(relativePath) {
   return config;
 }
 
-function createConfigIfMissing(relativePath) {
+function createConfigIfMissing(relativePath, templateType = undefined) {
   createFolder(relativePath);
 
   if (!fs.existsSync(`${relativePath}/config.json`)) {
     const config = { id: {} };
+    if (templateType == "reconciliation_text") {
+      config.text = "main.liquid";
+      config.text_parts = {};
+      config.auto_hide_formula = "";
+      config.text_configuration = null;
+      config.virtual_account_number = "";
+    }
     writeConfig(relativePath, config);
   }
 }

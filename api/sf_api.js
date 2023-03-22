@@ -187,6 +187,31 @@ async function responseErrorHandler(
   throw error;
 }
 
+async function createReconciliationText(
+  firmId,
+  attributes,
+  refreshToken = true
+) {
+  setAxiosDefaults(firmId);
+  try {
+    const response = await axios.post(`reconciliations`, attributes);
+    responseSuccessHandler(response);
+    return response;
+  } catch (error) {
+    const callbackParameters = {
+      attributes: attributes,
+      refreshToken: false,
+    };
+    const response = await responseErrorHandler(
+      error,
+      refreshToken,
+      createReconciliationText,
+      callbackParameters
+    );
+    return response;
+  }
+}
+
 async function fetchReconciliationTexts(firmId, page = 1, refreshToken = true) {
   setAxiosDefaults(firmId);
   try {
@@ -530,7 +555,7 @@ async function addSharedPart(
       firmId,
       error,
       refreshToken,
-      updateSharedPart,
+      addSharedPart,
       callbackParameters
     );
     return response;
@@ -561,7 +586,7 @@ async function removeSharedPart(
       firmId,
       error,
       refreshToken,
-      updateSharedPart,
+      removeSharedPart,
       callbackParameters
     );
     return response;
@@ -853,6 +878,7 @@ async function getAccountDetails(
 
 module.exports = {
   authorizeApp,
+  createReconciliationText,
   fetchReconciliationTexts,
   updateReconciliationText,
   findReconciliationText,
