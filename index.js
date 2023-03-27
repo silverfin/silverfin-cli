@@ -28,11 +28,13 @@ const RECONCILIATION_FIELDS_TO_SYNC = [
   "externally_managed",
 ];
 const RECONCILIATION_FIELDS_TO_PUSH = [
+  "handle",
   "name_en",
   "name_fr",
   "name_nl",
   "auto_hide_formula",
   "text_configuration",
+  "externally_managed",
 ];
 
 // Uncaught Errors. Open Issue in GitHub
@@ -263,6 +265,64 @@ async function persistReconciliationText(firmId, handle) {
     });
   } catch (error) {
     errorHandler(error);
+  }
+}
+
+async function newReconciliation(firmId, handle) {
+  try {
+    const existingReconciliation = await SF.findReconciliationText(
+      firmId,
+      handle
+    );
+    if (existingReconciliation) {
+      console.log(
+        `Reconciliation ${handle} already exists. Skipping its creation`
+      );
+      return;
+    }
+    const relativePath = `./reconciliation_texts/${handle}`;
+    fsUtils.createFolder(`./reconciliation_texts`);
+    fsUtils.createConfigIfMissing(relativePath, "reconciliation_text");
+    const config = fsUtils.readConfig(relativePath);
+
+    if (!fs.existsSync(`${relativePath}/main.liquid`)) {
+      fsUtils.createLiquidFile(
+        relativePath,
+        "main",
+        "{% comment %}NEW RECONCILIATION - MAIN PART{% endcomment %}"
+      );
+    }
+
+    const attributes = constructReconciliationText(handle);
+    const items = ["handle", "name_nl", "name_en", "name_fr"];
+    items.forEach((item) => {
+      if (!attributes[item]) {
+        attributes[item] = handle;
+        config[item] = handle;
+      }
+    });
+    fsUtils.writeConfig(relativePath, config);
+
+    const response = await SF.createReconciliationText(firmId, {
+      ...attributes,
+      version_comment: "Created using the API",
+    });
+
+    // Store new firm id
+    if (response && response.status == 201) {
+      config.id[firmId] = response.data.id;
+      fsUtils.writeConfig(relativePath, config);
+    }
+  } catch (error) {
+    errorHandler(error);
+  }
+}
+
+async function newReconciliationsAll(firmId) {
+  const reconciliationsArray = fsUtils.getTemplatePaths("reconciliation_texts");
+  for (let reconciliationPath of reconciliationsArray) {
+    const reconciliationHandle = reconciliationPath.split("/")[2];
+    await newReconciliation(firmId, reconciliationHandle);
   }
 }
 
@@ -926,6 +986,8 @@ module.exports = {
   importExistingReconciliationById,
   importExistingReconciliations,
   persistReconciliationText,
+  newReconciliation,
+  newReconciliationsAll,
   importExistingSharedPartByName,
   importExistingSharedParts,
   persistSharedPart,

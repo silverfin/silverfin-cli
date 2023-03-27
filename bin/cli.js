@@ -137,6 +137,33 @@ program
     toolkit.persistReconciliationText(options.firm, options.handle);
   });
 
+// Create new reconciliation
+program
+  .command("create-reconciliation")
+  .description("Create a new reconciliation text")
+  .requiredOption(
+    "-f, --firm <firm-id>",
+    "Specify the firm to be used",
+    firmIdDefault
+  )
+  .option(
+    "-h, --handle <handle>",
+    "Specify the handle of the reconciliation text to be created"
+  )
+  .option(
+    "-a, --all",
+    "Try to create all the reconciliation texts stored in the repository"
+  )
+  .action((options) => {
+    checkUniqueOption(["handle", "all"], options);
+    checkDefaultFirm(options.firm);
+    if (options.handle) {
+      toolkit.newReconciliation(options.firm, options.handle);
+    } else if (options.all) {
+      toolkit.newReconciliationsAll(options.firm);
+    }
+  });
+
 // Import shared parts
 program
   .command("import-shared-part")
@@ -193,7 +220,10 @@ program
     "Specify the firm to be used",
     firmIdDefault
   )
-  .option("-s, --shared-part <name>", "Specify the shared part to be used")
+  .option(
+    "-s, --shared-part <name>",
+    "Specify the name of the shared part to be created"
+  )
   .option(
     "-a, --all",
     "Try to create all the shared parts stored in the repository"
