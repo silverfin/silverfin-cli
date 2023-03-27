@@ -2,8 +2,12 @@ const fs = require("fs");
 const path = require("path");
 
 function createFolder(path) {
-  if (!fs.existsSync(path)) {
-    fs.mkdirSync(path);
+  try {
+    if (!fs.existsSync(path)) {
+      fs.mkdirSync(path);
+    }
+  } catch (error) {
+    console.log(error);
   }
 }
 

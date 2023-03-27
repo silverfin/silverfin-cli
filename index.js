@@ -126,7 +126,7 @@ function storeImportedReconciliation(firmId, reconciliationText) {
   const configContent = {
     ...attributes,
     id: {
-      ...existingConfig.id,
+      ...existingConfig?.id,
       [firmId]: reconciliationText.id,
     },
     text: "main.liquid",
@@ -333,16 +333,13 @@ async function importExistingSharedPartById(firmId, id) {
     throw `Shared part ${id} wasn't found.`;
   }
 
-  const relativePath = `./shared_parts/${sharedPart.data.name}`;
+  const sanitizedName = sharedPart.data.name.replace("/", "");
+  const relativePath = `./shared_parts/${sanitizedName}`;
 
   fsUtils.createFolder(`./shared_parts`);
   fsUtils.createFolder(relativePath);
 
-  fsUtils.createLiquidFile(
-    relativePath,
-    sharedPart.data.name,
-    sharedPart.data.text
-  );
+  fsUtils.createLiquidFile(relativePath, sanitizedName, sharedPart.data.text);
 
   let existingConfig;
 
@@ -399,7 +396,7 @@ async function importExistingSharedPartById(firmId, id) {
 
   const config = {
     id: { ...existingConfig.id, [firmId]: sharedPart.data.id },
-    name: sharedPart.data.name,
+    name: sanitizedName,
     text: "main.liquid",
     used_in: used_in,
   };
