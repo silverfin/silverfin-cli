@@ -189,7 +189,7 @@ function getSharedParts(firmId, handle) {
       (reconciliation) => {
         const usedReconciliationID = reconciliation.id[firmId]
           ? reconciliation.id[firmId]
-          : reconciliationConfig.id;
+          : reconciliation.id;
         return usedReconciliationID === reconciliationID ? true : false;
       }
     );
