@@ -178,19 +178,19 @@ function getSharedParts(firmId, handle) {
     : reconciliationConfig.id;
   const allSharedPartsPaths = getTemplatePaths("shared_parts");
   const sharedPartsPresent = [];
-  for (sharedPartPath of allSharedPartsPaths) {
+  for (let sharedPartPath of allSharedPartsPaths) {
     let sharedPartConfig = readConfig(sharedPartPath);
-    function usedInReconciliation(reconciliation) {
-      // Remove all syntax: reconciliation.id === reconciliationID;
-      // Keep: return reconciliation.id[firmId] === reconciliationID;
-      return reconciliation.id[firmId]
-        ? reconciliation.id[firmId] === reconciliationID
-        : reconciliation.id === reconciliationID;
-    }
     // Find if it is used in the reconciliation
-    let reconciliationIndex =
-      sharedPartConfig.used_in.findIndex(usedInReconciliation);
-    if (reconciliationIndex !== -1) {
+    const reconciliationUsed = sharedPartConfig.used_in?.some(
+      (reconciliation) => {
+        const usedReconciliationID = reconciliation.id[firmId]
+          ? reconciliation.id[firmId]
+          : reconciliation.id;
+        return usedReconciliationID === reconciliationID ? true : false;
+      }
+    );
+
+    if (reconciliationUsed) {
       sharedPartsPresent.push(sharedPartConfig.name);
     }
   }

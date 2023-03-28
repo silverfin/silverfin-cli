@@ -126,7 +126,7 @@ function storeImportedReconciliation(firmId, reconciliationText) {
   const configContent = {
     ...attributes,
     id: {
-      ...existingConfig.id,
+      ...existingConfig?.id,
       [firmId]: reconciliationText.id,
     },
     text: "main.liquid",
@@ -211,6 +211,10 @@ async function getAllTemplatesId(firmId, type) {
     for (let configPath of templatesArray) {
       let configTemplate = fsUtils.readConfig(configPath);
       let handle = configTemplate.handle || configTemplate.name;
+      if (!handle) {
+        continue;
+      }
+      console.log(`Getting ID for ${handle}...`);
       await updateTemplateID(firmId, type, handle);
     }
   } catch (error) {
@@ -331,6 +335,13 @@ async function importExistingSharedPartById(firmId, id) {
 
   if (!sharedPart) {
     throw `Shared part ${id} wasn't found.`;
+  }
+  const sharedPartNameCheck = /^[a-zA-Z0-9_]*$/.test(sharedPart.data.name);
+  if (!sharedPartNameCheck) {
+    console.log(
+      `Shared part name contains invalid characters. Skipping. Current name: ${sharedPart.data.name}`
+    );
+    return;
   }
 
   const relativePath = `./shared_parts/${sharedPart.data.name}`;
