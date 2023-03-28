@@ -211,6 +211,10 @@ async function getAllTemplatesId(firmId, type) {
     for (let configPath of templatesArray) {
       let configTemplate = fsUtils.readConfig(configPath);
       let handle = configTemplate.handle || configTemplate.name;
+      if (!handle) {
+        continue;
+      }
+      console.log(`Getting ID for ${handle}...`);
       await updateTemplateID(firmId, type, handle);
     }
   } catch (error) {
@@ -332,14 +336,24 @@ async function importExistingSharedPartById(firmId, id) {
   if (!sharedPart) {
     throw `Shared part ${id} wasn't found.`;
   }
+  const sharedPartNameCheck = /^[a-zA-Z0-9_]*$/.test(sharedPart.data.name);
+  if (!sharedPartNameCheck) {
+    console.log(
+      `Shared part name contains invalid characters. Skipping. Current name: ${sharedPart.data.name}`
+    );
+    return;
+  }
 
-  const sanitizedName = sharedPart.data.name.replace("/", "");
-  const relativePath = `./shared_parts/${sanitizedName}`;
+  const relativePath = `./shared_parts/${sharedPart.data.name}`;
 
   fsUtils.createFolder(`./shared_parts`);
   fsUtils.createFolder(relativePath);
 
-  fsUtils.createLiquidFile(relativePath, sanitizedName, sharedPart.data.text);
+  fsUtils.createLiquidFile(
+    relativePath,
+    sharedPart.data.name,
+    sharedPart.data.text
+  );
 
   let existingConfig;
 
@@ -396,7 +410,7 @@ async function importExistingSharedPartById(firmId, id) {
 
   const config = {
     id: { ...existingConfig.id, [firmId]: sharedPart.data.id },
-    name: sanitizedName,
+    name: sharedPart.data.name,
     text: "main.liquid",
     used_in: used_in,
   };

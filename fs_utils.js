@@ -2,12 +2,8 @@ const fs = require("fs");
 const path = require("path");
 
 function createFolder(path) {
-  try {
-    if (!fs.existsSync(path)) {
-      fs.mkdirSync(path);
-    }
-  } catch (error) {
-    console.log(error);
+  if (!fs.existsSync(path)) {
+    fs.mkdirSync(path);
   }
 }
 
@@ -182,7 +178,7 @@ function getSharedParts(firmId, handle) {
     : reconciliationConfig.id;
   const allSharedPartsPaths = getTemplatePaths("shared_parts");
   const sharedPartsPresent = [];
-  for (sharedPartPath of allSharedPartsPaths) {
+  for (let sharedPartPath of allSharedPartsPaths) {
     let sharedPartConfig = readConfig(sharedPartPath);
     // Find if it is used in the reconciliation
     const reconciliationUsed = sharedPartConfig.used_in?.some(
