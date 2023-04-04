@@ -3,7 +3,6 @@ const open = require("open");
 const prompt = require("prompt-sync")({ sigint: true });
 const { config } = require("./auth");
 
-require("dotenv").config();
 const baseURL = process.env.SF_HOST || "https://live.getsilverfin.com";
 const missingVariables = ["SF_API_CLIENT_ID", "SF_API_SECRET"].filter(
   (key) => !process.env[key]
