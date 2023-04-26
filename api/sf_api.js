@@ -875,6 +875,35 @@ async function getAccountDetails(
   }
 }
 
+// Liquid Linter
+// attributes should be JSON
+async function verifyLiquid(firmId, attributes, refreshToken = true) {
+  setAxiosDefaults(firmId);
+  try {
+    const config = { headers: { "Content-Type": "application/json" } };
+    const response = await axios.post(
+      "reconciliations/verify_liquid",
+      attributes,
+      config
+    );
+    return response;
+  } catch (error) {
+    const callbackParameters = {
+      firmId: firmId,
+      attributes: attributes,
+      refreshToken: false,
+    };
+    const response = await responseErrorHandler(
+      firmId,
+      error,
+      refreshToken,
+      verifyLiquid,
+      callbackParameters
+    );
+    return response;
+  }
+}
+
 module.exports = {
   authorizeApp,
   createReconciliationText,
@@ -903,4 +932,5 @@ module.exports = {
   findReconciliationInWorkflow,
   findReconciliationInWorkflows,
   getAccountDetails,
+  verifyLiquid,
 };
