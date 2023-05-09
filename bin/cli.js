@@ -8,6 +8,7 @@ const prompt = require("prompt-sync")({ sigint: true });
 const pkg = require("../package.json");
 const cliUpdates = require("../resources/cliUpdates");
 const program = new Command();
+const devMode = require("../devMode");
 
 // Load default firm id from Config Object or ENV
 let firmIdDefault = undefined;
@@ -481,6 +482,22 @@ program
     } else if (options.all) {
       toolkit.getAllTemplatesId(options.firm, "shared_parts");
     }
+  });
+
+// Development mode
+program
+  .command("development-mode")
+  .description(
+    "Development mode - Push updates to the platform after every file save"
+  )
+  .requiredOption(
+    "-f, --firm <firm-id>",
+    "Specify the firm to be used",
+    firmIdDefault
+  )
+  .action((options) => {
+    checkDefaultFirm(options.firm);
+    devMode.watch(options.firm);
   });
 
 // Update the CLI
