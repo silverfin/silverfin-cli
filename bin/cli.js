@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 const toolkit = require("../index.js");
-const liquidTests = require("../liquid_test_generator/generator");
-const stats = require("../stats_utils");
+const liquidTests = require("../liquidTestGenerator/generator.js");
+const stats = require("../statsUtils");
 const { Command } = require("commander");
 const prompt = require("prompt-sync")({ sigint: true });
 const pkg = require("../package.json");

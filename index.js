@@ -1,5 +1,5 @@
-const SF = require("./api/sf_api");
-const fsUtils = require("./fs_utils");
+const SF = require("./api/sfApi");
+const fsUtils = require("./fsUtils");
 const fs = require("fs");
 const { spinner } = require("./resources/spinner");
 const chalk = require("chalk");

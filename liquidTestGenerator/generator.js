@@ -1,4 +1,4 @@
-const SF = require("../api/sf_api");
+const SF = require("../api/sfApi");
 const { config } = require("../api/auth");
 const Utils = require("./utils");
 
