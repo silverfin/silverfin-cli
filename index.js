@@ -1,10 +1,10 @@
-const SF = require("./api/sfApi");
+const SF = require("./lib/api/sfApi");
 const fsUtils = require("./lib/utils/fsUtils");
 const fs = require("fs");
 const { spinner } = require("./lib/cli/spinner");
 const chalk = require("chalk");
 const pkg = require("./package.json");
-const { config } = require("./api/auth");
+const { config } = require("./lib/api/auth");
 const yaml = require("yaml");
 const axios = require("axios");
 const open = require("open");
@@ -12,7 +12,7 @@ const path = require("path");
 const { exec, execSync } = require("child_process");
 const isWsl = require("is-wsl");
 const commandExistsSync = require("command-exists").sync;
-const errorUtils = require("../lib/utils/errorUtils");
+const errorUtils = require("./lib/utils/errorUtils");
 
 const RECONCILIATION_FIELDS_TO_SYNC = [
   "handle",
