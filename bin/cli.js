@@ -344,14 +344,28 @@ program
     "Get a html file of the template generated with the Liquid Test information (optional)",
     false
   )
+  .option(
+    "--watch",
+    "Watch for changes in the test file and run the test automatically every time it's saved (optional)",
+    false
+  )
   .action((options) => {
     checkDefaultFirm(options.firm);
-    toolkit.runTestsWithOutput(
-      options.firm,
-      options.handle,
-      options.test,
-      options.html
-    );
+    if (options.watch) {
+      devMode.watchYaml(
+        options.firm,
+        options.handle,
+        options.test,
+        options.html
+      );
+    } else {
+      toolkit.runTestsWithOutput(
+        options.firm,
+        options.handle,
+        options.test,
+        options.html
+      );
+    }
   });
 
 // Create Liquid Test
@@ -497,7 +511,7 @@ program
   )
   .action((options) => {
     checkDefaultFirm(options.firm);
-    devMode.watch(options.firm);
+    devMode.watchLiquid(options.firm);
   });
 
 // Update the CLI

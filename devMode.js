@@ -4,9 +4,41 @@ const toolkit = require("./index");
 
 const CWD = process.cwd();
 
-// Recursive is not available in every OS (Linux)
-function watch(firmId) {
-  console.log("Watching... FIRM: " + firmId);
+// Watch for changes in an specific YAML
+// Publish updates when file is saved
+async function watchYaml(firmId, handle, testName, html_render) {
+  console.log("Watching for changes in the YAML file...");
+  const filePath = path.resolve(
+    CWD,
+    "reconciliation_texts",
+    handle,
+    "tests",
+    `${handle}_liquid_test.yml`
+  );
+  if (!fs.existsSync(filePath)) {
+    console.log("YAML file not found: ", filePath);
+    return;
+  }
+  const lastUpdates = {};
+
+  fs.watch(filePath, async (eventType, filename) => {
+    if (eventType !== "change") return;
+
+    // Check last update (avoid multiple updates)
+    let fileStats = fs.statSync(filePath);
+    if (lastUpdates[filename] === fileStats.mtimeMs) return;
+    lastUpdates[filename] = fileStats.mtimeMs;
+
+    // Run test
+    await toolkit.runTestsWithOutput(firmId, handle, testName, html_render);
+  });
+}
+
+// Watch for changes in any file .liquid
+// Identify if it's a reconciliation or shared part
+// Publish updates when file is saved
+function watchLiquid(firmId) {
+  console.log("Watching for changes in liquid files...");
   const files = listFiles();
   const lastUpdates = {};
   files.forEach((filePath) => {
@@ -35,25 +67,39 @@ function watch(firmId) {
   });
 }
 
-function listFiles() {
+// List all files of a specific type (recursive search)
+// Return an array with their full paths
+function listFiles(typeCheck = "liquid") {
   const baseDirectory = fs.readdirSync(CWD);
   const basePath = path.resolve(CWD);
-  const array = recursiveInspect(basePath, baseDirectory);
+  const array = recursiveInspectDirectory({
+    basePath: basePath,
+    collection: baseDirectory,
+    pathsArray: undefined,
+    typeCheck: typeCheck,
+  });
   return array;
 }
 
-function recursiveInspect(
+// Recursive option for fs.watch is not available in every OS (e.g. Linux)
+function recursiveInspectDirectory({
   basePath,
   collection,
   pathsArray = [],
-  typeCheck = "liquid"
-) {
+  typeCheck = "liquid",
+}) {
   collection.forEach((filePath) => {
     let fullPath = path.resolve(basePath, filePath);
     let fileStats = fs.statSync(fullPath, () => {});
+
     if (fileStats.isDirectory()) {
       let directory = fs.readdirSync(fullPath);
-      recursiveInspect(fullPath, directory, pathsArray);
+      recursiveInspectDirectory({
+        basePath: fullPath,
+        collection: directory,
+        pathsArray: pathsArray,
+        typeCheck: typeCheck,
+      });
     }
     let fileType = fullPath.split(".")[fullPath.split.length - 1];
     if (fileType === typeCheck) {
@@ -63,6 +109,8 @@ function recursiveInspect(
   return pathsArray;
 }
 
+// Return {type, handle} of a template
+// type: reconciliationText | sharedPart
 function identifyTypeAndHandle(filePath) {
   let index;
   const pathParts = path.resolve(filePath).split(path.sep);
@@ -79,4 +127,4 @@ function identifyTypeAndHandle(filePath) {
   return false;
 }
 
-module.exports = { watch };
+module.exports = { watchYaml, watchLiquid };
