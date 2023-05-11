@@ -9,6 +9,7 @@ const pkg = require("../package.json");
 const cliUpdates = require("../lib/cli/cliUpdates");
 const program = new Command();
 const devMode = require("../lib/cli/devMode");
+const errorUtils = require("../lib/utils/errorUtils");
 
 // Load default firm id from Config Object or ENV
 let firmIdDefault = undefined;
@@ -28,10 +29,10 @@ function checkDefaultFirm(firmUsed) {
 // Uncaught Errors
 process
   .on("uncaughtException", (err) => {
-    toolkit.uncaughtErrors(err);
+    errorUtils.uncaughtErrors(err);
   })
   .on("unhandledRejection", (err) => {
-    toolkit.uncaughtErrors(err);
+    errorUtils.uncaughtErrors(err);
   });
 
 // Prompt Confirmation
