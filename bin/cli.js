@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 
 const toolkit = require("../index.js");
-const liquidTests = require("../liquidTestGenerator/generator.js");
-const stats = require("../statsUtils");
+const liquidTestGenerator = require("../lib/liquidTestGenerator");
+const stats = require("../lib/cli/stats");
 const { Command } = require("commander");
 const prompt = require("prompt-sync")({ sigint: true });
 const pkg = require("../package.json");
-const cliUpdates = require("../resources/cliUpdates");
+const cliUpdates = require("../lib/cli/cliUpdates");
 const program = new Command();
 const devMode = require("../lib/cli/devMode");
 
@@ -378,7 +378,7 @@ program
   .action((options) => {
     reconciledStatus = options.unreconciled ? false : true;
     let testName = options.test ? options.test : "test_name";
-    liquidTests.testGenerator(options.url, testName);
+    liquidTestGenerator.testGenerator(options.url, testName);
   });
 
 // Authorize APP

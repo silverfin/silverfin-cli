@@ -1,7 +1,7 @@
 const SF = require("./api/sfApi");
-const fsUtils = require("./fsUtils");
+const fsUtils = require("./lib/utils/fsUtils");
 const fs = require("fs");
-const { spinner } = require("./resources/spinner");
+const { spinner } = require("./lib/cli/spinner");
 const chalk = require("chalk");
 const pkg = require("./package.json");
 const { config } = require("./api/auth");
