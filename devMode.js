@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const toolkit = require("./index");
-
+const fsUtils = require("./fs_utils");
 const CWD = process.cwd();
 
 // Watch for changes in an specific YAML
@@ -39,14 +39,14 @@ async function watchYaml(firmId, handle, testName, html_render) {
 // Publish updates when file is saved
 function watchLiquid(firmId) {
   console.log("Watching for changes in liquid files...");
-  const files = listFiles();
+  const files = fsUtils.listExistingFiles();
   const lastUpdates = {};
   files.forEach((filePath) => {
     fs.watch(filePath, (eventType, filename) => {
       if (eventType !== "change") {
         return;
       }
-      let details = identifyTypeAndHandle(filePath);
+      let details = fsUtils.identifyTypeAndHandle(filePath);
       if (!details) {
         return;
       }
@@ -65,66 +65,6 @@ function watchLiquid(firmId) {
       }
     });
   });
-}
-
-// List all files of a specific type (recursive search)
-// Return an array with their full paths
-function listFiles(typeCheck = "liquid") {
-  const baseDirectory = fs.readdirSync(CWD);
-  const basePath = path.resolve(CWD);
-  const array = recursiveInspectDirectory({
-    basePath: basePath,
-    collection: baseDirectory,
-    pathsArray: undefined,
-    typeCheck: typeCheck,
-  });
-  return array;
-}
-
-// Recursive option for fs.watch is not available in every OS (e.g. Linux)
-function recursiveInspectDirectory({
-  basePath,
-  collection,
-  pathsArray = [],
-  typeCheck = "liquid",
-}) {
-  collection.forEach((filePath) => {
-    let fullPath = path.resolve(basePath, filePath);
-    let fileStats = fs.statSync(fullPath, () => {});
-
-    if (fileStats.isDirectory()) {
-      let directory = fs.readdirSync(fullPath);
-      recursiveInspectDirectory({
-        basePath: fullPath,
-        collection: directory,
-        pathsArray: pathsArray,
-        typeCheck: typeCheck,
-      });
-    }
-    let fileType = fullPath.split(".")[fullPath.split.length - 1];
-    if (fileType === typeCheck) {
-      pathsArray.push(fullPath);
-    }
-  });
-  return pathsArray;
-}
-
-// Return {type, handle} of a template
-// type: reconciliationText | sharedPart
-function identifyTypeAndHandle(filePath) {
-  let index;
-  const pathParts = path.resolve(filePath).split(path.sep);
-  const sharedPartCheck = (element) => element === "shared_parts";
-  const reconciliationCheck = (element) => element === "reconciliation_texts";
-  index = pathParts.findIndex(sharedPartCheck);
-  if (index !== -1) {
-    return { type: "sharedPart", handle: pathParts[index + 1] };
-  }
-  index = pathParts.findIndex(reconciliationCheck);
-  if (index !== -1) {
-    return { type: "reconciliationText", handle: pathParts[index + 1] };
-  }
-  return false;
 }
 
 module.exports = { watchYaml, watchLiquid };
