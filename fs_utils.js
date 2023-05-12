@@ -146,7 +146,7 @@ function getTemplatePaths(relativePath) {
     return templatesArray;
   }
   let allTemplates = fs.readdirSync(`./${relativePath}`);
-  for (templateDir of allTemplates) {
+  for (let templateDir of allTemplates) {
     let templatePath = `./${relativePath}/${templateDir}`;
     let dir = fs.statSync(templatePath, () => {});
     if (dir.isDirectory()) {
