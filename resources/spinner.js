@@ -35,12 +35,16 @@ class Spinner {
       // Stop interval
       if (this.running === false) {
         clearInterval(interval);
+        this.clear();
       }
     }, 100);
   }
 
-  clear() {
+  stop() {
     this.running = false;
+  }
+
+  clear() {
     readline.clearLine(process.stdout);
     readline.cursorTo(process.stdout, 0);
     std.write("\x1B[?25h");

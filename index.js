@@ -733,12 +733,12 @@ async function fetchResult(firmId, testRunId) {
     waitingTime += pollingDelay;
     pollingDelay *= 1.05;
     if (waitingTime >= waitingLimit) {
-      spinner.clear();
+      spinner.stop();
       console.log("Timeout. Try to run your test again");
       break;
     }
   }
-  spinner.clear();
+  spinner.stop();
   return testRun;
 }
 
