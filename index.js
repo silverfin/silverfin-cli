@@ -286,6 +286,7 @@ async function newReconciliation(firmId, handle) {
     }
     const relativePath = `./reconciliation_texts/${handle}`;
     fsUtils.createFolder(`./reconciliation_texts`);
+    fsUtils.createFolders(relativePath);
     fsUtils.createConfigIfMissing(relativePath, "reconciliation_text");
     const config = fsUtils.readConfig(relativePath);
 
