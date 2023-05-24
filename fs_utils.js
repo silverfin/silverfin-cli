@@ -117,10 +117,15 @@ function createConfigIfMissing(relativePath, templateType = undefined) {
     const config = { id: {} };
     if (templateType == "reconciliation_text") {
       config.text = "main.liquid";
-      config.text_parts = {};
       config.auto_hide_formula = "";
       config.text_configuration = null;
       config.virtual_account_number = "";
+      config.reconciliation_type = "only_reconciled_with_data";
+      config.public = false;
+      config.allow_duplicate_reconciliation = false;
+      config.is_active = true;
+      config.externally_managed == false;
+      config.text_parts = {};
     }
     writeConfig(relativePath, config);
   }
