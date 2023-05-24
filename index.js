@@ -298,6 +298,7 @@ async function newReconciliation(firmId, handle) {
       );
     }
 
+    // Write handle & names 
     const attributes = constructReconciliationText(handle);
     const items = ["handle", "name_nl", "name_en", "name_fr"];
     items.forEach((item) => {
@@ -306,17 +307,20 @@ async function newReconciliation(firmId, handle) {
         config[item] = handle;
       }
     });
+
+    // Liquid Test YAML
+    const testFilenameRoot = handle;
+    let testContent = "# Add your Liquid Tests here";
+    fsUtils.createLiquidTestFiles(relativePath, testFilenameRoot, testContent);
+    config.tests = 'tests/${handle}_liquid_test.yml';
+
+    // Write config
     fsUtils.writeConfig(relativePath, config);
 
     const response = await SF.createReconciliationText(firmId, {
       ...attributes,
       version_comment: "Created using the API",
     });
-
-    // Liquid Test YAML
-    const testFilenameRoot = handle;
-    let testContent = "# Add your Liquid Tests here";
-    fsUtils.createLiquidTestFiles(relativePath, testFilenameRoot, testContent);
 
     // Store new firm id
     if (response && response.status == 201) {
