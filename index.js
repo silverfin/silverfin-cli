@@ -312,6 +312,11 @@ async function newReconciliation(firmId, handle) {
       version_comment: "Created using the API",
     });
 
+    // Liquid Test YAML
+    const testFilenameRoot = handle;
+    let testContent = "# Add your Liquid Tests here";
+    fsUtils.createLiquidTestFiles(relativePath, testFilenameRoot, testContent);
+
     // Store new firm id
     if (response && response.status == 201) {
       config.id[firmId] = response.data.id;
