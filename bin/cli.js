@@ -352,6 +352,12 @@ program
       options.test,
       options.html
     );
+    toolkit.runTestsWithOutput(
+      options.firm,
+      options.handle,
+      options.test,
+      options.html
+    );
   });
 
 // Create Liquid Test
@@ -488,6 +494,7 @@ program
 program
   .command("development-mode")
   .description("Development mode - Watch for changes in files")
+  .description("Development mode - Watch for changes in files")
   .requiredOption(
     "-f, --firm <firm-id>",
     "Specify the firm to be used",
@@ -503,17 +510,32 @@ program
   )
   .option(
     "-t, --test <test-name>",
-    `Specify the name of the test to be run (optional). It has to be used together with "--handle"`,
+    "Specify the name of the test to be run (optional). It has to be used together with --handle",
     ""
   )
   .option(
     "--html",
-    `Get a html file of the template generated with the Liquid Test information (optional). It has to be used together with "--handle"`,
+    "Get a html file of the template generated with the Liquid Test information (optional). It has to be used together with --handle",
     false
   )
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     checkDefaultFirm(options.firm);
+    checkUniqueOption(["handle", "updateTemplates"], options);
+    if (options.updateTemplates && !options.yes) {
+      promptConfirmation();
+    }
+    if (options.handle) {
+      devMode.watchLiquidTest(
+        options.firm,
+        options.handle,
+        options.test,
+        options.html
+      );
+    }
+    if (options.updateTemplates) {
+      devMode.watchLiquidFiles(options.firm);
+    }
     checkUniqueOption(["handle", "updateTemplates"], options);
     if (options.updateTemplates && !options.yes) {
       promptConfirmation();
