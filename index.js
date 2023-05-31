@@ -286,6 +286,7 @@ async function newReconciliation(firmId, handle) {
     }
     const relativePath = `./reconciliation_texts/${handle}`;
     fsUtils.createFolder(`./reconciliation_texts`);
+    fsUtils.createFolders(relativePath);
     fsUtils.createConfigIfMissing(relativePath, "reconciliation_text");
     const config = fsUtils.readConfig(relativePath);
 
@@ -297,6 +298,7 @@ async function newReconciliation(firmId, handle) {
       );
     }
 
+    // Write handle & names 
     const attributes = constructReconciliationText(handle);
     const items = ["handle", "name_nl", "name_en", "name_fr"];
     items.forEach((item) => {
@@ -305,6 +307,14 @@ async function newReconciliation(firmId, handle) {
         config[item] = handle;
       }
     });
+
+    // Liquid Test YAML
+    const testFilenameRoot = handle;
+    let testContent = "# Add your Liquid Tests here";
+    fsUtils.createLiquidTestFiles(relativePath, testFilenameRoot, testContent);
+    config.tests = 'tests/${handle}_liquid_test.yml';
+
+    // Write config
     fsUtils.writeConfig(relativePath, config);
 
     const response = await SF.createReconciliationText(firmId, {
