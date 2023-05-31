@@ -124,7 +124,7 @@ function createConfigIfMissing(relativePath, templateType = undefined) {
       config.public = false;
       config.allow_duplicate_reconciliation = false;
       config.is_active = true;
-      config.externally_managed == true;
+      config.externally_managed = true;
       config.text_parts = {};
     }
     writeConfig(relativePath, config);
