@@ -10,9 +10,7 @@ const missingVariables = ["SF_API_CLIENT_ID", "SF_API_SECRET"].filter(
 if (missingVariables.length) {
   console.log(`Error: Missing API credentials: [${missingVariables}]`);
   console.log(`Credentials should be defined as environmental variables.`);
-  console.log(
-    `Call export ${missingVariables[0]}=... or define them in a .env file inside the root directory before using this CLI`
-  );
+  console.log(`Call export ${missingVariables[0]}=...`);
   console.log(
     `If you don't have credentials yet, you need to register your app with Silverfin to get them`
   );

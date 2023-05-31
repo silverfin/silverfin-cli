@@ -217,6 +217,32 @@ function listExistingFiles(typeCheck = "liquid") {
   return array;
 }
 
+// List all liquid files related to a specific reconciliation
+// Main, parts and shared parts used
+// Return an array with their full paths
+function listExistingRelatedLiquidFiles(firmId, handle) {
+  const relatedSharedParts = getSharedParts(firmId, handle);
+  const allLiquidFiles = listExistingFiles("liquid");
+  const patternReconciliation = `reconciliation_texts/${handle}/`;
+  const reconciliationRegExp = new RegExp(patternReconciliation, "g");
+  const relatedLiquidFiles = allLiquidFiles.filter((filePath) => {
+    let match = false;
+    if (filePath.match(reconciliationRegExp)) {
+      match = true;
+    } else {
+      for (let sharedPart of relatedSharedParts) {
+        const patternSharedPart = `shared_parts/${sharedPart}/`;
+        const sharedPartRegExp = new RegExp(patternSharedPart, "g");
+        if (filePath.match(sharedPartRegExp)) {
+          match = true;
+        }
+      }
+    }
+    return match;
+  });
+  return relatedLiquidFiles;
+}
+
 // Recursive option for fs.watch is not available in every OS (e.g. Linux)
 function recursiveInspectDirectory({
   basePath,
@@ -276,5 +302,6 @@ module.exports = {
   findHandleByID,
   getSharedParts,
   listExistingFiles,
+  listExistingRelatedLiquidFiles,
   identifyTypeAndHandle,
 };
