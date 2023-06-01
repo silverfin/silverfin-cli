@@ -6,9 +6,9 @@ const stats = require("../lib/cli/stats");
 const { Command } = require("commander");
 const pkg = require("../package.json");
 const cliUpdates = require("../lib/cli/cliUpdates");
+const cliUtils = require("../lib/cli/utils");
 const program = new Command();
 const devMode = require("../lib/cli/devMode");
-const cliUtils = require("../lib/cli/utils");
 
 let firmIdDefault = cliUtils.loadDefaultFirmId();
 cliUtils.handleUncaughtErrors();
@@ -35,7 +35,7 @@ program
   .action((options) => {
     cliUtils.checkUniqueOption(["handle", "id", "all"], options);
     if (!options.yes) {
-      cliUpdates.promptConfirmation();
+      cliUtils.promptConfirmation();
     }
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     if (options.handle) {
@@ -66,7 +66,7 @@ program
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     if (!options.yes) {
-      cliUpdates.promptConfirmation();
+      cliUtils.promptConfirmation();
     }
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     toolkit.persistReconciliationText(options.firm, options.handle);
@@ -114,7 +114,7 @@ program
   .action((options) => {
     cliUtils.checkUniqueOption(["sharedPart", "all"], options);
     if (!options.yes) {
-      cliUpdates.promptConfirmation();
+      cliUtils.promptConfirmation();
     }
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     if (options.sharedPart) {
@@ -140,7 +140,7 @@ program
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     if (!options.yes) {
-      cliUpdates.promptConfirmation();
+      cliUtils.promptConfirmation();
     }
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     toolkit.persistSharedPart(options.firm, options.sharedPart);
@@ -193,7 +193,7 @@ program
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     if (!options.yes) {
-      cliUpdates.promptConfirmation();
+      cliUtils.promptConfirmation();
     }
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     toolkit.addSharedPartToReconciliation(
@@ -217,7 +217,7 @@ program
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     if (!options.yes) {
-      cliUpdates.promptConfirmation();
+      cliUtils.promptConfirmation();
     }
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     toolkit.addAllSharedPartsToAllReconciliation(options.firm);
@@ -243,7 +243,7 @@ program
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     if (!options.yes) {
-      cliUpdates.promptConfirmation();
+      cliUtils.promptConfirmation();
     }
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     toolkit.removeSharedPartFromReconciliation(
@@ -280,12 +280,6 @@ program
   )
   .action((options) => {
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
-    toolkit.runTestsWithOutput(
-      options.firm,
-      options.handle,
-      options.test,
-      options.html
-    );
     toolkit.runTestsWithOutput(
       options.firm,
       options.handle,
@@ -381,7 +375,7 @@ program
   .action((options) => {
     cliUtils.checkUniqueOption(["handle", "all"], options);
     if (!options.yes) {
-      cliUpdates.promptConfirmation();
+      cliUtils.promptConfirmation();
     }
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     if (options.handle) {
@@ -410,7 +404,7 @@ program
   .action((options) => {
     cliUtils.checkUniqueOption(["sharedPart", "all"], options);
     if (!options.yes) {
-      cliUpdates.promptConfirmation();
+      cliUtils.promptConfirmation();
     }
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     if (options.sharedPart) {
@@ -428,7 +422,6 @@ program
 program
   .command("development-mode")
   .description("Development mode - Watch for changes in files")
-  .description("Development mode - Watch for changes in files")
   .requiredOption(
     "-f, --firm <firm-id>",
     "Specify the firm to be used",
@@ -444,12 +437,12 @@ program
   )
   .option(
     "-t, --test <test-name>",
-    "Specify the name of the test to be run (optional). It has to be used together with --handle",
+    `Specify the name of the test to be run (optional). It has to be used together with "--handle"`,
     ""
   )
   .option(
     "--html",
-    "Get a html file of the template generated with the Liquid Test information (optional). It has to be used together with --handle",
+    `Get a html file of the template generated with the Liquid Test information (optional). It has to be used together with "--handle"`,
     false
   )
   .option("--yes", "Skip the prompt confirmation (optional)")
@@ -457,22 +450,7 @@ program
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     cliUtils.checkUniqueOption(["handle", "updateTemplates"], options);
     if (options.updateTemplates && !options.yes) {
-      cliUpdates.promptConfirmation();
-    }
-    if (options.handle) {
-      devMode.watchLiquidTest(
-        options.firm,
-        options.handle,
-        options.test,
-        options.html
-      );
-    }
-    if (options.updateTemplates) {
-      devMode.watchLiquidFiles(options.firm);
-    }
-    checkUniqueOption(["handle", "updateTemplates"], options);
-    if (options.updateTemplates && !options.yes) {
-      promptConfirmation();
+      cliUtils.promptConfirmation();
     }
     if (options.handle) {
       devMode.watchLiquidTest(
