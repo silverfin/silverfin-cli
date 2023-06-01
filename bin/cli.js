@@ -8,6 +8,7 @@ const prompt = require("prompt-sync")({ sigint: true });
 const pkg = require("../package.json");
 const cliUpdates = require("../resources/cliUpdates");
 const program = new Command();
+const devMode = require("../lib/cli/devMode");
 
 // Load default firm id from Config Object or ENV
 let firmIdDefault = undefined;
@@ -480,6 +481,53 @@ program
       );
     } else if (options.all) {
       toolkit.getAllTemplatesId(options.firm, "shared_parts");
+    }
+  });
+
+// Development mode
+program
+  .command("development-mode")
+  .description("Development mode - Watch for changes in files")
+  .requiredOption(
+    "-f, --firm <firm-id>",
+    "Specify the firm to be used",
+    firmIdDefault
+  )
+  .option(
+    "-h, --handle <handle>",
+    "Watch for changes in liquid and yaml files related to the reconcilation mentioned. Run a new Liquid Test on each save"
+  )
+  .option(
+    "-u, --update-templates",
+    "Watch for changes in any liquid file. Publish the new code of the template into the Platform on each save"
+  )
+  .option(
+    "-t, --test <test-name>",
+    `Specify the name of the test to be run (optional). It has to be used together with "--handle"`,
+    ""
+  )
+  .option(
+    "--html",
+    `Get a html file of the template generated with the Liquid Test information (optional). It has to be used together with "--handle"`,
+    false
+  )
+  .option("--yes", "Skip the prompt confirmation (optional)")
+  .action((options) => {
+    checkDefaultFirm(options.firm);
+    checkUniqueOption(["handle", "updateTemplates"], options);
+    if (options.updateTemplates && !options.yes) {
+      promptConfirmation();
+    }
+    if (options.handle) {
+      devMode.watchLiquidTest(
+        options.firm,
+        options.handle,
+        options.test,
+        options.html
+      );
+    }
+    if (options.updateTemplates) {
+      devMode.watchLiquidFiles(options.firm);
     }
   });
 
