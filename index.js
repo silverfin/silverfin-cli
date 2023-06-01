@@ -1,10 +1,10 @@
-const SF = require("./api/sf_api");
-const fsUtils = require("./fs_utils");
+const SF = require("./lib/api/sfApi");
+const fsUtils = require("./lib/utils/fsUtils");
 const fs = require("fs");
-const { spinner } = require("./resources/spinner");
+const { spinner } = require("./lib/cli/spinner");
 const chalk = require("chalk");
 const pkg = require("./package.json");
-const { config } = require("./api/auth");
+const { config } = require("./lib/api/auth");
 const yaml = require("yaml");
 const axios = require("axios");
 const open = require("open");
@@ -12,6 +12,7 @@ const path = require("path");
 const { exec, execSync } = require("child_process");
 const isWsl = require("is-wsl");
 const commandExistsSync = require("command-exists").sync;
+const errorUtils = require("./lib/utils/errorUtils");
 
 const RECONCILIATION_FIELDS_TO_SYNC = [
   "handle",
@@ -36,33 +37,6 @@ const RECONCILIATION_FIELDS_TO_PUSH = [
   "text_configuration",
   "externally_managed",
 ];
-
-// Uncaught Errors. Open Issue in GitHub
-function uncaughtErrors(error) {
-  if (error.stack) {
-    console.error("");
-    console.error(
-      `!!! Please open an issue including this log on ${pkg.bugs.url}`
-    );
-    console.error("");
-    console.error(error.message);
-    console.error(`silverfin: v${pkg.version}, node: ${process.version}`);
-    console.error("");
-    console.error(error.stack);
-  }
-  process.exit(1);
-}
-
-function errorHandler(error) {
-  if (error.code == "ENOENT") {
-    console.log(
-      `The path ${error.path} was not found, please ensure you've imported all required files`
-    );
-    process.exit();
-  } else {
-    uncaughtErrors(error);
-  }
-}
 
 function storeImportedReconciliation(firmId, reconciliationText) {
   if (!reconciliationText.handle) {
@@ -218,7 +192,7 @@ async function getAllTemplatesId(firmId, type) {
       await updateTemplateID(firmId, type, handle);
     }
   } catch (error) {
-    errorHandler(error);
+    errorUtils.errorHandler(error);
   }
 }
 
@@ -268,7 +242,7 @@ async function persistReconciliationText(firmId, handle) {
       version_comment: "Update published using the API",
     });
   } catch (error) {
-    errorHandler(error);
+    errorUtils.errorHandler(error);
   }
 }
 
@@ -328,7 +302,7 @@ async function newReconciliation(firmId, handle) {
       fsUtils.writeConfig(relativePath, config);
     }
   } catch (error) {
-    errorHandler(error);
+    errorUtils.errorHandler(error);
   }
 }
 
@@ -474,7 +448,7 @@ async function persistSharedPart(firmId, name) {
       version_comment: "Update published using the API",
     });
   } catch (error) {
-    errorHandler(error);
+    errorUtils.errorHandler(error);
   }
 }
 
@@ -516,7 +490,7 @@ async function newSharedPart(firmId, name) {
       fsUtils.writeConfig(relativePath, config);
     }
   } catch (error) {
-    errorHandler(error);
+    errorUtils.errorHandler(error);
   }
 }
 
@@ -593,7 +567,7 @@ async function addSharedPartToReconciliation(
       fsUtils.writeConfig(relativePathReconciliation, configReconciliation);
     }
   } catch (error) {
-    errorHandler(error);
+    errorUtils.errorHandler(error);
   }
 }
 
@@ -655,7 +629,7 @@ async function removeSharedPartFromReconciliation(
       fsUtils.writeConfig(relativePathSharedPart, configSharedPart);
     }
   } catch (error) {
-    errorHandler(error);
+    errorUtils.errorHandler(error);
   }
 }
 
@@ -960,7 +934,7 @@ async function runTests(firmId, handle, testName = "", html_render = false) {
     const testRun = await fetchResult(firmId, testRunId);
     return testRun;
   } catch (error) {
-    errorHandler(error);
+    errorUtils.errorHandler(error);
   }
 }
 
@@ -980,7 +954,7 @@ async function runTestsWithOutput(
       handleHTMLfiles(testName, testRun);
     }
   } catch (error) {
-    errorHandler(error);
+    errorUtils.errorHandler(error);
   }
 }
 
@@ -1025,7 +999,6 @@ module.exports = {
   authorize,
   updateTemplateID,
   getAllTemplatesId,
-  uncaughtErrors,
   setDefaultFirmID,
   getDefaultFirmID,
   listStoredIds,
