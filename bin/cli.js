@@ -1,87 +1,20 @@
 #!/usr/bin/env node
 
-const toolkit = require("../index.js");
+const toolkit = require("../index");
 const liquidTestGenerator = require("../lib/liquidTestGenerator");
 const stats = require("../lib/cli/stats");
 const { Command } = require("commander");
-const prompt = require("prompt-sync")({ sigint: true });
 const pkg = require("../package.json");
 const cliUpdates = require("../lib/cli/cliUpdates");
 const program = new Command();
 const devMode = require("../lib/cli/devMode");
-const errorUtils = require("../lib/utils/errorUtils");
+const cliUtils = require("../lib/cli/utils");
 
-// Load default firm id from Config Object or ENV
-let firmIdDefault = undefined;
-let firmStoredConfig = toolkit.getDefaultFirmID();
-if (firmStoredConfig) {
-  firmIdDefault = firmStoredConfig;
-}
-if (!firmIdDefault && process.env.SF_FIRM_ID) {
-  firmIdDefault = process.env.SF_FIRM_ID;
-}
-function checkDefaultFirm(firmUsed) {
-  if (firmUsed === firmIdDefault) {
-    console.log(`Firm ID to be used: ${firmIdDefault}`);
-  }
-}
+let firmIdDefault = cliUtils.loadDefaultFirmId();
+cliUtils.handleUncaughtErrors();
 
-// Uncaught Errors
-process
-  .on("uncaughtException", (err) => {
-    errorUtils.uncaughtErrors(err);
-  })
-  .on("unhandledRejection", (err) => {
-    errorUtils.uncaughtErrors(err);
-  });
-
-// Prompt Confirmation
-function promptConfirmation() {
-  const confirm = prompt(
-    "This will overwrite existing templates. Do you want to proceed? (y/n): "
-  );
-  if (confirm.toLocaleLowerCase() !== "yes" && confirm.toLowerCase() !== "y") {
-    console.log("Operation cancelled");
-    process.exit(1);
-  }
-  return true;
-}
-
-// Convert variable name into flag name to show in message (listAll -> list-all)
-function formatOption(inputString) {
-  return inputString
-    .split("")
-    .map((character) => {
-      if (character == character.toUpperCase()) {
-        return "-" + character.toLowerCase();
-      } else {
-        return character;
-      }
-    })
-    .join("");
-}
-// Check unique options
-function checkUniqueOption(uniqueParameters = [], options) {
-  const optionsToCheck = Object.keys(options).filter((element) => {
-    if (uniqueParameters.includes(element)) {
-      return true;
-    }
-  });
-  if (optionsToCheck.length !== 1) {
-    let formattedParameters = uniqueParameters.map((parameter) =>
-      formatOption(parameter)
-    );
-    console.log(
-      "Only one of the following options must be used: " +
-        formattedParameters.join(", ")
-    );
-    process.exit(1);
-  }
-}
-
+// Name & Version
 program.name("silverfin");
-
-// Version
 if (pkg.version) {
   program.version(pkg.version);
 }
@@ -100,11 +33,11 @@ program
   .option("-a, --all", "Import all reconciliations")
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
-    checkUniqueOption(["handle", "id", "all"], options);
+    cliUtils.checkUniqueOption(["handle", "id", "all"], options);
     if (!options.yes) {
-      promptConfirmation();
+      cliUpdates.promptConfirmation();
     }
-    checkDefaultFirm(options.firm);
+    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     if (options.handle) {
       toolkit.importExistingReconciliationByHandle(
         options.firm,
@@ -133,9 +66,9 @@ program
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     if (!options.yes) {
-      promptConfirmation();
+      cliUpdates.promptConfirmation();
     }
-    checkDefaultFirm(options.firm);
+    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     toolkit.persistReconciliationText(options.firm, options.handle);
   });
 
@@ -157,8 +90,8 @@ program
     "Try to create all the reconciliation texts stored in the repository"
   )
   .action((options) => {
-    checkUniqueOption(["handle", "all"], options);
-    checkDefaultFirm(options.firm);
+    cliUtils.checkUniqueOption(["handle", "all"], options);
+    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     if (options.handle) {
       toolkit.newReconciliation(options.firm, options.handle);
     } else if (options.all) {
@@ -179,11 +112,11 @@ program
   .option("-a, --all", "Import all shared parts")
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
-    checkUniqueOption(["sharedPart", "all"], options);
+    cliUtils.checkUniqueOption(["sharedPart", "all"], options);
     if (!options.yes) {
-      promptConfirmation();
+      cliUpdates.promptConfirmation();
     }
-    checkDefaultFirm(options.firm);
+    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     if (options.sharedPart) {
       toolkit.importExistingSharedPartByName(options.firm, options.sharedPart);
     } else if (options.all) {
@@ -207,9 +140,9 @@ program
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     if (!options.yes) {
-      promptConfirmation();
+      cliUpdates.promptConfirmation();
     }
-    checkDefaultFirm(options.firm);
+    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     toolkit.persistSharedPart(options.firm, options.sharedPart);
   });
 
@@ -231,8 +164,8 @@ program
     "Try to create all the shared parts stored in the repository"
   )
   .action((options) => {
-    checkUniqueOption(["sharedPart", "all"], options);
-    checkDefaultFirm(options.firm);
+    cliUtils.checkUniqueOption(["sharedPart", "all"], options);
+    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     if (options.sharedPart) {
       toolkit.newSharedPart(options.firm, options.sharedPart);
     } else if (options.all) {
@@ -260,9 +193,9 @@ program
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     if (!options.yes) {
-      promptConfirmation();
+      cliUpdates.promptConfirmation();
     }
-    checkDefaultFirm(options.firm);
+    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     toolkit.addSharedPartToReconciliation(
       options.firm,
       options.sharedPart,
@@ -284,9 +217,9 @@ program
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     if (!options.yes) {
-      promptConfirmation();
+      cliUpdates.promptConfirmation();
     }
-    checkDefaultFirm(options.firm);
+    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     toolkit.addAllSharedPartsToAllReconciliation(options.firm);
   });
 
@@ -310,9 +243,9 @@ program
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     if (!options.yes) {
-      promptConfirmation();
+      cliUpdates.promptConfirmation();
     }
-    checkDefaultFirm(options.firm);
+    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     toolkit.removeSharedPartFromReconciliation(
       options.firm,
       options.sharedPart,
@@ -346,7 +279,7 @@ program
     false
   )
   .action((options) => {
-    checkDefaultFirm(options.firm);
+    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     toolkit.runTestsWithOutput(
       options.firm,
       options.handle,
@@ -412,7 +345,7 @@ program
   .option("-g, --get-firm", "Check if there is any firm id already stored")
   .option("-l, --list-all", "List all the firm IDs stored")
   .action((options) => {
-    checkUniqueOption(["setFirm", "getFirm", "listAll"], options);
+    cliUtils.checkUniqueOption(["setFirm", "getFirm", "listAll"], options);
     if (options.setFirm) {
       toolkit.setDefaultFirmID(options.setFirm);
     }
@@ -446,11 +379,11 @@ program
   .option("-a, --all", "Fetch the ID for every reconciliation")
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
-    checkUniqueOption(["handle", "all"], options);
+    cliUtils.checkUniqueOption(["handle", "all"], options);
     if (!options.yes) {
-      promptConfirmation();
+      cliUpdates.promptConfirmation();
     }
-    checkDefaultFirm(options.firm);
+    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     if (options.handle) {
       toolkit.updateTemplateID(
         options.firm,
@@ -475,11 +408,11 @@ program
   .option("-a, --all", "Fetch the ID for every shared part")
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
-    checkUniqueOption(["sharedPart", "all"], options);
+    cliUtils.checkUniqueOption(["sharedPart", "all"], options);
     if (!options.yes) {
-      promptConfirmation();
+      cliUpdates.promptConfirmation();
     }
-    checkDefaultFirm(options.firm);
+    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     if (options.sharedPart) {
       toolkit.updateTemplateID(
         options.firm,
@@ -521,10 +454,10 @@ program
   )
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
-    checkDefaultFirm(options.firm);
-    checkUniqueOption(["handle", "updateTemplates"], options);
+    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
+    cliUtils.checkUniqueOption(["handle", "updateTemplates"], options);
     if (options.updateTemplates && !options.yes) {
-      promptConfirmation();
+      cliUpdates.promptConfirmation();
     }
     if (options.handle) {
       devMode.watchLiquidTest(
