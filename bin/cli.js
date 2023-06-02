@@ -2,6 +2,7 @@
 
 const toolkit = require("../index");
 const liquidTestGenerator = require("../lib/liquidTestGenerator");
+const liquidTestRunner = require("../lib/liquidTestRunner");
 const stats = require("../lib/cli/stats");
 const { Command } = require("commander");
 const pkg = require("../package.json");
@@ -280,7 +281,7 @@ program
   )
   .action((options) => {
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
-    toolkit.runTestsWithOutput(
+    liquidTestRunner.runTestsWithOutput(
       options.firm,
       options.handle,
       options.test,
