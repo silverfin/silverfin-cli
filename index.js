@@ -272,7 +272,7 @@ async function newReconciliation(firmId, handle) {
       );
     }
 
-    // Write handle & names 
+    // Write handle & names
     const attributes = constructReconciliationText(handle);
     const items = ["handle", "name_nl", "name_en", "name_fr"];
     items.forEach((item) => {
@@ -286,7 +286,7 @@ async function newReconciliation(firmId, handle) {
     const testFilenameRoot = handle;
     let testContent = "# Add your Liquid Tests here";
     fsUtils.createLiquidTestFiles(relativePath, testFilenameRoot, testContent);
-    config.tests = 'tests/${handle}_liquid_test.yml';
+    config.test = `tests/${handle}_liquid_test.yml`;
 
     // Write config
     fsUtils.writeConfig(relativePath, config);
@@ -342,7 +342,7 @@ async function importExistingSharedPartById(firmId, id) {
   let existingConfig;
 
   if (!fs.existsSync(`${relativePath}/config.json`)) {
-    existingConfig = fsUtils.createConfigIfMissing(relativePath);
+    existingConfig = fsUtils.createConfigIfMissing(relativePath, "shared_part");
   }
   existingConfig = fsUtils.readConfig(relativePath);
 
@@ -463,7 +463,7 @@ async function newSharedPart(firmId, name) {
 
     fsUtils.createFolder(`./shared_parts`);
 
-    fsUtils.createConfigIfMissing(relativePath);
+    fsUtils.createConfigIfMissing(relativePath, "shared_part");
     const config = fsUtils.readConfig(relativePath);
 
     if (!fs.existsSync(`${relativePath}/${name}.liquid`)) {
