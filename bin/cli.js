@@ -183,45 +183,36 @@ program
     "Specify the firm to be used",
     firmIdDefault
   )
-  .requiredOption(
+  .option(
     "-s, --shared-part <name>",
-    "Specify the shared part to be added (mandatory)"
+    `Specify the shared part to be added (used together with "--handle")`
   )
-  .requiredOption(
+  .option(
     "-h, --handle <handle>",
-    "Specify the reconciliation that needs to be updated (mandatory)"
+    `Specify the reconciliation that needs to be updated (used together with "--shared-part")`
   )
-  .option("--yes", "Skip the prompt confirmation (optional)")
-  .action((options) => {
-    if (!options.yes) {
-      cliUtils.promptConfirmation();
-    }
-    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
-    toolkit.addSharedPartToReconciliation(
-      options.firm,
-      options.sharedPart,
-      options.handle
-    );
-  });
-
-// Add all shared parts
-program
-  .command("add-all-shared-parts")
-  .description(
+  .option(
+    "-a, --all",
     "Add all shared parts to all reconciliations (based on the config file of shared parts and the handles assigned there to each reconciliation)"
   )
-  .requiredOption(
-    "-f, --firm <firm-id>",
-    "Specify the firm to be used",
-    firmIdDefault
-  )
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
+    cliUtils.checkUsedTogether(["sharedPart", "handle"], options);
+    cliUtils.checkUniqueOption(["sharedPart", "all"], options);
+    cliUtils.checkUniqueOption(["handle", "all"], options);
     if (!options.yes) {
       cliUtils.promptConfirmation();
     }
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
-    toolkit.addAllSharedPartsToAllReconciliation(options.firm);
+    if (options.sharedPart && options.handle) {
+      toolkit.addSharedPartToReconciliation(
+        options.firm,
+        options.sharedPart,
+        options.handle
+      );
+    } else if (options.all) {
+      toolkit.addAllSharedPartsToAllReconciliation(options.firm);
+    }
   });
 
 // Remove shared part to reconciliation
