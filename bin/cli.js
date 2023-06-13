@@ -2,6 +2,7 @@
 
 const toolkit = require("../index");
 const liquidTestGenerator = require("../lib/liquidTestGenerator");
+const liquidTestRunner = require("../lib/liquidTestRunner");
 const stats = require("../lib/cli/stats");
 const { Command } = require("commander");
 const pkg = require("../package.json");
@@ -278,14 +279,27 @@ program
     "Get a html file of the template generated with the Liquid Test information (optional)",
     false
   )
+  .option(
+    "--status",
+    "Only return the status of the test runs as PASSED/FAILED (optional)",
+    false
+  )
   .action((options) => {
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
-    toolkit.runTestsWithOutput(
-      options.firm,
-      options.handle,
-      options.test,
-      options.html
-    );
+    if (options.status) {
+      liquidTestRunner.runTestsStatusOnly(
+        options.firm,
+        options.handle,
+        options.test
+      );
+    } else {
+      liquidTestRunner.runTestsWithOutput(
+        options.firm,
+        options.handle,
+        options.test,
+        options.html
+      );
+    }
   });
 
 // Create Liquid Test
