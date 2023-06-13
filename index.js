@@ -46,7 +46,7 @@ function storeImportedReconciliation(firmId, reconciliationText) {
   fsUtils.createLiquidTestFiles(relativePath, testFilenameRoot, testContent);
 
   // Config Json File
-  const attributes = templateUtils.RECONCILIATION_FIELDS_TO_SYNC.reduce(
+  const attributes = templateUtils.RECONCILIATION_FIELDS_TO_GET.reduce(
     (acc, attribute) => {
       acc[attribute] = reconciliationText[attribute];
       return acc;
