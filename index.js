@@ -286,7 +286,11 @@ async function importExistingSharedPartById(firmId, id) {
   let existingConfig;
 
   if (!fs.existsSync(`${relativePath}/config.json`)) {
-    existingConfig = fsUtils.createConfigIfMissing(relativePath, "shared_part");
+    existingConfig = fsUtils.createConfigIfMissing(
+      relativePath,
+      "shared_part",
+      sharedPart.data.name
+    );
   }
   existingConfig = fsUtils.readConfig(relativePath);
 
@@ -339,7 +343,7 @@ async function importExistingSharedPartById(firmId, id) {
   const config = {
     id: { ...existingConfig.id, [firmId]: sharedPart.data.id },
     name: sharedPart.data.name,
-    text: "main.liquid",
+    text: `${sharedPart.data.name}.liquid`,
     used_in: used_in,
   };
 
@@ -407,7 +411,7 @@ async function newSharedPart(firmId, name) {
 
     fsUtils.createFolder(`./shared_parts`);
 
-    fsUtils.createConfigIfMissing(relativePath, "shared_part");
+    fsUtils.createConfigIfMissing(relativePath, "shared_part", name);
     const config = fsUtils.readConfig(relativePath);
 
     if (!fs.existsSync(`${relativePath}/${name}.liquid`)) {
