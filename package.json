@@ -1,6 +1,6 @@
 {
   "name": "sf_toolkit",
-  "version": "1.8.2",
+  "version": "1.8.3",
   "description": "Command line tool for Silverfin template development",
   "main": "index.js",
   "license": "MIT",
