@@ -1,5 +1,6 @@
 const SF = require("./lib/api/sfApi");
 const fsUtils = require("./lib/utils/fsUtils");
+const path = require("path");
 const fs = require("fs");
 const chalk = require("chalk");
 const { config } = require("./lib/api/auth");
@@ -181,12 +182,23 @@ async function persistReconciliationText(firmId, handle) {
       process.exit(1);
     }
     let reconciliationTextId = config.id[firmId];
-    SF.updateReconciliationText(firmId, reconciliationTextId, {
+    console.log(`Updating ${handle}...`);
+    await SF.updateReconciliationText(firmId, reconciliationTextId, {
       ...templateUtils.constructReconciliationText(handle),
       version_comment: "Update published using the API",
     });
   } catch (error) {
     errorUtils.errorHandler(error);
+  }
+}
+
+async function persistReconciliationTexts(firmId) {
+  let templatesArray = fsUtils.getTemplatePaths("reconciliation_texts");
+  for (let templatePath of templatesArray) {
+    let pathParts = path.resolve(templatePath).split(path.sep);
+    let handle = pathParts[pathParts.length - 1];
+    if (!handle) continue;
+    await persistReconciliationText(firmId, handle);
   }
 }
 
@@ -391,12 +403,23 @@ async function persistSharedPart(firmId, name) {
       `${relativePath}/${name}.liquid`,
       "utf-8"
     );
-    SF.updateSharedPart(firmId, config.id[firmId], {
+    console.log(`Updating shared part ${name}...`);
+    await SF.updateSharedPart(firmId, config.id[firmId], {
       ...attributes,
       version_comment: "Update published using the API",
     });
   } catch (error) {
     errorUtils.errorHandler(error);
+  }
+}
+
+async function persistSharedParts(firmId) {
+  let templatesArray = fsUtils.getTemplatePaths("shared_parts");
+  for (let templatePath of templatesArray) {
+    let pathParts = path.resolve(templatePath).split(path.sep);
+    let name = pathParts[pathParts.length - 1];
+    if (!name) continue;
+    await persistSharedPart(firmId, name);
   }
 }
 
@@ -604,11 +627,13 @@ module.exports = {
   importExistingReconciliationById,
   importExistingReconciliations,
   persistReconciliationText,
+  persistReconciliationTexts,
   newReconciliation,
   newReconciliationsAll,
   importExistingSharedPartByName,
   importExistingSharedParts,
   persistSharedPart,
+  persistSharedParts,
   newSharedPart,
   newSharedPartsAll,
   addSharedPartToReconciliation,
