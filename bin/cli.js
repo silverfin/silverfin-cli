@@ -60,17 +60,23 @@ program
     "Specify the firm to be used",
     firmIdDefault
   )
-  .requiredOption(
+  .option(
     "-h, --handle <handle>",
     "Specify the reconcilation to be used (mandatory)"
   )
+  .option("-a, --all", "Import all reconciliations")
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
+    cliUtils.checkUniqueOption(["handle", "all"], options);
     if (!options.yes) {
       cliUtils.promptConfirmation();
     }
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
-    toolkit.persistReconciliationText(options.firm, options.handle);
+    if (options.handle) {
+      toolkit.persistReconciliationText(options.firm, options.handle);
+    } else if (options.all) {
+      toolkit.persistReconciliationTexts(options.firm);
+    }
   });
 
 // Create new reconciliation
@@ -134,17 +140,23 @@ program
     "Specify the firm to be used",
     firmIdDefault
   )
-  .requiredOption(
+  .option(
     "-s, --shared-part <name>",
     "Specify the shared part to be used (mandatory)"
   )
+  .option("-a, --all", "Import all shared parts")
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
+    cliUtils.checkUniqueOption(["sharedPart", "all"], options);
     if (!options.yes) {
       cliUtils.promptConfirmation();
     }
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
-    toolkit.persistSharedPart(options.firm, options.sharedPart);
+    if (options.sharedPart) {
+      toolkit.persistSharedPart(options.firm, options.sharedPart);
+    } else if (options.all) {
+      toolkit.persistSharedParts(options.firm);
+    }
   });
 
 // Create new shared parts
