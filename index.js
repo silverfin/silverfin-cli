@@ -3,7 +3,6 @@ const fsUtils = require("./lib/utils/fsUtils");
 const path = require("path");
 const fs = require("fs");
 const chalk = require("chalk");
-const { config } = require("./lib/api/auth");
 const errorUtils = require("./lib/utils/errorUtils");
 const templateUtils = require("./lib/utils/templateUtils");
 
@@ -531,7 +530,7 @@ async function addSharedPartToReconciliation(
       configReconciliation.id[firmId]
     );
 
-    if (!response.status === 201) {
+    if (!response || !response.status || !response.status === 201) {
       console.log(
         `Adding shared part "${sharedPartHandle}" to "${reconciliationHandle}" reconciliation text failed.`
       );
@@ -649,24 +648,6 @@ async function removeSharedPartFromReconciliation(
   }
 }
 
-function authorize(firmId = undefined) {
-  SF.authorizeApp(firmId);
-}
-
-function setDefaultFirmID(firmId) {
-  config.setFirmId(firmId);
-  console.log(`Set firm id to: ${firmId}`);
-}
-
-function getDefaultFirmID() {
-  const firmId = config.getFirmId();
-  return firmId;
-}
-
-function listStoredIds() {
-  return config.storedIds();
-}
-
 module.exports = {
   importExistingReconciliationByHandle,
   importExistingReconciliationById,
@@ -684,10 +665,6 @@ module.exports = {
   addSharedPartToReconciliation,
   removeSharedPartFromReconciliation,
   addAllSharedPartsToAllReconciliation,
-  authorize,
   updateTemplateID,
   getAllTemplatesId,
-  setDefaultFirmID,
-  getDefaultFirmID,
-  listStoredIds,
 };
