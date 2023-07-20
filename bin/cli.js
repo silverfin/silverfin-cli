@@ -10,6 +10,9 @@ const cliUpdates = require("../lib/cli/cliUpdates");
 const cliUtils = require("../lib/cli/utils");
 const program = new Command();
 const devMode = require("../lib/cli/devMode");
+const { firmCredentials } = require("../lib/api/firmCredentials");
+const SF = require("../lib/api/sfApi");
+const path = require("path");
 
 let firmIdDefault = cliUtils.loadDefaultFirmId();
 cliUtils.handleUncaughtErrors();
@@ -331,7 +334,7 @@ program
   .command("authorize")
   .description("Authorize the CLI by entering your Silverfin API credentials")
   .action(() => {
-    toolkit.authorize(firmIdDefault);
+    SF.authorizeApp(firmIdDefault);
   });
 
 // Repositories Statistics
@@ -358,10 +361,12 @@ program
   .action((options) => {
     cliUtils.checkUniqueOption(["setFirm", "getFirm", "listAll"], options);
     if (options.setFirm) {
-      toolkit.setDefaultFirmID(options.setFirm);
+      firmCredentials.setDefaultFirmId(options.setFirm);
+      const currentDirectory = path.basename(process.cwd());
+      console.log(`${currentDirectory}: firm id set to ${options.setFirm}`);
     }
     if (options.getFirm) {
-      const storedFirmId = toolkit.getDefaultFirmID();
+      const storedFirmId = firmCredentials.getDefaultFirmId();
       if (storedFirmId) {
         console.log(`Firm id previously stored: ${storedFirmId}`);
       } else {
@@ -369,7 +374,7 @@ program
       }
     }
     if (options.listAll) {
-      const ids = toolkit.listStoredIds() || [];
+      const ids = firmCredentials.listStoredIds() || [];
       if (ids) {
         console.log("List of authorized firms");
         ids.forEach((element) => console.log("- " + element));
