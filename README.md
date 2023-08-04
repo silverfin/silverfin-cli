@@ -16,6 +16,8 @@ A command-line tool for Silverfin template development.
 
 To use this CLI tool you first need to register an API application within Silverfin. You will get a `client_id` and `secret`.
 
+You will need (at least) the following scopes: `administration:read administration:write financials:read financials:write workflows:read`
+
 #### Node
 
 To make use of this CLI, you will need to have Node.js installed.
