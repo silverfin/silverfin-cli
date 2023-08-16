@@ -1,4 +1,4 @@
-# sf-toolkit
+# Silverfin CLI
 
 A command-line tool for Silverfin template development.
 
@@ -29,7 +29,7 @@ If not you can download it from the [official website](https://nodejs.org/).
 It is recommended to install the CLI globally by doing:
 
 ```bash
-npm install -g https://github.com/silverfin/sf-toolkit.git
+npm install -g https://github.com/silverfin/silverfin-cli.git
 ```
 
 If you prefer, you could opt to add the CLI as a dependency to each of your projects containing a Liquid repository. Keep in mind that by doing so, the CLI may not work as expected (for example, the `update` command assumes that extension is installed globally).

@@ -1,6 +1,6 @@
 {
-  "name": "sf_toolkit",
-  "version": "1.13.1",
+  "name": "silverfin-cli",
+  "version": "1.14.0",
   "description": "Command line tool for Silverfin template development",
   "main": "index.js",
   "license": "MIT",
@@ -10,15 +10,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/silverfin/sf-toolkit.git"
+    "url": "https://github.com/silverfin/silverfin-cli.git"
   },
-  "homepage": "https://github.com/silverfin/sf-toolkit#readme",
+  "homepage": "https://github.com/silverfin/silverfin-cli#readme",
   "bugs": {
-    "url": "https://github.com/silverfin/sf-toolkit/issues"
+    "url": "https://github.com/silverfin/silverfin-cli/issues"
   },
   "scripts": {
     "test": "jest",
-    "silverfin": "./node_modules/sf-toolkit/bin/cli.js"
+    "silverfin": "./node_modules/silverfin-cli/bin/cli.js"
   },
   "dependencies": {
     "axios": "^0.26.1",
