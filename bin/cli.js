@@ -278,8 +278,18 @@ program
     ""
   )
   .option(
-    "--html",
-    "Get a html file of the template generated with the Liquid Test information (optional)",
+    "--html-input",
+    "Get a static html of the input-view of the template generated with the Liquid Test data (optional)",
+    false
+  )
+  .option(
+    "--html-preview",
+    "Get a static html of the export-view of the template generated with the Liquid Test data (optional)",
+    false
+  )
+  .option(
+    "--skip-results",
+    "Skip the checking of the results of the Liquid Test in case you only want to generate a preview template (optional)",
     false
   )
   .option(
@@ -300,7 +310,8 @@ program
         options.firm,
         options.handle,
         options.test,
-        options.html
+        options.htmlInput,
+        options.htmlPreview
       );
     }
   });
