@@ -208,7 +208,11 @@ async function publishAllExportFiles(
   }
 }
 
-async function newExportFile(firmId, name) {
+async function newExportFile(
+  firmId,
+  name,
+  message = "Created through the API"
+) {
   try {
     const existingTemplate = await SF.findExportFileByName(firmId, name);
     if (existingTemplate) {
@@ -219,7 +223,7 @@ async function newExportFile(firmId, name) {
     }
     const template = await ExportFile.read(name);
     if (!template) return;
-    template.version_comment = "Created through the API";
+    template.version_comment = message;
     const response = await SF.createExportFile(firmId, template);
 
     // Store new id
@@ -231,10 +235,10 @@ async function newExportFile(firmId, name) {
   }
 }
 
-async function newAllExportFiles(firmId) {
+async function newAllExportFiles(firmId, message = "Created through the API") {
   const templates = fsUtils.getAllTemplatesOfAType("exportFile");
   for (let name of templates) {
-    await newExportFile(firmId, name);
+    await newExportFile(firmId, name, message);
   }
 }
 

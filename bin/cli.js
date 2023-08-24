@@ -199,13 +199,18 @@ program
     "-a, --all",
     "Try to create all export files stored in the repository"
   )
+  .option(
+    "-m, --message <message>",
+    "Add a message to Silverfin's changelog (optional)",
+    undefined
+  )
   .action((options) => {
     cliUtils.checkUniqueOption(["name", "all"], options);
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     if (options.name) {
-      toolkit.newExportFile(options.firm, options.name);
+      toolkit.newExportFile(options.firm, options.name, options.message);
     } else if (options.all) {
-      toolkit.newAllExportFiles(options.firm, options.name);
+      toolkit.newAllExportFiles(options.firm, options.name, options.message);
     }
   });
 
