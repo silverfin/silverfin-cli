@@ -6,6 +6,7 @@ const errorUtils = require("./lib/utils/errorUtils");
 const { ReconciliationText } = require("./lib/reconciliationText");
 const { SharedPart } = require("./lib/sharedPart");
 const { firmCredentials } = require("./lib/api/firmCredentials");
+const { ExportFile } = require("./lib/exportFile");
 
 async function fetchReconciliation(firmId, handle) {
   const templateConfig = fsUtils.readConfig("reconciliationText", handle);
@@ -102,6 +103,7 @@ async function newReconciliation(firmId, handle) {
       return;
     }
     const template = await ReconciliationText.read(handle);
+    template.version_comment = "Created through the API";
     const response = await SF.createReconciliationText(firmId, template);
 
     // Store new id
@@ -120,12 +122,119 @@ async function newAllReconciliations(firmId) {
   }
 }
 
+async function fetchExportFileByHandle(firmId, name) {
+  const template = await SF.findExportFileByName(firmId, name);
+  if (!template) {
+    throw `Export file ${name} wasn't found`;
+  }
+  ExportFile.save(firmId, template);
+}
+
+async function fetchExportFileById(firmId, id) {
+  const template = await SF.readExportFileById(firmId, id);
+  if (!template) {
+    throw `Export file with id ${id} wasn't found`;
+  }
+  ExportFile.save(firmId, template);
+}
+
+async function fetchAllExportFiles(firmId, page = 1) {
+  const templates = await SF.readExportFiles(firmId, page);
+  if (templates.length == 0) {
+    if (page == 1) {
+      console.log("No export files found");
+    }
+    return;
+  }
+  templates.forEach(async (template) => {
+    fetchExportFileById(firmId, template.id);
+  });
+  fetchAllExportFiles(firmId, page + 1);
+}
+
+async function publishExportFileByName(
+  firmId,
+  name,
+  message = "Updated through the API"
+) {
+  try {
+    const templateConfig = fsUtils.readConfig("exportFile", name);
+    if (!templateConfig || !templateConfig.id[firmId]) {
+      console.log(`Export file ${name}: ID is missing. Aborted`);
+      process.exit(1);
+    }
+    let templateId = templateConfig.id[firmId];
+    console.log(`Updating ${name}...`);
+    const template = await ExportFile.read(name);
+    template.version_comment = message;
+    await SF.updateExportFile(firmId, templateId, template);
+  } catch (error) {
+    errorUtils.errorHandler(error);
+  }
+}
+
+async function publishAllExportFiles(
+  firmId,
+  message = "Updated through the API"
+) {
+  let templates = fsUtils.getAllTemplatesOfAType("exportFile");
+  for (let name of templates) {
+    if (!name) continue;
+    await publishExportFileByName(firmId, name, message);
+  }
+}
+
+async function newExportFile(firmId, name) {
+  try {
+    const existingTemplate = await SF.findExportFileByName(firmId, name);
+    if (existingTemplate) {
+      console.log(
+        `Reconciliation ${name} already exists. Skipping its creation`
+      );
+      return;
+    }
+    const template = await ExportFile.read(name);
+    template.version_comment = "Created through the API";
+    const response = await SF.createExportFile(firmId, template);
+
+    // Store new id
+    if (response && response.status == 201) {
+      ExportFile.updateTemplateId(firmId, name, response.data.id);
+    }
+  } catch (error) {
+    errorUtils.errorHandler(error);
+  }
+}
+
+async function newAllExportFiles(firmId) {
+  const templates = fsUtils.getAllTemplatesOfAType("exportFile");
+  for (let name of templates) {
+    await newExportFile(firmId, name);
+  }
+}
+
+async function fetchAccountDetailByHandle(firmId, name) {}
+async function fetchAccountDetailById(firmId, id) {}
+async function fetchAllAccountDetails(firmId) {}
+async function publishAccountDetailByName(firmId, name) {}
+async function publishAllAccountDetails(firmId) {}
+async function newAccountDetail(firmId, name) {}
+async function newAllAccountDetails(firmId) {}
+
 async function fetchSharedPart(firmId, name) {
   const templateConfig = fsUtils.readConfig("sharedPart", name);
   if (templateConfig && templateConfig.id[firmId]) {
     fetchSharedPartById(firmId, templateConfig.id[firmId]);
   } else {
     fetchSharedPartByName(firmId, name);
+  }
+}
+
+async function fetchSharedPartById(firmId, id) {
+  const sharedPart = await SF.readSharedPartById(firmId, id);
+
+  if (!sharedPart) {
+    throw `Shared part ${id} wasn't found.`;
   }
 }
 
@@ -422,6 +531,9 @@ async function getTemplateId(firmId, type, handle) {
     case "reconciliationText":
       templateText = await SF.findReconciliationTextByHandle(firmId, handle);
       break;
+    case "exportFile":
+      templateText = await SF.findExportFileByName(firmId, handle);
+      break;
     case "sharedPart":
       templateText = await SF.findSharedPartByName(firmId, handle);
       break;
@@ -482,6 +594,20 @@ module.exports = {
   publishAllReconciliations,
   newReconciliation,
   newAllReconciliations,
+  fetchExportFileByHandle,
+  fetchExportFileById,
+  fetchAllExportFiles,
+  publishExportFileByName,
+  publishAllExportFiles,
+  newExportFile,
+  newAllExportFiles,
+  fetchAccountDetailByHandle,
+  fetchAccountDetailById,
+  fetchAllAccountDetails,
+  publishAccountDetailByName,
+  publishAllAccountDetails,
+  newAccountDetail,
+  newAllAccountDetails,
   fetchSharedPart,
   fetchSharedPartByName,
   fetchSharedPartById,
