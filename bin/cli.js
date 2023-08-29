@@ -64,7 +64,7 @@ program
     "-h, --handle <handle>",
     "Specify the reconcilation to be used (mandatory)"
   )
-  .option("-a, --all", "Import all reconciliations")
+  .option("-a, --all", "Update all reconciliations")
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     cliUtils.checkUniqueOption(["handle", "all"], options);
