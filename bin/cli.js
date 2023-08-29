@@ -475,6 +475,31 @@ program
     }
   });
 
+// Get all the IDs of existing export files
+program
+  .command("get-export-file-id")
+  .description("Fetch the ID of an export file from Silverfin")
+  .requiredOption(
+    "-f, --firm <firm-id>",
+    "Specify the firm to be used",
+    firmIdDefault
+  )
+  .option("-n, --name <name>", "Fetch the export file ID by name")
+  .option("-a, --all", "Fetch the ID for every export file")
+  .option("--yes", "Skip the prompt confirmation (optional)")
+  .action((options) => {
+    cliUtils.checkUniqueOption(["name", "all"], options);
+    if (!options.yes) {
+      cliUtils.promptConfirmation();
+    }
+    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
+    if (options.name) {
+      toolkit.getTemplateId(options.firm, "exportFile", options.name);
+    } else if (options.all) {
+      toolkit.getAllTemplatesId(options.firm, "exportFile");
+    }
+  });
+
 // Get all the IDs of existing shared parts
 program
   .command("get-shared-part-id")
