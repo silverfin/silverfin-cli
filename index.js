@@ -90,7 +90,11 @@ async function publishAllReconciliations(
   }
 }
 
-async function newReconciliation(firmId, handle) {
+async function newReconciliation(
+  firmId,
+  handle,
+  message = "Created through the API"
+) {
   try {
     const existingTemplate = await SF.findReconciliationTextByHandle(
       firmId,
@@ -104,7 +108,7 @@ async function newReconciliation(firmId, handle) {
     }
     const template = await ReconciliationText.read(handle);
     if (!template) return;
-    template.version_comment = "Created through the API";
+    template.version_comment = message;
     const response = await SF.createReconciliationText(firmId, template);
 
     // Store new id
@@ -116,10 +120,13 @@ async function newReconciliation(firmId, handle) {
   }
 }
 
-async function newAllReconciliations(firmId) {
+async function newAllReconciliations(
+  firmId,
+  message = "Created through the API"
+) {
   const templates = fsUtils.getAllTemplatesOfAType("reconciliationText");
   for (let handle of templates) {
-    await newReconciliation(firmId, handle);
+    await newReconciliation(firmId, handle, message);
   }
 }
 
@@ -322,7 +329,11 @@ async function publishAllSharedParts(
   }
 }
 
-async function newSharedPart(firmId, name) {
+async function newSharedPart(
+  firmId,
+  name,
+  message = "Created through the API"
+) {
   try {
     const existingSharedPart = await SF.findSharedPartByName(firmId, name);
     if (existingSharedPart) {
@@ -331,7 +342,7 @@ async function newSharedPart(firmId, name) {
     }
     const template = await SharedPart.read(name);
     if (!template) return;
-    template.version_comment = "Created through the API";
+    template.version_comment = message;
     const response = await SF.createSharedPart(firmId, template);
 
     // Store new firm id
@@ -343,10 +354,10 @@ async function newSharedPart(firmId, name) {
   }
 }
 
-async function newAllSharedParts(firmId) {
+async function newAllSharedParts(firmId, message = "Created through the API") {
   const templates = fsUtils.getAllTemplatesOfAType("sharedPart");
   for (let name of templates) {
-    await newSharedPart(firmId, name);
+    await newSharedPart(firmId, name, message);
   }
 }
 

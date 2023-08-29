@@ -105,13 +105,18 @@ program
     "-a, --all",
     "Try to create all the reconciliation texts stored in the repository"
   )
+  .option(
+    "-m, --message <message>",
+    "Add a message to Silverfin's changelog (optional)",
+    undefined
+  )
   .action((options) => {
     cliUtils.checkUniqueOption(["handle", "all"], options);
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     if (options.handle) {
-      toolkit.newReconciliation(options.firm, options.handle);
+      toolkit.newReconciliation(options.firm, options.handle, options.message);
     } else if (options.all) {
-      toolkit.newAllReconciliations(options.firm);
+      toolkit.newAllReconciliations(options.firm, options.message);
     }
   });
 
@@ -372,13 +377,18 @@ program
     "-a, --all",
     "Try to create all the shared parts stored in the repository"
   )
+  .option(
+    "-m, --message <message>",
+    "Add a message to Silverfin's changelog (optional)",
+    undefined
+  )
   .action((options) => {
     cliUtils.checkUniqueOption(["sharedPart", "all"], options);
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     if (options.sharedPart) {
-      toolkit.newSharedPart(options.firm, options.sharedPart);
+      toolkit.newSharedPart(options.firm, options.sharedPart, options.message);
     } else if (options.all) {
-      toolkit.newAllSharedParts(options.firm);
+      toolkit.newAllSharedParts(options.firm, options.message);
     }
   });
 
