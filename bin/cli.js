@@ -13,15 +13,19 @@ const devMode = require("../lib/cli/devMode");
 const { firmCredentials } = require("../lib/api/firmCredentials");
 const SF = require("../lib/api/sfApi");
 const path = require("path");
+const { consola } = require("consola");
 
 let firmIdDefault = cliUtils.loadDefaultFirmId();
 cliUtils.handleUncaughtErrors();
 
 // Name & Version
 program.name("silverfin");
-if (pkg.version) {
-  program.version(pkg.version);
-}
+pkg.version ? program.version(pkg.version) : undefined;
+// Verbose Option
+program.option("-v, --verbose", "Verbose output");
+program.on("option:verbose", () => {
+  consola.level = "debug"; // default: "info"
+});
 
 // READ reconciliations
 program
@@ -105,112 +109,13 @@ program
     "-a, --all",
     "Try to create all the reconciliation texts stored in the repository"
   )
-  .option(
-    "-m, --message <message>",
-    "Add a message to Silverfin's changelog (optional)",
-    undefined
-  )
   .action((options) => {
     cliUtils.checkUniqueOption(["handle", "all"], options);
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     if (options.handle) {
-      toolkit.newReconciliation(options.firm, options.handle, options.message);
+      toolkit.newReconciliation(options.firm, options.handle);
     } else if (options.all) {
-      toolkit.newAllReconciliations(options.firm, options.message);
-    }
-  });
-
-// READ export file
-program
-  .command("import-export-file")
-  .description("Import export file templates")
-  .requiredOption(
-    "-f, --firm <firm-id>",
-    "Specify the firm to be used",
-    firmIdDefault
-  )
-  .option("-n, --name <name>", "Import a specific export file by name")
-  .option("-i, --id <id>", "Import a specific export file by id")
-  .option("-a, --all", "Import all existing export files")
-  .option("--yes", "Skip the prompt confirmation (optional)")
-  .action((options) => {
-    cliUtils.checkUniqueOption(["name", "id", "all"], options);
-    if (!options.yes) {
-      cliUtils.promptConfirmation();
-    }
-    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
-    if (options.name) {
-      toolkit.fetchExportFile(options.firm, options.name);
-    } else if (options.id) {
-      toolkit.fetchExportFileById(options.firm, options.id);
-    } else if (options.all) {
-      toolkit.fetchAllExportFiles(options.firm);
-    }
-  });
-
-// UPDATE export file
-program
-  .command("update-export-file")
-  .description("Update an existing export file template")
-  .requiredOption(
-    "-f, --firm <firm-id>",
-    "Specify the firm to be used",
-    firmIdDefault
-  )
-  .option("-n, --name <name>", "Specify the export file to be used (mandatory)")
-  .option("-a, --all", "Update all export files")
-  .option(
-    "-m, --message <message>",
-    "Add a message to Silverfin's changelog (optional)",
-    undefined
-  )
-  .option("--yes", "Skip the prompt confirmation (optional)")
-  .action((options) => {
-    cliUtils.checkUniqueOption(["name", "all"], options);
-    if (!options.yes) {
-      cliUtils.promptConfirmation();
-    }
-    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
-    if (options.name) {
-      toolkit.publishExportFileByName(
-        options.firm,
-        options.name,
-        options.message
-      );
-    } else if (options.all) {
-      toolkit.publishAllExportFiles(options.firm, options.message);
-    }
-  });
-
-// CREATE export file
-program
-  .command("create-export-file")
-  .description("Create a new export file template")
-  .requiredOption(
-    "-f, --firm <firm-id>",
-    "Specify the firm to be used",
-    firmIdDefault
-  )
-  .option(
-    "-n, --name <name>",
-    "Specify the name of the export file to be created"
-  )
-  .option(
-    "-a, --all",
-    "Try to create all export files stored in the repository"
-  )
-  .option(
-    "-m, --message <message>",
-    "Add a message to Silverfin's changelog (optional)",
-    undefined
-  )
-  .action((options) => {
-    cliUtils.checkUniqueOption(["name", "all"], options);
-    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
-    if (options.name) {
-      toolkit.newExportFile(options.firm, options.name, options.message);
-    } else if (options.all) {
-      toolkit.newAllExportFiles(options.firm, options.name, options.message);
+      toolkit.newAllReconciliations(options.firm);
     }
   });
 
@@ -382,18 +287,13 @@ program
     "-a, --all",
     "Try to create all the shared parts stored in the repository"
   )
-  .option(
-    "-m, --message <message>",
-    "Add a message to Silverfin's changelog (optional)",
-    undefined
-  )
   .action((options) => {
     cliUtils.checkUniqueOption(["sharedPart", "all"], options);
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     if (options.sharedPart) {
-      toolkit.newSharedPart(options.firm, options.sharedPart, options.message);
+      toolkit.newSharedPart(options.firm, options.sharedPart);
     } else if (options.all) {
-      toolkit.newAllSharedParts(options.firm, options.message);
+      toolkit.newAllSharedParts(options.firm);
     }
   });
 
@@ -548,7 +448,7 @@ program
       );
     } else {
       if (options.previewOnly && !options.htmlInput && !options.htmlPreview) {
-        console.log(
+        consola.info(
           `When using "--preview-only" you need to specify at least one of the following options: "--html-input", "--html-preview"`
         );
         process.exit(1);
@@ -634,22 +534,22 @@ program
     if (options.setFirm) {
       firmCredentials.setDefaultFirmId(options.setFirm);
       const currentDirectory = path.basename(process.cwd());
-      console.log(`${currentDirectory}: firm id set to ${options.setFirm}`);
+      consola.success(`${currentDirectory}: firm id set to ${options.setFirm}`);
     }
     if (options.getFirm) {
       const storedFirmId = firmCredentials.getDefaultFirmId();
       if (storedFirmId) {
-        console.log(`Firm id previously stored: ${storedFirmId}`);
+        consola.info(`Firm id previously stored: ${storedFirmId}`);
       } else {
-        console.log("There is no firm id previously stored");
+        consola.info("There is no firm id previously stored");
       }
     }
     if (options.listAll) {
       const firms = firmCredentials.listAuthorizedFirms() || [];
       if (firms) {
-        console.log("List of authorized firms");
+        consola.info("List of authorized firms");
         firms.forEach((element) =>
-          console.log(`- ${element[0]}${element[1] ? ` (${element[1]})` : ""}`)
+          consola.log(`- ${element[0]}${element[1] ? ` (${element[1]})` : ""}`)
         );
       }
     }
@@ -799,5 +699,5 @@ if (pkg.repository && pkg.repository.url) {
 (async function () {
   // Check if there is a new version available
   await cliUpdates.checkVersions();
-  program.parse();
+  await program.parseAsync();
 })();
