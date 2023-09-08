@@ -288,7 +288,7 @@ program
     false
   )
   .option(
-    "--skip-results",
+    "--preview-only",
     "Skip the checking of the results of the Liquid Test in case you only want to generate a preview template (optional)",
     false
   )
@@ -310,6 +310,7 @@ program
         options.firm,
         options.handle,
         options.test,
+        options.previewOnly,
         options.htmlInput,
         options.htmlPreview
       );
