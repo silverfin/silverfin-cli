@@ -23,7 +23,7 @@ if (pkg.version) {
   program.version(pkg.version);
 }
 
-// Import reconciliations
+// READ reconciliations
 program
   .command("import-reconciliation")
   .description("Import reconciliation templates")
@@ -43,18 +43,15 @@ program
     }
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     if (options.handle) {
-      toolkit.importExistingReconciliationByHandle(
-        options.firm,
-        options.handle
-      );
+      toolkit.fetchReconciliationByHandle(options.firm, options.handle);
     } else if (options.id) {
-      toolkit.importExistingReconciliationById(options.firm, options.id);
+      toolkit.fetchReconciliationById(options.firm, options.id);
     } else if (options.all) {
-      toolkit.importExistingReconciliations(options.firm);
+      toolkit.fetchAllReconciliations(options.firm);
     }
   });
 
-// Update a single reconciliation
+// UPDATE reconciliation
 program
   .command("update-reconciliation")
   .description("Update an existing reconciliation template")
@@ -67,7 +64,7 @@ program
     "-h, --handle <handle>",
     "Specify the reconcilation to be used (mandatory)"
   )
-  .option("-a, --all", "Import all reconciliations")
+  .option("-a, --all", "Update all reconciliations")
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     cliUtils.checkUniqueOption(["handle", "all"], options);
@@ -76,13 +73,13 @@ program
     }
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     if (options.handle) {
-      toolkit.persistReconciliationText(options.firm, options.handle);
+      toolkit.publishReconciliationByHandle(options.firm, options.handle);
     } else if (options.all) {
-      toolkit.persistReconciliationTexts(options.firm);
+      toolkit.publishAllReconciliations(options.firm);
     }
   });
 
-// Create new reconciliation
+// CREATE reconciliation
 program
   .command("create-reconciliation")
   .description("Create a new reconciliation text")
@@ -105,11 +102,11 @@ program
     if (options.handle) {
       toolkit.newReconciliation(options.firm, options.handle);
     } else if (options.all) {
-      toolkit.newReconciliationsAll(options.firm);
+      toolkit.newAllReconciliations(options.firm);
     }
   });
 
-// Import shared parts
+// READ shared part
 program
   .command("import-shared-part")
   .description("Import an existing shared part")
@@ -128,13 +125,13 @@ program
     }
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     if (options.sharedPart) {
-      toolkit.importExistingSharedPartByName(options.firm, options.sharedPart);
+      toolkit.fetchSharedPartByName(options.firm, options.sharedPart);
     } else if (options.all) {
-      toolkit.importExistingSharedParts(options.firm);
+      toolkit.fetchAllSharedParts(options.firm);
     }
   });
 
-// Update a single shared part
+// UPDATE shared part
 program
   .command("update-shared-part")
   .description("Update an existing shared part")
@@ -156,13 +153,13 @@ program
     }
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     if (options.sharedPart) {
-      toolkit.persistSharedPart(options.firm, options.sharedPart);
+      toolkit.publishSharedPartByName(options.firm, options.sharedPart);
     } else if (options.all) {
-      toolkit.persistSharedParts(options.firm);
+      toolkit.publishAllSharedParts(options.firm);
     }
   });
 
-// Create new shared parts
+// CREATE shared part
 program
   .command("create-shared-part")
   .description("Create a new shared part")
@@ -185,7 +182,7 @@ program
     if (options.sharedPart) {
       toolkit.newSharedPart(options.firm, options.sharedPart);
     } else if (options.all) {
-      toolkit.newSharedPartsAll(options.firm);
+      toolkit.newAllSharedParts(options.firm);
     }
   });
 
@@ -401,13 +398,9 @@ program
     }
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     if (options.handle) {
-      toolkit.updateTemplateID(
-        options.firm,
-        "reconciliation_texts",
-        options.handle
-      );
+      toolkit.getTemplateId(options.firm, "reconciliationText", options.handle);
     } else if (options.all) {
-      toolkit.getAllTemplatesId(options.firm, "reconciliation_texts");
+      toolkit.getAllTemplatesId(options.firm, "reconciliationText");
     }
   });
 
@@ -430,13 +423,9 @@ program
     }
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     if (options.sharedPart) {
-      toolkit.updateTemplateID(
-        options.firm,
-        "shared_parts",
-        options.sharedPart
-      );
+      toolkit.getTemplateId(options.firm, "sharedPart", options.sharedPart);
     } else if (options.all) {
-      toolkit.getAllTemplatesId(options.firm, "shared_parts");
+      toolkit.getAllTemplatesId(options.firm, "sharedPart");
     }
   });
 
