@@ -16,10 +16,11 @@ async function fetchReconciliationByHandle(firmId, handle) {
 
 async function fetchReconciliationById(firmId, id) {
   const template = await SF.readReconciliationTextById(firmId, id);
-  if (!template) {
+
+  if (!template || !template.data) {
     throw `Reconciliation with id ${id} wasn't found`;
   }
-  ReconciliationText.save(firmId, template);
+  ReconciliationText.save(firmId, template.data);
 }
 
 // Import all reconciliations
