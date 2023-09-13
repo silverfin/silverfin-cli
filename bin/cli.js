@@ -383,10 +383,12 @@ program
       }
     }
     if (options.listAll) {
-      const ids = firmCredentials.listStoredIds() || [];
-      if (ids) {
+      const firms = firmCredentials.listAuthorizedFirms() || [];
+      if (firms) {
         console.log("List of authorized firms");
-        ids.forEach((element) => console.log("- " + element));
+        firms.forEach((element) =>
+          console.log(`- ${element[0]}${element[1] ? ` (${element[1]})` : ""}`)
+        );
       }
     }
   });
