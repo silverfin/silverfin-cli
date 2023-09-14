@@ -5,6 +5,7 @@ const chalk = require("chalk");
 const errorUtils = require("./lib/utils/errorUtils");
 const { ReconciliationText } = require("./lib/reconciliationText");
 const { SharedPart } = require("./lib/sharedPart");
+const { firmCredentials } = require("./lib/api/firmCredentials");
 
 async function fetchReconciliationByHandle(firmId, handle) {
   const template = await SF.findReconciliationTextByHandle(firmId, handle);
@@ -417,6 +418,21 @@ async function getAllTemplatesId(firmId, type) {
   }
 }
 
+async function updateFirmName(firmId) {
+  try {
+    const firmDetails = await SF.getFirmDetails(firmId);
+    if (!firmDetails) {
+      console.log(`Firm ${firmId} not found.`);
+      return false;
+    }
+    firmCredentials.storeFirmName(firmId, firmDetails.name);
+    console.log(`Firm ${firmId} name set to ${firmDetails.name}`);
+    return true;
+  } catch (error) {
+    errorUtils.errorHandler(error);
+  }
+}
+
 module.exports = {
   fetchReconciliationByHandle,
   fetchReconciliationById,
@@ -436,4 +452,5 @@ module.exports = {
   addAllSharedPartsToAllReconciliation,
   getTemplateId,
   getAllTemplatesId,
+  updateFirmName,
 };

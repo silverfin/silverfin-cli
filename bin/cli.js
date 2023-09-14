@@ -4,7 +4,7 @@ const toolkit = require("../index");
 const liquidTestGenerator = require("../lib/liquidTestGenerator");
 const liquidTestRunner = require("../lib/liquidTestRunner");
 const stats = require("../lib/cli/stats");
-const { Command } = require("commander");
+const { Command, Option } = require("commander");
 const pkg = require("../package.json");
 const cliUpdates = require("../lib/cli/cliUpdates");
 const cliUtils = require("../lib/cli/utils");
@@ -373,8 +373,17 @@ program
   )
   .option("-g, --get-firm", "Check if there is any firm id already stored")
   .option("-l, --list-all", "List all the firm IDs stored")
+  .addOption(
+    new Option(
+      "-n, --update-name [firmId]",
+      "Update the name of the firm (fetched from Silverfin)"
+    ).preset(firmIdDefault)
+  )
   .action((options) => {
-    cliUtils.checkUniqueOption(["setFirm", "getFirm", "listAll"], options);
+    cliUtils.checkUniqueOption(
+      ["setFirm", "getFirm", "listAll", "updateName"],
+      options
+    );
     if (options.setFirm) {
       firmCredentials.setDefaultFirmId(options.setFirm);
       const currentDirectory = path.basename(process.cwd());
@@ -396,6 +405,10 @@ program
           console.log(`- ${element[0]}${element[1] ? ` (${element[1]})` : ""}`)
         );
       }
+    }
+    if (options.updateName) {
+      cliUtils.checkDefaultFirm(options.updateName, firmIdDefault);
+      toolkit.updateFirmName(options.updateName);
     }
   });
 
