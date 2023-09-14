@@ -306,6 +306,12 @@ program
         options.test
       );
     } else {
+      if (options.previewOnly && !options.htmlInput && !options.htmlPreview) {
+        console.log(
+          `When using "--preview-only" you need to specify at least one of the following options: "--html-input", "--html-preview"`
+        );
+        process.exit(1);
+      }
       liquidTestRunner.runTestsWithOutput(
         options.firm,
         options.handle,
@@ -467,7 +473,7 @@ program
   )
   .option(
     "--html",
-    `Get a html file of the template generated with the Liquid Test information (optional). It has to be used together with "--handle"`,
+    `Get a html file of the template's input-view generated with the Liquid Test information (optional). It has to be used together with "--handle"`,
     false
   )
   .option("--yes", "Skip the prompt confirmation (optional)")
