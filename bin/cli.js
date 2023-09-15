@@ -379,9 +379,15 @@ program
       "Update the name of the firm (fetched from Silverfin)"
     ).preset(firmIdDefault)
   )
+  .addOption(
+    new Option(
+      "-r, --refresh-token [firmId]",
+      "Get a new pair of credentials using the stored refresh token"
+    ).preset(firmIdDefault)
+  )
   .action((options) => {
     cliUtils.checkUniqueOption(
-      ["setFirm", "getFirm", "listAll", "updateName"],
+      ["setFirm", "getFirm", "listAll", "updateName", "refreshToken"],
       options
     );
     if (options.setFirm) {
@@ -409,6 +415,10 @@ program
     if (options.updateName) {
       cliUtils.checkDefaultFirm(options.updateName, firmIdDefault);
       toolkit.updateFirmName(options.updateName);
+    }
+    if (options.refreshToken) {
+      cliUtils.checkDefaultFirm(options.refreshToken, firmIdDefault);
+      SF.refreshTokens(options.refreshToken);
     }
   });
 
