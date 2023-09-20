@@ -65,6 +65,11 @@ program
     "Specify the reconcilation to be used (mandatory)"
   )
   .option("-a, --all", "Update all reconciliations")
+  .option(
+    "-m, --message <message>",
+    "Add a message to Silverfin's changelog (optional)",
+    undefined
+  )
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     cliUtils.checkUniqueOption(["handle", "all"], options);
@@ -73,9 +78,13 @@ program
     }
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     if (options.handle) {
-      toolkit.publishReconciliationByHandle(options.firm, options.handle);
+      toolkit.publishReconciliationByHandle(
+        options.firm,
+        options.handle,
+        options.message
+      );
     } else if (options.all) {
-      toolkit.publishAllReconciliations(options.firm);
+      toolkit.publishAllReconciliations(options.firm, options.message);
     }
   });
 
@@ -145,6 +154,11 @@ program
     "Specify the shared part to be used (mandatory)"
   )
   .option("-a, --all", "Import all shared parts")
+  .option(
+    "-m, --message <message>",
+    "Add a message to Silverfin's changelog (optional)",
+    undefined
+  )
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     cliUtils.checkUniqueOption(["sharedPart", "all"], options);
@@ -153,9 +167,13 @@ program
     }
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     if (options.sharedPart) {
-      toolkit.publishSharedPartByName(options.firm, options.sharedPart);
+      toolkit.publishSharedPartByName(
+        options.firm,
+        options.sharedPart,
+        options.message
+      );
     } else if (options.all) {
-      toolkit.publishAllSharedParts(options.firm);
+      toolkit.publishAllSharedParts(options.firm, options.message);
     }
   });
 

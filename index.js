@@ -39,7 +39,11 @@ async function fetchAllReconciliations(firmId, page = 1) {
   fetchAllReconciliations(firmId, page + 1);
 }
 
-async function publishReconciliationByHandle(firmId, handle) {
+async function publishReconciliationByHandle(
+  firmId,
+  handle,
+  message = "Updated through the API"
+) {
   try {
     const templateConfig = fsUtils.readConfig("reconciliationText", handle);
     if (!templateConfig || !templateConfig.id[firmId]) {
@@ -54,18 +58,21 @@ async function publishReconciliationByHandle(firmId, handle) {
     let templateId = templateConfig.id[firmId];
     console.log(`Updating ${handle}...`);
     const template = await ReconciliationText.read(handle);
-    template.version_comment = "Updated through the CLI";
+    template.version_comment = message;
     await SF.updateReconciliationText(firmId, templateId, template);
   } catch (error) {
     errorUtils.errorHandler(error);
   }
 }
 
-async function publishAllReconciliations(firmId) {
+async function publishAllReconciliations(
+  firmId,
+  message = "Updated through the API"
+) {
   let templates = fsUtils.getAllTemplatesOfAType("reconciliationText");
   for (let handle of templates) {
     if (!handle) continue;
-    await publishReconciliationByHandle(firmId, handle);
+    await publishReconciliationByHandle(firmId, handle, message);
   }
 }
 
@@ -82,7 +89,6 @@ async function newReconciliation(firmId, handle) {
       return;
     }
     const template = await ReconciliationText.read(handle);
-    template.version_comment = "Updated through the CLI";
     const response = await SF.createReconciliationText(firmId, template);
 
     // Store new id
@@ -133,7 +139,11 @@ async function fetchAllSharedParts(firmId, page = 1) {
   await fetchAllSharedParts(firmId, page + 1);
 }
 
-async function publishSharedPartByName(firmId, name) {
+async function publishSharedPartByName(
+  firmId,
+  name,
+  message = "Updated through the API"
+) {
   try {
     const templateConfig = fsUtils.readConfig("sharedPart", name);
     if (!templateConfig || !templateConfig.id[firmId]) {
@@ -147,18 +157,21 @@ async function publishSharedPartByName(firmId, name) {
     }
     console.log(`Updating shared part ${name}...`);
     const template = await SharedPart.read(name);
-    template.version_comment = "Updated through the CLI";
+    template.version_comment = message;
     await SF.updateSharedPart(firmId, templateConfig.id[firmId], template);
   } catch (error) {
     errorUtils.errorHandler(error);
   }
 }
 
-async function publishAllSharedParts(firmId) {
+async function publishAllSharedParts(
+  firmId,
+  message = "Updated through the API"
+) {
   let templates = fsUtils.getAllTemplatesOfAType("sharedPart");
   for (let name of templates) {
     if (!name) continue;
-    await publishSharedPartByName(firmId, name);
+    await publishSharedPartByName(firmId, name, message);
   }
 }
 
@@ -170,7 +183,7 @@ async function newSharedPart(firmId, name) {
       return;
     }
     const template = await SharedPart.read(name);
-    template.version_comment = "Updated through the CLI";
+    template.version_comment = "Created through the API";
     const response = await SF.createSharedPart(firmId, template);
 
     // Store new firm id
