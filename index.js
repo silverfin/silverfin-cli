@@ -76,11 +76,7 @@ async function publishAllReconciliations(
   }
 }
 
-async function newReconciliation(
-  firmId,
-  handle,
-  message = "Created through the API"
-) {
+async function newReconciliation(firmId, handle) {
   try {
     const existingTemplate = await SF.findReconciliationTextByHandle(
       firmId,
@@ -93,7 +89,6 @@ async function newReconciliation(
       return;
     }
     const template = await ReconciliationText.read(handle);
-    template.version_comment = message;
     const response = await SF.createReconciliationText(firmId, template);
 
     // Store new id
@@ -105,13 +100,10 @@ async function newReconciliation(
   }
 }
 
-async function newAllReconciliations(
-  firmId,
-  message = "Created through the API"
-) {
+async function newAllReconciliations(firmId) {
   const templates = fsUtils.getAllTemplatesOfAType("reconciliationText");
   for (let handle of templates) {
-    await newReconciliation(firmId, handle, message);
+    await newReconciliation(firmId, handle);
   }
 }
 
@@ -183,11 +175,7 @@ async function publishAllSharedParts(
   }
 }
 
-async function newSharedPart(
-  firmId,
-  name,
-  message = "Created through the API"
-) {
+async function newSharedPart(firmId, name) {
   try {
     const existingSharedPart = await SF.findSharedPartByName(firmId, name);
     if (existingSharedPart) {
@@ -195,7 +183,7 @@ async function newSharedPart(
       return;
     }
     const template = await SharedPart.read(name);
-    template.version_comment = message;
+    template.version_comment = "Created through the API";
     const response = await SF.createSharedPart(firmId, template);
 
     // Store new firm id
@@ -207,10 +195,10 @@ async function newSharedPart(
   }
 }
 
-async function newAllSharedParts(firmId, message = "Created through the API") {
+async function newAllSharedParts(firmId) {
   const templates = fsUtils.getAllTemplatesOfAType("sharedPart");
   for (let name of templates) {
-    await newSharedPart(firmId, name, message);
+    await newSharedPart(firmId, name);
   }
 }
 
