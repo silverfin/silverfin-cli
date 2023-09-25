@@ -456,7 +456,7 @@ async function addSharedPart(
  */
 async function addAllSharedParts(firmId) {
   const sharedPartsArray = fsUtils.getAllTemplatesOfAType("sharedPart");
-  for (let sharedPartName of sharedPartsArray) {
+  for await (let sharedPartName of sharedPartsArray) {
     let configSharedPart = fsUtils.readConfig("sharedPart", sharedPartName);
     for await (let template of configSharedPart.used_in) {
       template = SharedPart.checkReconciliationType(template);
