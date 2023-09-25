@@ -59,7 +59,7 @@ async function publishReconciliationByHandle(
       errorUtils.missingReconciliationId(handle);
     }
     let templateId = templateConfig.id[firmId];
-    console.log(`Updating ${handle}...`);
+    console.log(`Updating reconciliation ${handle}...`);
     const template = await ReconciliationText.read(handle);
     template.version_comment = message;
     const response = await SF.updateReconciliationText(
@@ -160,14 +160,20 @@ async function publishExportFileByName(
   try {
     const templateConfig = fsUtils.readConfig("exportFile", name);
     if (!templateConfig || !templateConfig.id[firmId]) {
-      console.log(`Export file ${name}: ID is missing. Aborted`);
-      process.exit(1);
+      errorUtils.missingExportFileId(name);
     }
     let templateId = templateConfig.id[firmId];
-    console.log(`Updating ${name}...`);
+    console.log(`Updating export file ${name}...`);
     const template = await ExportFile.read(name);
     template.version_comment = message;
-    await SF.updateExportFile(firmId, templateId, template);
+    const response = await SF.updateExportFile(firmId, templateId, template);
+    if (response && response.data && response.data.name) {
+      console.log(`Export file updated: ${response.data.name}`);
+      return true;
+    } else {
+      console.log(`Export file update failed: ${name}`);
+      return false;
+    }
   } catch (error) {
     errorUtils.errorHandler(error);
   }
@@ -338,114 +344,99 @@ async function newAllSharedParts(firmId) {
   }
 }
 
-/** This function adds a shared part to a reconciliation text. It will make a POST request to the API. If the ID of one of the templates it missing, it will try to fetch it first by making a GET request. In case of success, it will store the details in the corresponding config files.
+/** This function adds a shared part to a template. It will make a POST request to the API. If the ID of one of the templates it missing, it will try to fetch it first by making a GET request. In case of success, it will store the details in the corresponding config files.
  *
  * @param {Number} firmId
- * @param {string} sharedPartHandle
- * @param {string} reconciliationHandle
+ * @param {string} sharedPartName
+ * @param {string} templateHandle
+ * @param {string} templateType has to be either `reconciliationText`, `exportFile`or `accountTemplate`
  * @returns {boolean} - Returns true if the shared part was added successfully
  */
-async function addSharedPartToReconciliation(
+async function addSharedPart(
   firmId,
-  sharedPartHandle,
-  reconciliationHandle
+  sharedPartName,
+  templateHandle,
+  templateType
 ) {
   try {
-    let configReconciliation = await fsUtils.readConfig(
-      "reconciliationText",
-      reconciliationHandle
-    );
+    let configTemplate = await fsUtils.readConfig(templateType, templateHandle);
     let configSharedPart = await fsUtils.readConfig(
       "sharedPart",
-      sharedPartHandle
+      sharedPartName
     );
 
-    // Missing Reconciliation ID
-    if (!configReconciliation.id[firmId]) {
-      const updated = await getTemplateId(
-        firmId,
-        "reconciliationText",
-        reconciliationHandle
-      );
-      if (!updated) {
-        console.error(`Reconciliation ${reconciliationHandle}: ID not found.`);
-        return false;
-      }
-      configReconciliation = await fsUtils.readConfig(
-        "reconciliationText",
-        reconciliationHandle
-      );
+    // Missing Reconciliation ID. Try to identify it based on the handle
+    if (!configTemplate.id[firmId]) {
+      const updated = await getTemplateId(firmId, templateType, templateHandle);
+      if (!updated) return false;
+      configTemplate = await fsUtils.readConfig(templateType, templateHandle);
     }
-
-    // Missing Shared Part ID
+    // Missing Shared Part ID. Try to identify it based on the name
     if (!configSharedPart.id[firmId]) {
-      const updated = await getTemplateId(
-        firmId,
-        "sharedPart",
-        sharedPartHandle
-      );
-      if (!updated) {
-        console.error(`Shared part ${sharedPartHandle}: ID not found.`);
-        return false;
-      }
-      configSharedPart = await fsUtils.readConfig(
-        "sharedPart",
-        sharedPartHandle
-      );
+      const updated = await getTemplateId(firmId, "sharedPart", sharedPartName);
+      if (!updated) return false;
+      configSharedPart = await fsUtils.readConfig("sharedPart", sharedPartName);
     }
 
-    // Add shared part to reconciliation
-    const response = await SF.addSharedPartToReconciliation(
+    // Add shared part to template
+    let addSharedPart;
+    switch (templateType) {
+      case "reconciliationText":
+        addSharedPart = SF.addSharedPartToReconciliation;
+        break;
+      case "exportFile":
+        addSharedPart = SF.addSharedPartToExportFile;
+        break;
+      case "accountTemplate":
+        // To be implemented
+        // addFunction = SF.addSharedPartToAccountTemplate;
+        break;
+    }
+    let response = await addSharedPart(
       firmId,
       configSharedPart.id[firmId],
-      configReconciliation.id[firmId]
+      configTemplate.id[firmId]
     );
 
+    // Success or failure
     if (!response || !response.status || !response.status === 201) {
       console.log(
-        `Adding shared part "${sharedPartHandle}" to "${reconciliationHandle}" reconciliation text failed.`
+        `Adding shared part "${sharedPartName}" to "${templateHandle}" failed (${templateType}).`
       );
       return false;
     }
     console.log(
-      `Shared part "${sharedPartHandle}" added to "${reconciliationHandle}" reconciliation text.`
+      `Shared part "${sharedPartName}" added to "${templateHandle}" (${templateType}).`
     );
 
     // Store details in config files
-    let reconciliationIndex;
-
+    let templateIndex;
     if (!configSharedPart.used_in) {
-      reconciliationIndex = -1;
+      templateIndex = -1;
       configSharedPart.used_in = [];
     } else {
-      reconciliationIndex = configSharedPart.used_in.findIndex(
-        (reconciliationText) =>
-          reconciliationHandle === reconciliationText.handle
+      // Previously stored ?
+      templateIndex = configSharedPart.used_in.findIndex(
+        (template) =>
+          templateHandle === template.handle || templateHandle === template.name
       );
     }
-
     // Not stored yet
-    if (reconciliationIndex === -1) {
+    if (templateIndex === -1) {
       configSharedPart.used_in.push({
-        id: { [firmId]: configReconciliation.id[firmId] },
-        type: "reconciliation",
-        handle: reconciliationHandle,
+        id: { [firmId]: configTemplate.id[firmId] },
+        type: templateType,
+        handle: templateHandle,
       });
     }
-
     // Previously stored
-    if (reconciliationIndex !== -1) {
-      configSharedPart.used_in[reconciliationIndex].id[firmId] =
-        configReconciliation.id[firmId];
+    if (templateIndex !== -1) {
+      configSharedPart.used_in[templateIndex].id[firmId] =
+        configTemplate.id[firmId];
     }
-
     // Save Configs
-    fsUtils.writeConfig("sharedPart", sharedPartHandle, configSharedPart);
-    fsUtils.writeConfig(
-      "reconciliationText",
-      reconciliationHandle,
-      configReconciliation
-    );
+    fsUtils.writeConfig("sharedPart", sharedPartName, configSharedPart);
+    fsUtils.writeConfig(templateType, templateHandle, configTemplate);
     return true;
   } catch (error) {
     errorUtils.errorHandler(error);
@@ -454,65 +445,86 @@ async function addSharedPartToReconciliation(
 }
 
 /**
- * This function loops through all shared parts (config files) and tries to add the shared part to each reconciliation listed in 'used_in'. It will make a POST request to the API. If the ID of one of the templates it missing, it will try to fetch it first by making a GET request. In case of success, it will store the details in the corresponding config files.
+ * This function loops through all shared parts (config files) and tries to add the shared part to each template listed in 'used_in'. It will make a POST request to the API. If the ID of one of the templates it missing, it will try to fetch it first by making a GET request. In case of success, it will store the details in the corresponding config files.
  * @param {Number} firmId
  */
-async function addAllSharedPartsToAllReconciliation(firmId) {
+async function addAllSharedParts(firmId) {
   const sharedPartsArray = fsUtils.getAllTemplatesOfAType("sharedPart");
-  for (let sharedPartName of sharedPartsArray) {
+  for await (let sharedPartName of sharedPartsArray) {
     let configSharedPart = fsUtils.readConfig("sharedPart", sharedPartName);
-    for (let reconciliation of configSharedPart.used_in) {
-      if (!reconciliation.handle) {
-        console.log(`Reconciliation has no handle. Skipping.`);
+    for await (let template of configSharedPart.used_in) {
+      template = SharedPart.checkReconciliationType(template);
+      if (!template.handle && !template.name) {
+        console.log(`Template has no handle or name. Skipping.`);
         continue;
       }
-      if (!fs.existsSync(`./reconciliation_texts/${reconciliation.handle}`)) {
-        console.log(
-          `Reconciliation ${reconciliation.handle} not found. Skipping.`
-        );
+      const folder = fsUtils.FOLDERS[template.type];
+      const handle = template.handle || template.name;
+      if (!fs.existsSync(`./${folder}/${handle}`)) {
+        console.log(`Template ${template.type} ${handle} not found. Skipping.`);
         continue;
       }
-      await addSharedPartToReconciliation(
-        firmId,
-        configSharedPart.name,
-        reconciliation.handle
-      );
+      addSharedPart(firmId, configSharedPart.name, handle, template.type);
     }
   }
 }
 
-async function removeSharedPartFromReconciliation(
+async function removeSharedPart(
   firmId,
   sharedPartHandle,
-  reconciliationHandle
+  templateHandle,
+  templateType
 ) {
   try {
-    const configReconciliation = fsUtils.readConfig(
-      "reconciliationText",
-      reconciliationHandle
-    );
+    const configTemplate = fsUtils.readConfig(templateType, templateHandle);
     const configSharedPart = fsUtils.readConfig("sharedPart", sharedPartHandle);
+    if (!configTemplate.id[firmId]) {
+      console.log(
+        `Template id not found for ${templateHandle} (${templateType}). Skipping.`
+      );
+      return false;
+    }
+    if (!configSharedPart.id[firmId]) {
+      console.log(`Shared part id not found for ${templateHandle}. Skipping.`);
+      return false;
+    }
+    // Remove shared part from template
+    let removeSharedPart;
+    switch (templateType) {
+      case "reconciliationText":
+        removeSharedPart = SF.removeSharedPartFromReconciliation;
 
-    const response = await SF.removeSharedPartFromReconciliation(
+        break;
+      case "exportFile":
+        removeSharedPart = SF.removeSharedPartFromExportFile;
+        break;
+      case "accountTemplate":
+        // To be implemented
+        // removeSharedPart = SF.removeSharedPartFromAccountTemplate;
+        break;
+    }
+    let response = await removeSharedPart(
       firmId,
       configSharedPart.id[firmId],
-      configReconciliation.id[firmId]
+      configTemplate.id[firmId]
     );
+
     if (response.status === 200) {
       console.log(
-        `Shared part "${sharedPartHandle}" removed from "${reconciliationHandle}" reconciliation text.`
+        `Shared part "${sharedPartHandle}" removed from template "${templateHandle}" (${templateType}).`
       );
     }
 
-    const reconciliationIndex = configSharedPart.used_in.findIndex(
+    // Remove reference from shared part config
+    const templateIndex = configSharedPart.used_in.findIndex(
       (reconciliationText) =>
-        reconciliationText.id[firmId] === configReconciliation.id[firmId]
+        reconciliationText.id[firmId] === configTemplate.id[firmId]
     );
-    if (reconciliationIndex !== -1) {
-      const reconciliationText = configSharedPart.used_in[reconciliationIndex];
+    if (templateIndex !== -1) {
+      const reconciliationText = configSharedPart.used_in[templateIndex];
 
       if (Object.keys(reconciliationText.id).length === 1) {
-        configSharedPart.used_in.splice(reconciliationIndex, 1);
+        configSharedPart.used_in.splice(templateIndex, 1);
       } else {
         delete reconciliationText.id[firmId];
       }
@@ -542,7 +554,7 @@ async function getTemplateId(firmId, type, handle) {
       break;
   }
   if (!templateText) {
-    console.log(`${handle} wasn't found`);
+    console.log(`Template ${handle} wasn't found (${type})`);
     return false;
   }
   const config = fsUtils.readConfig(type, handle);
@@ -551,7 +563,7 @@ async function getTemplateId(firmId, type, handle) {
   }
   config.id[firmId] = templateText.id;
   fsUtils.writeConfig(type, handle, config);
-  console.log(`${handle}: ID updated`);
+  console.log(`Template ${handle}: ID updated (${type})`);
   return true;
 }
 
@@ -619,9 +631,9 @@ module.exports = {
   publishAllSharedParts,
   newSharedPart,
   newAllSharedParts,
-  addSharedPartToReconciliation,
-  removeSharedPartFromReconciliation,
-  addAllSharedPartsToAllReconciliation,
+  addSharedPart,
+  removeSharedPart,
+  addAllSharedParts,
   getTemplateId,
   getAllTemplatesId,
   updateFirmName,

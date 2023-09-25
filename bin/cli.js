@@ -304,40 +304,55 @@ program
   )
   .option(
     "-s, --shared-part <name>",
-    `Specify the shared part to be added (used together with "--handle")`
+    `Specify the shared part to be added (used together with "--handle" or "--export-file")`
   )
   .option(
     "-h, --handle <handle>",
     `Specify the reconciliation that needs to be updated (used together with "--shared-part")`
   )
   .option(
+    "-e, --export-file <name>",
+    `Specify the export file that needs to be updated (used together with "--shared-part")`
+  )
+  .option(
     "-a, --all",
-    "Add all shared parts to all reconciliations (based on the config file of shared parts and the handles assigned there to each reconciliation)"
+    "Add all shared parts to all templates (based on the config file of shared parts and the handles assigned there to each template)"
   )
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
-    cliUtils.checkUsedTogether(["sharedPart", "handle"], options);
-    cliUtils.checkUniqueOption(["sharedPart", "all"], options);
-    cliUtils.checkUniqueOption(["handle", "all"], options);
     if (!options.yes) {
       cliUtils.promptConfirmation();
     }
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
-    if (options.sharedPart && options.handle) {
-      toolkit.addSharedPartToReconciliation(
+    cliUtils.checkUniqueOption(["sharedPart", "all"], options);
+    if (options.sharedPart) {
+      cliUtils.checkUniqueOption(["handle", "exportFile"], options);
+    } else {
+      cliUtils.checkUniqueOption(["handle", "exportFile", "all"], options);
+    }
+    if (options.handle) {
+      toolkit.addSharedPart(
         options.firm,
         options.sharedPart,
-        options.handle
+        options.handle,
+        "reconciliationText"
+      );
+    } else if (options.exportFile) {
+      toolkit.addSharedPart(
+        options.firm,
+        options.sharedPart,
+        options.exportFile,
+        "exportFile"
       );
     } else if (options.all) {
-      toolkit.addAllSharedPartsToAllReconciliation(options.firm);
+      toolkit.addAllSharedParts(options.firm);
     }
   });
 
 // Remove shared part to reconciliation
 program
   .command("remove-shared-part")
-  .description("Remove an existing shared part to an existing reconciliation")
+  .description("Remove an existing shared part from an existing template")
   .requiredOption(
     "-f, --firm <firm-id>",
     "Specify the firm to be used",
@@ -345,11 +360,15 @@ program
   )
   .requiredOption(
     "-s, --shared-part <name>",
-    "Specify the shared part to be removed (mandatory)"
+    `Specify the shared part to be removed (mandatory, used together with "--handle" or "--export-file")`
   )
-  .requiredOption(
+  .option(
     "-h, --handle <handle>",
-    "Specify the reconciliation that needs to be updated (mandatory)"
+    `Specify the reconciliation that needs to be updated (used together with "--shared-part")`
+  )
+  .option(
+    "-e, --export-file <name>",
+    `Specify the export file that needs to be updated (used together with "--shared-part")`
   )
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
@@ -357,11 +376,22 @@ program
       cliUtils.promptConfirmation();
     }
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
-    toolkit.removeSharedPartFromReconciliation(
-      options.firm,
-      options.sharedPart,
-      options.handle
-    );
+    cliUtils.checkUniqueOption(["handle", "exportFile"], options);
+    if (options.handle) {
+      toolkit.removeSharedPart(
+        options.firm,
+        options.sharedPart,
+        options.handle,
+        "reconciliationText"
+      );
+    } else if (options.exportFile) {
+      toolkit.removeSharedPart(
+        options.firm,
+        options.sharedPart,
+        options.exportFile,
+        "exportFile"
+      );
+    }
   });
 
 // Run Liquid Test
