@@ -524,7 +524,7 @@ async function removeSharedPartFromReconciliation(
 }
 
 // Look for the template in Silverfin with the handle/name and get it's ID
-// Type has to be either "reconciliationText", "exportFile" or "sharedPart"
+// Type has to be either "reconciliationText", "exportFile". "accountTemplate" or "sharedPart"
 async function getTemplateId(firmId, type, handle) {
   let templateText;
   switch (type) {
@@ -536,6 +536,9 @@ async function getTemplateId(firmId, type, handle) {
       break;
     case "sharedPart":
       templateText = await SF.findSharedPartByName(firmId, handle);
+      break;
+    case "accountTemplate":
+      // To be implemented
       break;
   }
   if (!templateText) {
