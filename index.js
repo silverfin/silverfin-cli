@@ -59,7 +59,16 @@ async function publishReconciliationByHandle(
     console.log(`Updating ${handle}...`);
     const template = await ReconciliationText.read(handle);
     template.version_comment = message;
-    await SF.updateReconciliationText(firmId, templateId, template);
+    const response = await SF.updateReconciliationText(
+      firmId,
+      templateId,
+      template
+    );
+    if (response.data.handle) {
+      console.log(`Reconciliation updated: ${response.data.handle}`);
+    } else {
+      console.log(`Reconciliation update failed: ${handle}`);
+    }
   } catch (error) {
     errorUtils.errorHandler(error);
   }
@@ -158,7 +167,16 @@ async function publishSharedPartByName(
     console.log(`Updating shared part ${name}...`);
     const template = await SharedPart.read(name);
     template.version_comment = message;
-    await SF.updateSharedPart(firmId, templateConfig.id[firmId], template);
+    const response = await SF.updateSharedPart(
+      firmId,
+      templateConfig.id[firmId],
+      template
+    );
+    if (response.data.name) {
+      console.log(`Shared part updated: ${response.data.name}`);
+    } else {
+      console.log(`Shared part update failed: ${name}`);
+    }
   } catch (error) {
     errorUtils.errorHandler(error);
   }
