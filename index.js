@@ -17,7 +17,6 @@ async function fetchReconciliationByHandle(firmId, handle) {
 
 async function fetchReconciliationById(firmId, id) {
   const template = await SF.readReconciliationTextById(firmId, id);
-
   if (!template || !template.data) {
     throw `Reconciliation with id ${id} wasn't found`;
   }
@@ -47,13 +46,7 @@ async function publishReconciliationByHandle(
   try {
     const templateConfig = fsUtils.readConfig("reconciliationText", handle);
     if (!templateConfig || !templateConfig.id[firmId]) {
-      console.log(`Reconciliation ${handle}: ID is missing. Aborted`);
-      console.log(
-        `Try running: ${chalk.bold(
-          `silverfin get-reconciliation-id --handle ${handle}`
-        )} or ${chalk.bold(`silverfin get-reconciliation-id --all`)}`
-      );
-      process.exit(1);
+      errorUtils.missingReconciliationId(handle);
     }
     let templateId = templateConfig.id[firmId];
     console.log(`Updating ${handle}...`);
@@ -156,13 +149,7 @@ async function publishSharedPartByName(
   try {
     const templateConfig = fsUtils.readConfig("sharedPart", name);
     if (!templateConfig || !templateConfig.id[firmId]) {
-      console.log(`Shared part ${name}: ID is missing. Aborted`);
-      console.log(
-        `Try running: ${chalk.bold(
-          `silverfin get-shared-part-id --shared-part ${name}`
-        )} or ${chalk.bold(`silverfin get-shared-part-id --all`)}`
-      );
-      process.exit(1);
+      errorUtils.missingSharedPartId(name);
     }
     console.log(`Updating shared part ${name}...`);
     const template = await SharedPart.read(name);
