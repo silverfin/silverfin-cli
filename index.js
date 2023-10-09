@@ -57,7 +57,7 @@ async function publishReconciliationByHandle(
       templateId,
       template
     );
-    if (response.data.handle) {
+    if (response && response.data && response.data.handle) {
       console.log(`Reconciliation updated: ${response.data.handle}`);
     } else {
       console.log(`Reconciliation update failed: ${handle}`);
@@ -159,7 +159,7 @@ async function publishSharedPartByName(
       templateConfig.id[firmId],
       template
     );
-    if (response.data.name) {
+    if (response && response.data && response.data.name) {
       console.log(`Shared part updated: ${response.data.name}`);
     } else {
       console.log(`Shared part update failed: ${name}`);
