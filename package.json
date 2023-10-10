@@ -18,7 +18,8 @@
   },
   "scripts": {
     "test": "jest",
-    "silverfin": "./node_modules/silverfin-cli/bin/cli.js"
+    "silverfin": "./node_modules/silverfin-cli/bin/cli.js",
+    "preinstall": "nvm use"
   },
   "dependencies": {
     "axios": "^0.26.1",
