@@ -51,8 +51,8 @@ export SF_HOST=...
 
 ## Important considerations
 
-- Template handles should be unique, since we based on them to identify the correct template when there is still no reference to the corresponding ID. The only exception is templates that are included from a marketplace template (so you could have in your environment one template "local" and one from the marketplace using the same handle, the CLI will skip the one from the marketplace and try to indentify the local one).
-- Be sure to have enabled the "Dutch" locale in the firm's Advance settings. This is because the NL language is mandatory while interacting with templates (e.g. while creating them). If you are not suing the NL locale, you could populate this field `name_nl` with your default language or English.
+- Reconciliation handles should be unique, since we identify the correct reconciliation based on these handles when there is no reference to the corresponding ID. The only case where duplicate handles are supported in a single firm, are reconciliations that are added from a marketplace reconciliation (so you could have one custom reconciliation and one from the marketplace using the same handle, the CLI will skip the one from the marketplace and try to identify the custom one).
+- Be sure to have enabled the "Dutch" locale in the firm's 'Advanced' settings. This is because the NL language is mandatory while interacting with templates (e.g. while creating them). If you are not using the NL locale, you could populate this field `name_nl` with your default language or English.
 
 ## Project structure conventions
 
