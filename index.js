@@ -59,8 +59,10 @@ async function publishReconciliationByHandle(
     );
     if (response && response.data && response.data.handle) {
       console.log(`Reconciliation updated: ${response.data.handle}`);
+      return true;
     } else {
       console.log(`Reconciliation update failed: ${handle}`);
+      return false;
     }
   } catch (error) {
     errorUtils.errorHandler(error);
@@ -161,8 +163,10 @@ async function publishSharedPartByName(
     );
     if (response && response.data && response.data.name) {
       console.log(`Shared part updated: ${response.data.name}`);
+      return true;
     } else {
       console.log(`Shared part update failed: ${name}`);
+      return false;
     }
   } catch (error) {
     errorUtils.errorHandler(error);
