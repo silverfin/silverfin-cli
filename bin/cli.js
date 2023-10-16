@@ -208,18 +208,18 @@ program
     }
   });
 
-// READ export file
+// READ account template
 program
-  .command("import-export-file")
-  .description("Import export file templates")
+  .command("import-account-template")
+  .description("Import account templates")
   .requiredOption(
     "-f, --firm <firm-id>",
     "Specify the firm to be used",
     firmIdDefault
   )
-  .option("-n, --name <name>", "Import a specific export file by name")
-  .option("-i, --id <id>", "Import a specific export file by id")
-  .option("-a, --all", "Import all existing export files")
+  .option("-n, --name <name>", "Import a specific account template by name")
+  .option("-i, --id <id>", "Import a specific account template by id")
+  .option("-a, --all", "Import all existing account templates")
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     cliUtils.checkUniqueOption(["name", "id", "all"], options);
@@ -228,25 +228,28 @@ program
     }
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     if (options.name) {
-      toolkit.fetchExportFile(options.firm, options.name);
+      toolkit.fetchAccountTemplateByName(options.firm, options.name);
     } else if (options.id) {
-      toolkit.fetchExportFileById(options.firm, options.id);
+      toolkit.fetchAccountTemplateById(options.firm, options.id);
     } else if (options.all) {
-      toolkit.fetchAllExportFiles(options.firm);
+      toolkit.fetchAllAccountTemplates(options.firm);
     }
   });
 
-// UPDATE export file
+// UPDATE account template
 program
-  .command("update-export-file")
-  .description("Update an existing export file template")
+  .command("update-account-template")
+  .description("Update an existing account template")
   .requiredOption(
     "-f, --firm <firm-id>",
     "Specify the firm to be used",
     firmIdDefault
   )
-  .option("-n, --name <name>", "Specify the export file to be used (mandatory)")
-  .option("-a, --all", "Update all export files")
+  .option(
+    "-n, --name <name>",
+    "Specify the account template to be used (mandatory)"
+  )
+  .option("-a, --all", "Update all account templates")
   .option(
     "-m, --message <message>",
     "Add a message to Silverfin's changelog (optional)",
@@ -260,20 +263,20 @@ program
     }
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     if (options.name) {
-      toolkit.publishExportFileByName(
+      toolkit.publishAccountTemplateByName(
         options.firm,
         options.name,
         options.message
       );
     } else if (options.all) {
-      toolkit.publishAllExportFiles(options.firm, options.message);
+      toolkit.publishAllAccountTemplates(options.firm, options.message);
     }
   });
 
-// CREATE export file
+// CREATE account template
 program
-  .command("create-export-file")
-  .description("Create a new export file template")
+  .command("create-account-template")
+  .description("Create a new account template")
   .requiredOption(
     "-f, --firm <firm-id>",
     "Specify the firm to be used",
@@ -281,19 +284,19 @@ program
   )
   .option(
     "-n, --name <name>",
-    "Specify the name of the export file to be created"
+    "Specify the name of the account template to be created"
   )
   .option(
     "-a, --all",
-    "Try to create all export files stored in the repository"
+    "Try to create all account templates stored in the repository"
   )
   .action((options) => {
     cliUtils.checkUniqueOption(["name", "all"], options);
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     if (options.name) {
-      toolkit.newExportFile(options.firm, options.name);
+      toolkit.newAccountTemplate(options.firm, options.name);
     } else if (options.all) {
-      toolkit.newAllExportFiles(options.firm, options.name);
+      toolkit.newAllAccountTemplates(options.firm, options.name);
     }
   });
 

@@ -6,6 +6,7 @@ const { ReconciliationText } = require("./lib/templates/reconciliationText");
 const { SharedPart } = require("./lib/templates/sharedPart");
 const { firmCredentials } = require("./lib/api/firmCredentials");
 const { ExportFile } = require("./lib/templates/exportFile");
+const { AccountTemplate } = require("./lib/templates/accountTemplate");
 const { consola } = require("consola");
 
 async function fetchReconciliation(firmId, handle) {
@@ -37,7 +38,6 @@ async function fetchReconciliationById(firmId, id) {
   consola.success(`Reconciliation "${template.data.handle}" imported`);
 }
 
-// Import all reconciliations
 async function fetchAllReconciliations(firmId, page = 1) {
   const templates = await SF.readReconciliationTexts(firmId, page);
   if (templates.length == 0) {
@@ -242,6 +242,108 @@ async function newAllExportFiles(firmId) {
   }
 }
 
+async function fetchAccountTemplateByName(firmId, name) {
+  const template = await SF.findAccountTemplateByName(firmId, name);
+  if (!template) {
+    throw `Account template ${name} wasn't found`;
+  }
+  AccountTemplate.save(firmId, template);
+}
+
+async function fetchAccountTemplateById(firmId, id) {
+  const template = await SF.readAccountTemplateById(firmId, id);
+  if (!template || !template.data) {
+    throw `Account Template with id ${id} wasn't found`;
+  }
+  AccountTemplate.save(firmId, template.data);
+}
+
+async function fetchAllAccountTemplates(firmId) {
+  const templates = await SF.readAccountTemplates(firmId, page);
+  if (templates.length == 0) {
+    if (page == 1) {
+      console.log("No account templates found");
+    }
+    return;
+  }
+  templates.forEach(async (template) => {
+    await AccountTemplate.save(firmId, template);
+  });
+  fetchAllAccountTemplates(firmId, page + 1);
+}
+
+async function publishAccountTemplateByName(
+  firmId,
+  name,
+  message = "Updated through the API"
+) {
+  try {
+    const templateConfig = fsUtils.readConfig("accountTemplate", name);
+    if (!templateConfig || !templateConfig.id[firmId]) {
+      errorUtils.missingAccountTemplateId(name);
+    }
+    let templateId = templateConfig.id[firmId];
+    console.log(`Updating account template ${name}...`);
+    const template = await AccountTemplate.read(name);
+    template.version_comment = message;
+    const response = await SF.updateAccountTemplate(
+      firmId,
+      templateId,
+      template
+    );
+    //TODO: Replace name_nl
+    if (response && response.data && response.data.name_nl) {
+      console.log(`Account template updated: ${response.data.name_nl}`);
+      return true;
+    } else {
+      console.log(`Account template update failed: ${handle}`);
+      return false;
+    }
+  } catch (error) {
+    errorUtils.errorHandler(error);
+  }
+}
+
+async function publishAllAccountTemplates(
+  firmId,
+  message = "Updated through the API"
+) {
+  let templates = fsUtils.getAllTemplatesOfAType("accountTemplate");
+  for (let name of templates) {
+    if (!name) continue;
+    await publishAccountTemplateByName(firmId, name, message);
+  }
+}
+
+async function newAccountTemplate(firmId, name) {
+  try {
+    const existingTemplate = await SF.findAccountTemplateByName(firmId, name);
+    if (existingTemplate) {
+      console.log(
+        `Account template ${name} already exists. Skipping its creation`
+      );
+      return;
+    }
+    const template = await AccountTemplate.read(name);
+    template.version_comment = "Created through the API";
+    const response = await SF.createAccountTemplate(firmId, template);
+
+    // Store new id
+    if (response && response.status == 201) {
+      AccountTemplate.updateTemplateId(firmId, handle, response.data.id);
+    }
+  } catch (error) {
+    errorUtils.errorHandler(error);
+  }
+}
+
+async function newAllAccountTemplates(firmId) {
+  const templates = fsUtils.getAllTemplatesOfAType("accountTemplate");
+  for (let name of templates) {
+    await newReconciliation(firmId, name);
+  }
+}
+
 async function fetchSharedPart(firmId, name) {
   const templateConfig = fsUtils.readConfig("sharedPart", name);
   if (templateConfig && templateConfig.id[firmId]) {
@@ -410,8 +512,7 @@ async function addSharedPart(
         addSharedPart = SF.addSharedPartToExportFile;
         break;
       case "accountTemplate":
-        // To be implemented
-        // addFunction = SF.addSharedPartToAccountTemplate;
+        addFunction = SF.addSharedPartToAccountTemplate;
         break;
     }
     let response = await addSharedPart(
@@ -523,8 +624,7 @@ async function removeSharedPart(
         removeSharedPart = SF.removeSharedPartFromExportFile;
         break;
       case "accountTemplate":
-        // To be implemented
-        // removeSharedPart = SF.removeSharedPartFromAccountTemplate;
+        removeSharedPart = SF.removeSharedPartFromAccountTemplate;
         break;
     }
     let response = await removeSharedPart(
@@ -575,7 +675,7 @@ async function getTemplateId(firmId, type, handle) {
       templateText = await SF.findSharedPartByName(firmId, handle);
       break;
     case "accountTemplate":
-      // To be implemented
+      templateText = await SF.findAccountTemplateByName(firmId, handle);
       break;
   }
   if (!templateText) {
@@ -592,10 +692,14 @@ async function getTemplateId(firmId, type, handle) {
   return true;
 }
 
-// For all existing reconciliations in the repository, find their IDs
+/**
+ * Fetch the ID of all templates of a certain type
+ * @param {Number} firmId
+ * @param {String} type Options: `reconciliationText`, `accountTemplate`, `exportFile` or `sharedPart`
+ */
 async function getAllTemplatesId(firmId, type) {
   try {
-    let templates = fsUtils.getAllTemplatesOfAType(type); // sharedPart or reconciliationText
+    let templates = fsUtils.getAllTemplatesOfAType(type);
     for (let templateName of templates) {
       let configTemplate = fsUtils.readConfig(type, templateName);
       let handle = configTemplate.handle || configTemplate.name;
@@ -641,6 +745,13 @@ module.exports = {
   publishAllExportFiles,
   newExportFile,
   newAllExportFiles,
+  fetchAccountTemplateByName,
+  fetchAccountTemplateById,
+  fetchAllAccountTemplates,
+  publishAccountTemplateByName,
+  publishAllAccountTemplates,
+  newAccountTemplate,
+  newAllAccountTemplates,
   fetchSharedPart,
   fetchSharedPartByName,
   fetchSharedPartById,
