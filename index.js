@@ -7,6 +7,15 @@ const { ReconciliationText } = require("./lib/reconciliationText");
 const { SharedPart } = require("./lib/sharedPart");
 const { firmCredentials } = require("./lib/api/firmCredentials");
 
+async function fetchReconciliation(firmId, handle) {
+  const templateConfig = fsUtils.readConfig("reconciliationText", handle);
+  if (templateConfig && templateConfig.id[firmId]) {
+    fetchReconciliationById(firmId, templateConfig.id[firmId]);
+  } else {
+    fetchReconciliationByHandle(firmId, handle);
+  }
+}
+
 async function fetchReconciliationByHandle(firmId, handle) {
   const template = await SF.findReconciliationTextByHandle(firmId, handle);
   if (!template) {
@@ -111,13 +120,13 @@ async function newAllReconciliations(firmId) {
   }
 }
 
-async function importExistingSharedPartById(firmId, id) {
-  const sharedPart = await SF.readSharedPartById(firmId, id);
-
-  if (!sharedPart) {
-    throw `Shared part ${id} wasn't found.`;
+async function fetchSharedPart(firmId, name) {
+  const templateConfig = fsUtils.readConfig("sharedPart", name);
+  if (templateConfig && templateConfig.id[firmId]) {
+    fetchSharedPartById(firmId, templateConfig.id[firmId]);
+  } else {
+    fetchSharedPartByName(firmId, name);
   }
-  await SharedPart.save(firmId, sharedPart.data);
 }
 
 async function fetchSharedPartByName(firmId, name) {
@@ -125,7 +134,16 @@ async function fetchSharedPartByName(firmId, name) {
   if (!sharedPartByName) {
     throw `Shared part with name ${name} wasn't found.`;
   }
-  return importExistingSharedPartById(firmId, sharedPartByName.id);
+  return fetchSharedPartById(firmId, sharedPartByName.id);
+}
+
+async function fetchSharedPartById(firmId, id) {
+  const sharedPart = await SF.readSharedPartById(firmId, id);
+
+  if (!sharedPart) {
+    throw `Shared part ${id} wasn't found.`;
+  }
+  await SharedPart.save(firmId, sharedPart.data);
 }
 
 async function fetchAllSharedParts(firmId, page = 1) {
@@ -138,7 +156,7 @@ async function fetchAllSharedParts(firmId, page = 1) {
     return;
   }
   sharedParts.forEach(async (sharedPart) => {
-    await importExistingSharedPartById(firmId, sharedPart.id);
+    await fetchSharedPartById(firmId, sharedPart.id);
   });
   await fetchAllSharedParts(firmId, page + 1);
 }
@@ -456,6 +474,7 @@ async function updateFirmName(firmId) {
 }
 
 module.exports = {
+  fetchReconciliation,
   fetchReconciliationByHandle,
   fetchReconciliationById,
   fetchAllReconciliations,
@@ -463,7 +482,9 @@ module.exports = {
   publishAllReconciliations,
   newReconciliation,
   newAllReconciliations,
+  fetchSharedPart,
   fetchSharedPartByName,
+  fetchSharedPartById,
   fetchAllSharedParts,
   publishSharedPartByName,
   publishAllSharedParts,

@@ -43,7 +43,7 @@ program
     }
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     if (options.handle) {
-      toolkit.fetchReconciliationByHandle(options.firm, options.handle);
+      toolkit.fetchReconciliation(options.firm, options.handle);
     } else if (options.id) {
       toolkit.fetchReconciliationById(options.firm, options.id);
     } else if (options.all) {
@@ -134,7 +134,7 @@ program
     }
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     if (options.sharedPart) {
-      toolkit.fetchSharedPartByName(options.firm, options.sharedPart);
+      toolkit.fetchSharedPart(options.firm, options.sharedPart);
     } else if (options.all) {
       toolkit.fetchAllSharedParts(options.firm);
     }
