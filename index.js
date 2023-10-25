@@ -219,14 +219,6 @@ async function newAllExportFiles(firmId) {
   }
 }
 
-async function fetchAccountDetailByHandle(firmId, name) {}
-async function fetchAccountDetailById(firmId, id) {}
-async function fetchAllAccountDetails(firmId) {}
-async function publishAccountDetailByName(firmId, name) {}
-async function publishAllAccountDetails(firmId) {}
-async function newAccountDetail(firmId, name) {}
-async function newAllAccountDetails(firmId) {}
-
 async function fetchSharedPart(firmId, name) {
   const templateConfig = fsUtils.readConfig("sharedPart", name);
   if (templateConfig && templateConfig.id[firmId]) {
@@ -616,13 +608,6 @@ module.exports = {
   publishAllExportFiles,
   newExportFile,
   newAllExportFiles,
-  fetchAccountDetailByHandle,
-  fetchAccountDetailById,
-  fetchAllAccountDetails,
-  publishAccountDetailByName,
-  publishAllAccountDetails,
-  newAccountDetail,
-  newAllAccountDetails,
   fetchSharedPart,
   fetchSharedPartByName,
   fetchSharedPartById,
