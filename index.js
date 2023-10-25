@@ -122,7 +122,16 @@ async function newAllReconciliations(firmId) {
   }
 }
 
-async function fetchExportFileByHandle(firmId, name) {
+async function fetchExportFile(firmId, name) {
+  const templateConfig = fsUtils.readConfig("exportFile", name);
+  if (templateConfig && templateConfig.id[firmId]) {
+    fetchExportFileById(firmId, templateConfig.id[firmId]);
+  } else {
+    fetchExportFileByName(firmId, name);
+  }
+}
+
+async function fetchExportFileByName(firmId, name) {
   const template = await SF.findExportFileByName(firmId, name);
   if (!template) {
     throw `Export file ${name} wasn't found`;
@@ -601,7 +610,8 @@ module.exports = {
   publishAllReconciliations,
   newReconciliation,
   newAllReconciliations,
-  fetchExportFileByHandle,
+  fetchExportFile,
+  fetchExportFileByName,
   fetchExportFileById,
   fetchAllExportFiles,
   publishExportFileByName,
