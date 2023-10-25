@@ -351,7 +351,7 @@ async function newAllSharedParts(firmId) {
   }
 }
 
-/** This function adds a shared part to a template. It will make a POST request to the API. If the ID of one of the templates it missing, it will try to fetch it first by making a GET request. In case of success, it will store the details in the corresponding config files.
+/** This function adds a shared part to a template. It will make a POST request to the API. If the ID of one of the templates is missing, it will try to fetch it first by making a GET request. In case of success, it will store the details in the corresponding config files.
  *
  * @param {Number} firmId
  * @param {string} sharedPartName
@@ -452,7 +452,7 @@ async function addSharedPart(
 }
 
 /**
- * This function loops through all shared parts (config files) and tries to add the shared part to each template listed in 'used_in'. It will make a POST request to the API. If the ID of one of the templates it missing, it will try to fetch it first by making a GET request. In case of success, it will store the details in the corresponding config files.
+ * This function loops through all shared parts (config files) and tries to add the shared part to each template listed in 'used_in'. It will make a POST request to the API. If the ID of one of the templates is missing, it will try to fetch it first by making a GET request. In case of success, it will store the details in the corresponding config files.
  * @param {Number} firmId
  */
 async function addAllSharedParts(firmId) {
