@@ -61,6 +61,7 @@ async function publishReconciliationByHandle(
     let templateId = templateConfig.id[firmId];
     console.log(`Updating reconciliation ${handle}...`);
     const template = await ReconciliationText.read(handle);
+    if (!template) return;
     template.version_comment = message;
     const response = await SF.updateReconciliationText(
       firmId,
@@ -103,6 +104,7 @@ async function newReconciliation(firmId, handle) {
       return;
     }
     const template = await ReconciliationText.read(handle);
+    if (!template) return;
     template.version_comment = "Created through the API";
     const response = await SF.createReconciliationText(firmId, template);
 
@@ -174,6 +176,7 @@ async function publishExportFileByName(
     let templateId = templateConfig.id[firmId];
     console.log(`Updating export file ${name}...`);
     const template = await ExportFile.read(name);
+    if (!template) return;
     template.version_comment = message;
     const response = await SF.updateExportFile(firmId, templateId, template);
     if (response && response.data && response.data.name) {
@@ -209,6 +212,7 @@ async function newExportFile(firmId, name) {
       return;
     }
     const template = await ExportFile.read(name);
+    if (!template) return;
     template.version_comment = "Created through the API";
     const response = await SF.createExportFile(firmId, template);
 
@@ -289,6 +293,7 @@ async function publishSharedPartByName(
     }
     console.log(`Updating shared part ${name}...`);
     const template = await SharedPart.read(name);
+    if (!template) return;
     template.version_comment = message;
     const response = await SF.updateSharedPart(
       firmId,
@@ -326,6 +331,7 @@ async function newSharedPart(firmId, name) {
       return;
     }
     const template = await SharedPart.read(name);
+    if (!template) return;
     template.version_comment = "Created through the API";
     const response = await SF.createSharedPart(firmId, template);
 
