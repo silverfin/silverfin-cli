@@ -1,7 +1,6 @@
 const SF = require("./lib/api/sfApi");
 const fsUtils = require("./lib/utils/fsUtils");
 const fs = require("fs");
-const chalk = require("chalk");
 const errorUtils = require("./lib/utils/errorUtils");
 const { ReconciliationText } = require("./lib/templates/reconciliationText");
 const { SharedPart } = require("./lib/templates/sharedPart");
@@ -457,7 +456,7 @@ async function addSharedPart(
  */
 async function addAllSharedParts(firmId) {
   const sharedPartsArray = fsUtils.getAllTemplatesOfAType("sharedPart");
-  for await (let sharedPartName of sharedPartsArray) {
+  for (let sharedPartName of sharedPartsArray) {
     let configSharedPart = fsUtils.readConfig("sharedPart", sharedPartName);
     for await (let template of configSharedPart.used_in) {
       template = SharedPart.checkReconciliationType(template);
