@@ -115,6 +115,95 @@ program
     }
   });
 
+// READ export file
+program
+  .command("import-export-file")
+  .description("Import export file templates")
+  .requiredOption(
+    "-f, --firm <firm-id>",
+    "Specify the firm to be used",
+    firmIdDefault
+  )
+  .option("-n, --name <name>", "Import a specific export file by name")
+  .option("-i, --id <id>", "Import a specific export file by id")
+  .option("-a, --all", "Import all existing export files")
+  .option("--yes", "Skip the prompt confirmation (optional)")
+  .action((options) => {
+    cliUtils.checkUniqueOption(["name", "id", "all"], options);
+    if (!options.yes) {
+      cliUtils.promptConfirmation();
+    }
+    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
+    if (options.name) {
+      toolkit.fetchExportFile(options.firm, options.name);
+    } else if (options.id) {
+      toolkit.fetchExportFileById(options.firm, options.id);
+    } else if (options.all) {
+      toolkit.fetchAllExportFiles(options.firm);
+    }
+  });
+
+// UPDATE export file
+program
+  .command("update-export-file")
+  .description("Update an existing export file template")
+  .requiredOption(
+    "-f, --firm <firm-id>",
+    "Specify the firm to be used",
+    firmIdDefault
+  )
+  .option("-n, --name <name>", "Specify the export file to be used (mandatory)")
+  .option("-a, --all", "Update all export files")
+  .option(
+    "-m, --message <message>",
+    "Add a message to Silverfin's changelog (optional)",
+    undefined
+  )
+  .option("--yes", "Skip the prompt confirmation (optional)")
+  .action((options) => {
+    cliUtils.checkUniqueOption(["name", "all"], options);
+    if (!options.yes) {
+      cliUtils.promptConfirmation();
+    }
+    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
+    if (options.name) {
+      toolkit.publishExportFileByName(
+        options.firm,
+        options.name,
+        options.message
+      );
+    } else if (options.all) {
+      toolkit.publishAllExportFiles(options.firm, options.message);
+    }
+  });
+
+// CREATE export file
+program
+  .command("create-export-file")
+  .description("Create a new export file template")
+  .requiredOption(
+    "-f, --firm <firm-id>",
+    "Specify the firm to be used",
+    firmIdDefault
+  )
+  .option(
+    "-n, --name <name>",
+    "Specify the name of the export file to be created"
+  )
+  .option(
+    "-a, --all",
+    "Try to create all export files stored in the repository"
+  )
+  .action((options) => {
+    cliUtils.checkUniqueOption(["name", "all"], options);
+    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
+    if (options.name) {
+      toolkit.newExportFile(options.firm, options.name);
+    } else if (options.all) {
+      toolkit.newAllExportFiles(options.firm, options.name);
+    }
+  });
+
 // READ shared part
 program
   .command("import-shared-part")
@@ -215,40 +304,55 @@ program
   )
   .option(
     "-s, --shared-part <name>",
-    `Specify the shared part to be added (used together with "--handle")`
+    `Specify the shared part to be added (used together with "--handle" or "--export-file")`
   )
   .option(
     "-h, --handle <handle>",
     `Specify the reconciliation that needs to be updated (used together with "--shared-part")`
   )
   .option(
+    "-e, --export-file <name>",
+    `Specify the export file that needs to be updated (used together with "--shared-part")`
+  )
+  .option(
     "-a, --all",
-    "Add all shared parts to all reconciliations (based on the config file of shared parts and the handles assigned there to each reconciliation)"
+    "Add all shared parts to all templates (based on the config file of shared parts and the handles assigned there to each template)"
   )
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
-    cliUtils.checkUsedTogether(["sharedPart", "handle"], options);
-    cliUtils.checkUniqueOption(["sharedPart", "all"], options);
-    cliUtils.checkUniqueOption(["handle", "all"], options);
     if (!options.yes) {
       cliUtils.promptConfirmation();
     }
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
-    if (options.sharedPart && options.handle) {
-      toolkit.addSharedPartToReconciliation(
+    cliUtils.checkUniqueOption(["sharedPart", "all"], options);
+    if (options.sharedPart) {
+      cliUtils.checkUniqueOption(["handle", "exportFile"], options);
+    } else {
+      cliUtils.checkUniqueOption(["handle", "exportFile", "all"], options);
+    }
+    if (options.handle) {
+      toolkit.addSharedPart(
         options.firm,
         options.sharedPart,
-        options.handle
+        options.handle,
+        "reconciliationText"
+      );
+    } else if (options.exportFile) {
+      toolkit.addSharedPart(
+        options.firm,
+        options.sharedPart,
+        options.exportFile,
+        "exportFile"
       );
     } else if (options.all) {
-      toolkit.addAllSharedPartsToAllReconciliation(options.firm);
+      toolkit.addAllSharedParts(options.firm);
     }
   });
 
 // Remove shared part to reconciliation
 program
   .command("remove-shared-part")
-  .description("Remove an existing shared part to an existing reconciliation")
+  .description("Remove an existing shared part from an existing template")
   .requiredOption(
     "-f, --firm <firm-id>",
     "Specify the firm to be used",
@@ -256,11 +360,15 @@ program
   )
   .requiredOption(
     "-s, --shared-part <name>",
-    "Specify the shared part to be removed (mandatory)"
+    `Specify the shared part to be removed (mandatory, used together with "--handle" or "--export-file")`
   )
-  .requiredOption(
+  .option(
     "-h, --handle <handle>",
-    "Specify the reconciliation that needs to be updated (mandatory)"
+    `Specify the reconciliation that needs to be updated (used together with "--shared-part")`
+  )
+  .option(
+    "-e, --export-file <name>",
+    `Specify the export file that needs to be updated (used together with "--shared-part")`
   )
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
@@ -268,11 +376,22 @@ program
       cliUtils.promptConfirmation();
     }
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
-    toolkit.removeSharedPartFromReconciliation(
-      options.firm,
-      options.sharedPart,
-      options.handle
-    );
+    cliUtils.checkUniqueOption(["handle", "exportFile"], options);
+    if (options.handle) {
+      toolkit.removeSharedPart(
+        options.firm,
+        options.sharedPart,
+        options.handle,
+        "reconciliationText"
+      );
+    } else if (options.exportFile) {
+      toolkit.removeSharedPart(
+        options.firm,
+        options.sharedPart,
+        options.exportFile,
+        "exportFile"
+      );
+    }
   });
 
 // Run Liquid Test
@@ -462,6 +581,31 @@ program
       toolkit.getTemplateId(options.firm, "reconciliationText", options.handle);
     } else if (options.all) {
       toolkit.getAllTemplatesId(options.firm, "reconciliationText");
+    }
+  });
+
+// Get all the IDs of existing export files
+program
+  .command("get-export-file-id")
+  .description("Fetch the ID of an export file from Silverfin")
+  .requiredOption(
+    "-f, --firm <firm-id>",
+    "Specify the firm to be used",
+    firmIdDefault
+  )
+  .option("-n, --name <name>", "Fetch the export file ID by name")
+  .option("-a, --all", "Fetch the ID for every export file")
+  .option("--yes", "Skip the prompt confirmation (optional)")
+  .action((options) => {
+    cliUtils.checkUniqueOption(["name", "all"], options);
+    if (!options.yes) {
+      cliUtils.promptConfirmation();
+    }
+    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
+    if (options.name) {
+      toolkit.getTemplateId(options.firm, "exportFile", options.name);
+    } else if (options.all) {
+      toolkit.getAllTemplatesId(options.firm, "exportFile");
     }
   });
 
