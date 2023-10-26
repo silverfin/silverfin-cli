@@ -296,7 +296,7 @@ program
 // Add shared part to reconciliation
 program
   .command("add-shared-part")
-  .description("Add an existing shared part to an existing reconciliation")
+  .description("Add an existing shared part to an existing template")
   .requiredOption(
     "-f, --firm <firm-id>",
     "Specify the firm to be used",
