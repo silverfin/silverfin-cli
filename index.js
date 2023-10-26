@@ -3,10 +3,10 @@ const fsUtils = require("./lib/utils/fsUtils");
 const fs = require("fs");
 const chalk = require("chalk");
 const errorUtils = require("./lib/utils/errorUtils");
-const { ReconciliationText } = require("./lib/reconciliationText");
-const { SharedPart } = require("./lib/sharedPart");
+const { ReconciliationText } = require("./lib/templates/reconciliationText");
+const { SharedPart } = require("./lib/templates/sharedPart");
 const { firmCredentials } = require("./lib/api/firmCredentials");
-const { ExportFile } = require("./lib/exportFile");
+const { ExportFile } = require("./lib/templates/exportFile");
 
 async function fetchReconciliation(firmId, handle) {
   const templateConfig = fsUtils.readConfig("reconciliationText", handle);
