@@ -13,15 +13,19 @@ const devMode = require("../lib/cli/devMode");
 const { firmCredentials } = require("../lib/api/firmCredentials");
 const SF = require("../lib/api/sfApi");
 const path = require("path");
+const { consola } = require("consola");
 
 let firmIdDefault = cliUtils.loadDefaultFirmId();
 cliUtils.handleUncaughtErrors();
 
 // Name & Version
 program.name("silverfin");
-if (pkg.version) {
-  program.version(pkg.version);
-}
+pkg.version ? program.version(pkg.version) : undefined;
+// Verbose Option
+program.option("-v, --verbose", "Verbose output");
+program.on("option:verbose", () => {
+  consola.level = "debug"; // default: "info"
+});
 
 // READ reconciliations
 program
@@ -444,7 +448,7 @@ program
       );
     } else {
       if (options.previewOnly && !options.htmlInput && !options.htmlPreview) {
-        console.log(
+        consola.info(
           `When using "--preview-only" you need to specify at least one of the following options: "--html-input", "--html-preview"`
         );
         process.exit(1);
@@ -530,22 +534,22 @@ program
     if (options.setFirm) {
       firmCredentials.setDefaultFirmId(options.setFirm);
       const currentDirectory = path.basename(process.cwd());
-      console.log(`${currentDirectory}: firm id set to ${options.setFirm}`);
+      consola.success(`${currentDirectory}: firm id set to ${options.setFirm}`);
     }
     if (options.getFirm) {
       const storedFirmId = firmCredentials.getDefaultFirmId();
       if (storedFirmId) {
-        console.log(`Firm id previously stored: ${storedFirmId}`);
+        consola.info(`Firm id previously stored: ${storedFirmId}`);
       } else {
-        console.log("There is no firm id previously stored");
+        consola.info("There is no firm id previously stored");
       }
     }
     if (options.listAll) {
       const firms = firmCredentials.listAuthorizedFirms() || [];
       if (firms) {
-        console.log("List of authorized firms");
+        consola.info("List of authorized firms");
         firms.forEach((element) =>
-          console.log(`- ${element[0]}${element[1] ? ` (${element[1]})` : ""}`)
+          consola.log(`- ${element[0]}${element[1] ? ` (${element[1]})` : ""}`)
         );
       }
     }
@@ -695,5 +699,5 @@ if (pkg.repository && pkg.repository.url) {
 (async function () {
   // Check if there is a new version available
   await cliUpdates.checkVersions();
-  program.parse();
+  await program.parseAsync();
 })();
