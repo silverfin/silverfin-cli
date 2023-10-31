@@ -249,6 +249,7 @@ async function fetchSharedPart(firmId, name) {
   } else {
     fetchSharedPartByName(firmId, name);
   }
+  consola.success(`Shared part "${templateConfig.name}" imported`);
 }
 
 async function fetchSharedPartById(firmId, id) {
@@ -258,7 +259,6 @@ async function fetchSharedPartById(firmId, id) {
     process.exit(1);
   }
   await SharedPart.save(firmId, template.data);
-  consola.success(`Shared part "${template.data.name}" imported`);
 }
 
 async function fetchSharedPartByName(firmId, name) {
