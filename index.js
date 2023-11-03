@@ -527,7 +527,7 @@ async function addSharedPart(
         addSharedPart = SF.addSharedPartToExportFile;
         break;
       case "accountTemplate":
-        addFunction = SF.addSharedPartToAccountTemplate;
+        addSharedPart = SF.addSharedPartToAccountTemplate;
         break;
     }
     let response = await addSharedPart(

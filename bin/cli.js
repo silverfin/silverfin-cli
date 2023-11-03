@@ -411,6 +411,10 @@ program
     `Specify the export file that needs to be updated (used together with "--shared-part")`
   )
   .option(
+    "-at, --account-template <name>",
+    `Specify the account template that needs to be updated (used together with "--shared-part")`
+  )
+  .option(
     "-a, --all",
     "Add all shared parts to all templates (based on the config file of shared parts and the handles assigned there to each template)"
   )
@@ -422,9 +426,15 @@ program
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     cliUtils.checkUniqueOption(["sharedPart", "all"], options);
     if (options.sharedPart) {
-      cliUtils.checkUniqueOption(["handle", "exportFile"], options);
+      cliUtils.checkUniqueOption(
+        ["handle", "exportFile", "accountTemplate"],
+        options
+      );
     } else {
-      cliUtils.checkUniqueOption(["handle", "exportFile", "all"], options);
+      cliUtils.checkUniqueOption(
+        ["handle", "exportFile", "accountTemplate", "all"],
+        options
+      );
     }
     if (options.handle) {
       toolkit.addSharedPart(
@@ -439,6 +449,13 @@ program
         options.sharedPart,
         options.exportFile,
         "exportFile"
+      );
+    } else if (options.accountTemplate) {
+      toolkit.addSharedPart(
+        options.firm,
+        options.sharedPart,
+        options.accountTemplate,
+        "accountTemplate"
       );
     } else if (options.all) {
       toolkit.addAllSharedParts(options.firm);
@@ -466,13 +483,20 @@ program
     "-e, --export-file <name>",
     `Specify the export file that needs to be updated (used together with "--shared-part")`
   )
+  .option(
+    "-at, --account-template <name>",
+    `Specify the account template that needs to be updated (used together with "--shared-part")`
+  )
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     if (!options.yes) {
       cliUtils.promptConfirmation();
     }
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
-    cliUtils.checkUniqueOption(["handle", "exportFile"], options);
+    cliUtils.checkUniqueOption(
+      ["handle", "exportFile", "accountTemplate"],
+      options
+    );
     if (options.handle) {
       toolkit.removeSharedPart(
         options.firm,
@@ -486,6 +510,13 @@ program
         options.sharedPart,
         options.exportFile,
         "exportFile"
+      );
+    } else if (options.accountTemplate) {
+      toolkit.removeSharedPart(
+        options.firm,
+        options.sharedPart,
+        options.accountTemplate,
+        "accountTemplate"
       );
     }
   });
