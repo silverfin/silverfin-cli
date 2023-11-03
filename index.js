@@ -102,7 +102,7 @@ async function newReconciliation(firmId, handle) {
       handle
     );
     if (existingTemplate) {
-      consola.info(
+      consola.warn(
         `Reconciliation "${handle}" already exists. Skipping its creation`
       );
       return;
@@ -319,18 +319,20 @@ async function newAccountTemplate(firmId, name) {
   try {
     const existingTemplate = await SF.findAccountTemplateByName(firmId, name);
     if (existingTemplate) {
-      console.log(
-        `Account template ${name} already exists. Skipping its creation`
+      consola.warn(
+        `Account template "${name}" already exists. Skipping its creation`
       );
       return;
     }
     const template = await AccountTemplate.read(name);
     template.version_comment = "Created through the API";
     const response = await SF.createAccountTemplate(firmId, template);
+    const handle = response.data.name_nl;
 
     // Store new id
     if (response && response.status == 201) {
       AccountTemplate.updateTemplateId(firmId, handle, response.data.id);
+      consola.success(`Account template "${handle}" created`);
     }
   } catch (error) {
     errorUtils.errorHandler(error);
@@ -441,7 +443,7 @@ async function newSharedPart(firmId, name) {
   try {
     const existingSharedPart = await SF.findSharedPartByName(firmId, name);
     if (existingSharedPart) {
-      consola.info(
+      consola.warn(
         `Shared part "${name}" already exists. Skipping its creation`
       );
       return;
