@@ -245,29 +245,42 @@ async function newAllExportFiles(firmId) {
 async function fetchAccountTemplateByName(firmId, name) {
   const template = await SF.findAccountTemplateByName(firmId, name);
   if (!template) {
-    throw `Account template ${name} wasn't found`;
+    consola.error(`Account template "${name}" wasn't found`);
+    process.exit(1);
   }
-  AccountTemplate.save(firmId, template);
+  const saved = AccountTemplate.save(firmId, template);
+  if (saved) {
+    consola.success(`Account template "${template?.name_nl}" imported`);
+  }
 }
 
 async function fetchAccountTemplateById(firmId, id) {
   const template = await SF.readAccountTemplateById(firmId, id);
-  if (!template || !template.data) {
-    throw `Account Template with id ${id} wasn't found`;
+
+  if (!template) {
+    consola.error(`Account template ${id} wasn't found`);
+    process.exit(1);
   }
-  AccountTemplate.save(firmId, template.data);
+
+  const saved = AccountTemplate.save(firmId, template);
+  if (saved) {
+    consola.success(`Account template "${template?.name_nl}" imported`);
+  }
 }
 
-async function fetchAllAccountTemplates(firmId) {
+async function fetchAllAccountTemplates(firmId, page = 1) {
   const templates = await SF.readAccountTemplates(firmId, page);
   if (templates.length == 0) {
     if (page == 1) {
-      console.log("No account templates found");
+      consola.warn("No account templates found");
     }
     return;
   }
   templates.forEach(async (template) => {
-    await AccountTemplate.save(firmId, template);
+    const saved = AccountTemplate.save(firmId, template);
+    if (saved) {
+      consola.success(`Account template "${template?.name_nl}" imported`);
+    }
   });
   fetchAllAccountTemplates(firmId, page + 1);
 }
@@ -283,7 +296,7 @@ async function publishAccountTemplateByName(
       errorUtils.missingAccountTemplateId(name);
     }
     let templateId = templateConfig.id[firmId];
-    console.log(`Updating account template ${name}...`);
+    consola.debug(`Updating account template ${name}...`);
     const template = await AccountTemplate.read(name);
     template.version_comment = message;
     const response = await SF.updateAccountTemplate(
@@ -291,12 +304,11 @@ async function publishAccountTemplateByName(
       templateId,
       template
     );
-    //TODO: Replace name_nl
     if (response && response.data && response.data.name_nl) {
-      console.log(`Account template updated: ${response.data.name_nl}`);
+      consola.success(`Account template updated: ${response.data.name_nl}`);
       return true;
     } else {
-      console.log(`Account template update failed: ${handle}`);
+      consola.error(`Account template update failed: ${handle}`);
       return false;
     }
   } catch (error) {
@@ -377,7 +389,8 @@ async function fetchSharedPartById(firmId, id) {
   const sharedPart = await SF.readSharedPartById(firmId, id);
 
   if (!sharedPart) {
-    throw `Shared part ${id} wasn't found.`;
+    consola.error(`Shared part ${id} wasn't found.`);
+    process.exit(1);
   }
   await SharedPart.save(firmId, sharedPart.data);
 }
@@ -575,9 +588,9 @@ async function addSharedPart(
  */
 async function addAllSharedParts(firmId) {
   const sharedPartsArray = fsUtils.getAllTemplatesOfAType("sharedPart");
-  for await (let sharedPartName of sharedPartsArray) {
+  for (let sharedPartName of sharedPartsArray) {
     let configSharedPart = fsUtils.readConfig("sharedPart", sharedPartName);
-    for await (let template of configSharedPart.used_in) {
+    for (let template of configSharedPart.used_in) {
       template = SharedPart.checkReconciliationType(template);
       if (!template.handle && !template.name) {
         consola.warn(`Template has no handle or name. Skipping.`);

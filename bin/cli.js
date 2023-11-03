@@ -139,7 +139,7 @@ program
     }
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     if (options.name) {
-      toolkit.fetchExportFileByHandle(options.firm, options.name);
+      toolkit.fetchExportFile(options.firm, options.name);
     } else if (options.id) {
       toolkit.fetchExportFileById(options.firm, options.id);
     } else if (options.all) {
