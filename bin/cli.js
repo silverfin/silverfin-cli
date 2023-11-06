@@ -501,7 +501,7 @@ program
     "-s, --since <date>, Specify the date which is going to be used to filter the data from (format: YYYY-MM-DD) (mandatory)"
   )
   .action((options) => {
-    stats.generateStatsOverview(options.since);
+    stats.generateOverview(options.since);
   });
 
 // Set/Get FIRM ID
