@@ -712,8 +712,6 @@ program
     new Option(
       "--refresh-partner-token [partnerId]",
       "Get a new partner api key using the stored api key"
-    ).choices(
-      firmCredentials.listAuthorizedPartners().map((partner) => partner.id)
     )
   )
   .action((options) => {
