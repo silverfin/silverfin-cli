@@ -645,6 +645,36 @@ program
     SF.authorizeApp(firmIdDefault);
   });
 
+// Authorize PARTNER
+program
+  .command("authorize-partner")
+  .description(
+    "Authorize a Silverfin partner environment by entering the API key and credentials"
+  )
+  .requiredOption(
+    "-i, --partner-id <partner-id>",
+    "Specify the partner environment id to be added"
+  )
+  .requiredOption(
+    "-k, --api-key <api-key>",
+    "Specify the api key of the partner environment to be added"
+  )
+  .option(
+    "-n, --partner-name <partner-name>",
+    "Specify the partner environment name to be added"
+  )
+  .action((options) => {
+    const stored = firmCredentials.storePartnerApiKey(
+      options.partnerId,
+      options.partnerName,
+      options.apiKey
+    );
+
+    if (stored) {
+      consola.success("Partner API key succesfully stored");
+    }
+  });
+
 // Repositories Statistics
 program
   .command("stats")
@@ -678,9 +708,24 @@ program
       "Get a new pair of credentials using the stored refresh token"
     ).preset(firmIdDefault)
   )
+  .addOption(
+    new Option(
+      "--refresh-partner-token [partnerId]",
+      "Get a new partner api key using the stored api key"
+    ).choices(
+      firmCredentials.listAuthorizedPartners().map((partner) => partner.id)
+    )
+  )
   .action((options) => {
     cliUtils.checkUniqueOption(
-      ["setFirm", "getFirm", "listAll", "updateName", "refreshToken"],
+      [
+        "setFirm",
+        "getFirm",
+        "listAll",
+        "updateName",
+        "refreshToken",
+        "refreshPartnerToken",
+      ],
       options
     );
     if (options.setFirm) {
@@ -704,6 +749,17 @@ program
           consola.log(`- ${element[0]}${element[1] ? ` (${element[1]})` : ""}`)
         );
       }
+
+      const partners = firmCredentials.listAuthorizedPartners();
+      if (partners.length > 0) {
+        console.log("\n");
+        consola.info("List of authorized partners");
+        partners.forEach((element) =>
+          consola.log(
+            `- ${element.id}${element.name ? ` (${element.name})` : ""}`
+          )
+        );
+      }
     }
     if (options.updateName) {
       cliUtils.checkDefaultFirm(options.updateName, firmIdDefault);
@@ -712,6 +768,9 @@ program
     if (options.refreshToken) {
       cliUtils.checkDefaultFirm(options.refreshToken, firmIdDefault);
       SF.refreshTokens(options.refreshToken);
+    }
+    if (options.refreshPartnerToken) {
+      SF.refreshPartnerToken(options.refreshPartnerToken);
     }
   });
 
