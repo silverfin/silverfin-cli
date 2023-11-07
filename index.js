@@ -12,9 +12,9 @@ const { consola } = require("consola");
 async function fetchReconciliation(firmId, handle) {
   const templateConfig = fsUtils.readConfig("reconciliationText", handle);
   if (templateConfig && templateConfig.id[firmId]) {
-    fetchReconciliationById(firmId, templateConfig.id[firmId]);
+    await fetchReconciliationById(firmId, templateConfig.id[firmId]);
   } else {
-    fetchReconciliationByHandle(firmId, handle);
+    await fetchReconciliationByHandle(firmId, handle);
   }
 }
 
@@ -24,8 +24,10 @@ async function fetchReconciliationByHandle(firmId, handle) {
     consola.error(`Reconciliation "${handle}" wasn't found`);
     process.exit(1);
   }
-  ReconciliationText.save(firmId, template);
-  consola.success(`Reconciliation "${handle}" imported`);
+  const saved = ReconciliationText.save(firmId, template);
+  if (saved) {
+    consola.success(`Reconciliation "${handle}" imported`);
+  }
 }
 
 async function fetchReconciliationById(firmId, id) {
@@ -34,8 +36,10 @@ async function fetchReconciliationById(firmId, id) {
     consola.error(`Reconciliation with id ${id} wasn't found`);
     process.exit(1);
   }
-  ReconciliationText.save(firmId, template.data);
-  consola.success(`Reconciliation "${template.data.handle}" imported`);
+  const saved = ReconciliationText.save(firmId, template.data);
+  if (saved) {
+    consola.success(`Reconciliation "${template.data.handle}" imported`);
+  }
 }
 
 async function fetchAllReconciliations(firmId, page = 1) {
@@ -47,7 +51,10 @@ async function fetchAllReconciliations(firmId, page = 1) {
     return;
   }
   templates.forEach(async (template) => {
-    await ReconciliationText.save(firmId, template);
+    const saved = await ReconciliationText.save(firmId, template);
+    if (saved) {
+      consola.success(`Reconciliation "${template.handle}" imported`);
+    }
   });
   fetchAllReconciliations(firmId, page + 1);
 }
@@ -132,9 +139,9 @@ async function newAllReconciliations(firmId) {
 async function fetchExportFile(firmId, name) {
   const templateConfig = fsUtils.readConfig("exportFile", name);
   if (templateConfig && templateConfig.id[firmId]) {
-    fetchExportFileById(firmId, templateConfig.id[firmId]);
+    await fetchExportFileById(firmId, templateConfig.id[firmId]);
   } else {
-    fetchExportFileByName(firmId, name);
+    await fetchExportFileByName(firmId, name);
   }
 }
 
@@ -144,8 +151,10 @@ async function fetchExportFileByName(firmId, name) {
     consola.error(`Export file "${name}" wasn't found`);
     process.exit(1);
   }
-  ExportFile.save(firmId, template);
-  consola.success(`Export file "${name}" imported`);
+  const saved = ExportFile.save(firmId, template);
+  if (saved) {
+    consola.success(`Export file "${name}" imported`);
+  }
 }
 
 async function fetchExportFileById(firmId, id) {
@@ -154,8 +163,10 @@ async function fetchExportFileById(firmId, id) {
     consola.error(`Export file with id ${id} wasn't found`);
     process.exit(1);
   }
-  ExportFile.save(firmId, template);
-  consola.success(`Export file "${template.name}" imported`);
+  const saved = ExportFile.save(firmId, template);
+  if (saved) {
+    consola.success(`Export file "${template.name}" imported`);
+  }
 }
 
 async function fetchAllExportFiles(firmId, page = 1) {
@@ -239,6 +250,15 @@ async function newAllExportFiles(firmId) {
   const templates = fsUtils.getAllTemplatesOfAType("exportFile");
   for (let name of templates) {
     await newExportFile(firmId, name);
+  }
+}
+
+async function fetchAccountTemplate(firmId, name) {
+  const templateConfig = fsUtils.readConfig("accountTemplate", name);
+  if (templateConfig && templateConfig.id[firmId]) {
+    await fetchAccountTemplateById(firmId, templateConfig.id[firmId]);
+  } else {
+    await fetchAccountTemplateByName(firmId, name);
   }
 }
 
@@ -361,11 +381,10 @@ async function newAllAccountTemplates(firmId) {
 async function fetchSharedPart(firmId, name) {
   const templateConfig = fsUtils.readConfig("sharedPart", name);
   if (templateConfig && templateConfig.id[firmId]) {
-    fetchSharedPartById(firmId, templateConfig.id[firmId]);
+    await fetchSharedPartById(firmId, templateConfig.id[firmId]);
   } else {
-    fetchSharedPartByName(firmId, name);
+    await fetchSharedPartByName(firmId, name);
   }
-  consola.success(`Shared part "${templateConfig.name}" imported`);
 }
 
 async function fetchSharedPartById(firmId, id) {
@@ -374,7 +393,10 @@ async function fetchSharedPartById(firmId, id) {
     consola.error(`Shared part ${id} wasn't found.`);
     process.exit(1);
   }
-  await SharedPart.save(firmId, template.data);
+  const saved = await SharedPart.save(firmId, template.data);
+  if (saved) {
+    consola.success(`Shared part "${template.data.name}" imported`);
+  }
 }
 
 async function fetchSharedPartByName(firmId, name) {
@@ -392,7 +414,10 @@ async function fetchSharedPartById(firmId, id) {
     consola.error(`Shared part ${id} wasn't found.`);
     process.exit(1);
   }
-  await SharedPart.save(firmId, sharedPart.data);
+  const saved = await SharedPart.save(firmId, sharedPart.data);
+  if (saved) {
+    consola.success(`Shared part "${sharedPart.data.name}" imported`);
+  }
 }
 
 async function fetchAllSharedParts(firmId, page = 1) {
@@ -760,6 +785,7 @@ module.exports = {
   publishAllExportFiles,
   newExportFile,
   newAllExportFiles,
+  fetchAccountTemplate,
   fetchAccountTemplateByName,
   fetchAccountTemplateById,
   fetchAllAccountTemplates,

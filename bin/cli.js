@@ -228,7 +228,7 @@ program
     }
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     if (options.name) {
-      toolkit.fetchAccountTemplateByName(options.firm, options.name);
+      toolkit.fetchAccountTemplate(options.firm, options.name);
     } else if (options.id) {
       toolkit.fetchAccountTemplateById(options.firm, options.id);
     } else if (options.all) {
