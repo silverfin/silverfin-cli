@@ -330,6 +330,7 @@ async function publishAccountTemplateByName(
     let templateId = templateConfig.id[firmId];
     consola.debug(`Updating account template ${name}...`);
     const template = await AccountTemplate.read(name);
+    if (!template) return;
     template.version_comment = message;
     const response = await SF.updateAccountTemplate(
       firmId,
@@ -369,6 +370,7 @@ async function newAccountTemplate(firmId, name) {
       return;
     }
     const template = await AccountTemplate.read(name);
+    if (!template) return;
     template.version_comment = "Created through the API";
     const response = await SF.createAccountTemplate(firmId, template);
     const handle = response.data.name_nl;
