@@ -417,6 +417,7 @@ async function fetchSharedPartByName(firmId, name) {
   const sharedPartByName = await SF.findSharedPartByName(firmId, name);
   if (!sharedPartByName) {
     consola.error(`Shared part "${name}" wasn't found.`);
+    process.exit(1);
   }
   return fetchSharedPartById(firmId, sharedPartByName.id);
 }
