@@ -9,41 +9,49 @@ const { ExportFile } = require("./lib/templates/exportFile");
 const { AccountTemplate } = require("./lib/templates/accountTemplate");
 const { consola } = require("consola");
 
-async function fetchReconciliation(firmId, handle) {
-  const configPresent = fsUtils.configExists("reconciliationText", handle);
-  let templateConfig;
-  if (configPresent) {
-    templateConfig = fsUtils.readConfig("reconciliationText", handle);
-  }
-  if (templateConfig?.id[firmId]) {
-    await fetchReconciliationById(firmId, templateConfig.id[firmId]);
-  } else {
-    await fetchReconciliationByHandle(firmId, handle);
-  }
-}
-
-async function fetchReconciliationByHandle(firmId, handle) {
-  const template = await SF.findReconciliationTextByHandle(firmId, handle);
-  if (!template) {
-    consola.error(`Reconciliation "${handle}" wasn't found`);
-    process.exit(1);
-  }
-  const saved = ReconciliationText.save(firmId, template);
-  if (saved) {
-    consola.success(`Reconciliation "${handle}" imported`);
-  }
-}
-
-async function fetchReconciliationById(firmId, id) {
-  const template = await SF.readReconciliationTextById(firmId, id);
+async function fetchReconciliationById(type, envId, id) {
+  const template = await SF.readReconciliationTextById(type, envId, id);
   if (!template || !template.data) {
     consola.error(`Reconciliation with id ${id} wasn't found`);
     process.exit(1);
   }
-  const saved = ReconciliationText.save(firmId, template.data);
-  if (saved) {
-    consola.success(`Reconciliation "${template.data.handle}" imported`);
+
+  ReconciliationText.save(type, envId, template.data);
+  consola.success(
+    `Reconciliation "${template.data.handle}" imported from ${type} ${envId}`
+  );
+
+  return {
+    type,
+    envId,
+    template,
+  };
+}
+
+async function fetchReconciliationByHandle(type, envId, handle) {
+  const templateConfig = fsUtils.readConfig("reconciliationText", handle);
+  let id =
+    type == "firm" ? templateConfig.id[envId] : templateConfig.partnerId[envId];
+  let existingTemplate;
+
+  if (!id) {
+    existingTemplate = await SF.findReconciliationTextByHandle(
+      type,
+      envId,
+      handle
+    );
+
+    if (!existingTemplate) {
+      consola.error(
+        `Reconciliation not found inside the reconciliation_texts folder or in the ${type} ${envId}. Please run create-reconciliation if you still need to create it.`
+      );
+      process.exit(1);
+    } else {
+      id = existingTemplate.id;
+    }
   }
+
+  fetchReconciliationById(type, envId, id);
 }
 
 async function fetchAllReconciliations(firmId, page = 1) {
@@ -898,7 +906,6 @@ async function updateFirmName(firmId) {
 }
 
 module.exports = {
-  fetchReconciliation,
   fetchReconciliationByHandle,
   fetchReconciliationById,
   fetchAllReconciliations,

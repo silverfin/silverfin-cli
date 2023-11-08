@@ -31,12 +31,12 @@ program.on("option:verbose", () => {
 program
   .command("import-reconciliation")
   .description("Import reconciliation templates")
-  .requiredOption(
-    "-f, --firm <firm-id>",
-    "Specify the firm to be used",
-    firmIdDefault
+  .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
+  .option("-p, --partner <partner-id>", "Specify the partner to be used")
+  .option(
+    "-h, --handle <handle>",
+    "Import a specific firm reconciliation by handle"
   )
-  .option("-h, --handle <handle>", "Import a specific reconciliation by handle")
   .option("-i, --id <id>", "Import a specific reconciliation by id")
   .option("-a, --all", "Import all reconciliations")
   .option(
@@ -44,16 +44,31 @@ program
     "Import all reconciliations (already stored in the repository)"
   )
   .option("--yes", "Skip the prompt confirmation (optional)")
-  .action((options) => {
+  .action(async (options) => {
     cliUtils.checkUniqueOption(["handle", "id", "all", "existing"], options);
+    cliUtils.checkRequiredFirmOrPartner(options, ["handle", "id", "all"]);
+    const settings = cliUtils.getCommandSettings(options);
+
     if (!options.yes) {
       cliUtils.promptConfirmation();
     }
-    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
+
+    if (settings.type == "firm") {
+      cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
+    }
+
     if (options.handle) {
-      toolkit.fetchReconciliation(options.firm, options.handle);
+      toolkit.fetchReconciliationByHandle(
+        settings.type,
+        settings.envId,
+        options.handle
+      );
     } else if (options.id) {
-      toolkit.fetchReconciliationById(options.firm, options.id);
+      toolkit.fetchReconciliationById(
+        settings.type,
+        settings.envId,
+        options.id
+      );
     } else if (options.all) {
       toolkit.fetchAllReconciliations(options.firm);
     } else if (options.existing) {
@@ -107,6 +122,7 @@ program
     "Specify the firm to be used",
     firmIdDefault
   )
+
   .option(
     "-h, --handle <handle>",
     "Specify the handle of the reconciliation text to be created"
@@ -666,8 +682,8 @@ program
   .action((options) => {
     const stored = firmCredentials.storePartnerApiKey(
       options.partnerId,
-      options.partnerName,
-      options.apiKey
+      options.apiKey,
+      options.partnerName
     );
 
     if (stored) {
@@ -714,7 +730,7 @@ program
       "Get a new partner api key using the stored api key"
     )
   )
-  .action((options) => {
+  .action(async (options) => {
     cliUtils.checkUniqueOption(
       [
         "setFirm",
@@ -750,7 +766,7 @@ program
 
       const partners = firmCredentials.listAuthorizedPartners();
       if (partners.length > 0) {
-        console.log("\n");
+        consola.log("\n");
         consola.info("List of authorized partners");
         partners.forEach((element) =>
           consola.log(
@@ -765,10 +781,27 @@ program
     }
     if (options.refreshToken) {
       cliUtils.checkDefaultFirm(options.refreshToken, firmIdDefault);
-      SF.refreshTokens(options.refreshToken);
+      const refreshedTokens = await SF.refreshTokens(
+        "firm",
+        options.refreshToken
+      );
+
+      if (refreshedTokens) {
+        consola.success(
+          `Tokens refreshed for firm ID: ${options.refreshToken}`
+        );
+      }
     }
     if (options.refreshPartnerToken) {
-      SF.refreshPartnerToken(options.refreshPartnerToken);
+      const refreshedTokens = await SF.refreshPartnerToken(
+        options.refreshPartnerToken
+      );
+
+      if (refreshedTokens && refreshedTokens.partnerId) {
+        consola.success(
+          `Partner API key refreshed for partner ID: ${refreshedTokens.partnerId}`
+        );
+      }
     }
   });
 
