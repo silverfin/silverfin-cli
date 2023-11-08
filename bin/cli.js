@@ -120,6 +120,7 @@ program
     "Specify the firm to be used",
     firmIdDefault
   )
+
   .option(
     "-h, --handle <handle>",
     "Specify the handle of the reconciliation text to be created"
@@ -822,7 +823,15 @@ program
       }
     }
     if (options.refreshPartnerToken) {
-      SF.refreshPartnerToken(options.refreshPartnerToken);
+      const refreshedTokens = await SF.refreshPartnerToken(
+        options.refreshPartnerToken
+      );
+
+      if (refreshedTokens && refreshedTokens.partnerId) {
+        consola.success(
+          `Partner API key refreshed for partner ID: ${refreshedTokens.partnerId}`
+        );
+      }
     }
   });
 
