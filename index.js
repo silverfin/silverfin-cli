@@ -758,7 +758,8 @@ async function getAllTemplatesId(firmId, type) {
     let templates = fsUtils.getAllTemplatesOfAType(type);
     for (let templateName of templates) {
       let configTemplate = fsUtils.readConfig(type, templateName);
-      let handle = configTemplate.handle || configTemplate.name;
+      let handle =
+        configTemplate.handle || configTemplate.name || configTemplate.name_nl;
       if (!handle) {
         continue;
       }

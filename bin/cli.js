@@ -686,7 +686,6 @@ program
     }
   });
 
-// Get all the IDs of existing reconciliations
 program
   .command("get-reconciliation-id")
   .description("Fetch the ID of the reconciliation from Silverfin")
@@ -711,7 +710,6 @@ program
     }
   });
 
-// Get all the IDs of existing export files
 program
   .command("get-export-file-id")
   .description("Fetch the ID of an export file from Silverfin")
@@ -736,7 +734,30 @@ program
     }
   });
 
-// Get all the IDs of existing shared parts
+program
+  .command("get-account-template-id")
+  .description("Fetch the ID of an account template from Silverfin")
+  .requiredOption(
+    "-f, --firm <firm-id>",
+    "Specify the firm to be used",
+    firmIdDefault
+  )
+  .option("-n, --name <name>", "Fetch the account template ID by name")
+  .option("-a, --all", "Fetch the ID for every account template")
+  .option("--yes", "Skip the prompt confirmation (optional)")
+  .action((options) => {
+    cliUtils.checkUniqueOption(["name", "all"], options);
+    if (!options.yes) {
+      cliUtils.promptConfirmation();
+    }
+    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
+    if (options.name) {
+      toolkit.getTemplateId(options.firm, "accountTemplate", options.name);
+    } else if (options.all) {
+      toolkit.getAllTemplatesId(options.firm, "accountTemplate");
+    }
+  });
+
 program
   .command("get-shared-part-id")
   .description("Fetch the ID of a shared part from Silverfin")
