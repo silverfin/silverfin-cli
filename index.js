@@ -65,6 +65,10 @@ async function publishReconciliationByHandle(
   message = "Updated through the API"
 ) {
   try {
+    const configPresent = fsUtils.configExists("reconciliationText", handle);
+    if (!configPresent) {
+      errorUtils.missingReconciliationId(handle);
+    }
     const templateConfig = fsUtils.readConfig("reconciliationText", handle);
     if (!templateConfig || !templateConfig.id[firmId]) {
       errorUtils.missingReconciliationId(handle);
@@ -189,6 +193,10 @@ async function publishExportFileByName(
   message = "Updated through the API"
 ) {
   try {
+    const configPresent = fsUtils.configExists("exportFile", name);
+    if (!configPresent) {
+      errorUtils.missingExportFileId(name);
+    }
     const templateConfig = fsUtils.readConfig("exportFile", name);
     if (!templateConfig || !templateConfig.id[firmId]) {
       errorUtils.missingExportFileId(name);
@@ -311,6 +319,10 @@ async function publishAccountTemplateByName(
   message = "Updated through the API"
 ) {
   try {
+    const configPresent = fsUtils.configExists("accountTemplate", name);
+    if (!configPresent) {
+      errorUtils.missingAccountTemplateId(name);
+    }
     const templateConfig = fsUtils.readConfig("accountTemplate", name);
     if (!templateConfig || !templateConfig.id[firmId]) {
       errorUtils.missingAccountTemplateId(name);
@@ -374,7 +386,7 @@ async function newAccountTemplate(firmId, name) {
 async function newAllAccountTemplates(firmId) {
   const templates = fsUtils.getAllTemplatesOfAType("accountTemplate");
   for (let name of templates) {
-    await newReconciliation(firmId, name);
+    await newAccountTemplate(firmId, name);
   }
 }
 
@@ -441,6 +453,10 @@ async function publishSharedPartByName(
   message = "Updated through the API"
 ) {
   try {
+    const configPresent = fsUtils.configExists("sharedPart", name);
+    if (!configPresent) {
+      errorUtils.missingSharedPartId(name);
+    }
     const templateConfig = fsUtils.readConfig("sharedPart", name);
     if (!templateConfig || !templateConfig.id[firmId]) {
       errorUtils.missingSharedPartId(name);
