@@ -2,15 +2,21 @@
 
 A command-line tool for Silverfin template development.
 
+## Why a CLI ?
+
+This CLI was conceived to enable the development of Silverfin templates externally, offering extra flexibility in our development flow and the option to leverage existing tools like repositories and custom pipelines. It is designed to work seamlessly with git, allowing you to store templates in repositories and interact with Silverfin using the CLI.
+
+Built on top of the [Silverfin Public API](https://developer.silverfin.com/reference/get-started-1), it has evolved beyond a standalone application to become part of the [Silverfin VS Code Extension](https://github.com/silverfin/silverfin-vscode). Additionally, it can be implemented in GitHub Actions for managing template updates ([example](https://github.com/silverfin/example_liquid_repository)).
+
 ## What can be used for ?
 
-- Create, read, update your templates from the command-line while storing them in git repositories (limited to Reconciliation templates at the moment).
+- Create, read, update your templates from the command-line while storing them in git repositories.
 - Run your Liquid Tests from the command-line.
 - Generate Liquid Tests from existing company files.
 
 ## Setup & Basic Usage
 
-### Prerequsites
+### Requirements
 
 #### API credentials
 
@@ -24,7 +30,11 @@ To make use of this CLI, you will need to have Node.js installed.
 You can check if you already have it by running `node --version`.
 If not you can download it from the [official website](https://nodejs.org/).
 
-### Install the CLI
+#### Git
+
+As mentioned before, it is recommended to be used together with git. [Official website](https://git-scm.com/downloads)
+
+### CLI Installation
 
 It is recommended to install the CLI globally by doing:
 
@@ -49,10 +59,11 @@ In case you need to use a different host, you can also set it up as an environme
 export SF_HOST=...
 ```
 
-## Important considerations
+## Important considerations and assumptions that we adder to
 
-- Reconciliation handles should be unique, since we identify the correct reconciliation based on these handles when there is no reference to the corresponding ID. The only case where duplicate handles are supported in a single firm, are reconciliations that are added from a marketplace reconciliation (so you could have one custom reconciliation and one from the marketplace using the same handle, the CLI will skip the one from the marketplace and try to identify the custom one).
-- Be sure to have enabled the "Dutch" locale in the firm's 'Advanced' settings. This is because the NL language is mandatory while interacting with templates (e.g. while creating them). If you are not using the NL locale, you could populate this field `name_nl` with your default language or English.
+## Advanced Settings
+
+Be sure to have enabled the "Dutch" locale in the firm's 'Advanced' settings. This is because the NL language is mandatory while interacting with templates (e.g. while creating them). If you are not using the NL locale, you could populate this field `name_nl` with your default language or English.
 
 ## Project structure conventions
 
@@ -78,15 +89,35 @@ The CLI will stick to some conventions regarding the structure and organization 
         /[name]
             [name].liquid
             config.json
+    /export_files
+        /[name]
+            main.liquid
+            config.json
+            /text_parts
+                part_1.liquid
+                part_2.liquid
+    /account_templates
+        /[name_nl]
+            main.liquid
+            config.json
+            /text_parts
+                part_1.liquid
+                part_2.liquid
+            /tests
+                README.md
+                [name_nl]_liquid_test.yml
 ```
 
 ### Naming conventions
 
-- As you can see in the previous diagram, we use `handle` for Reconciliations and `name` for Shared Parts as their identifiers. You should keep them unique since they will be used to name the directories, liquid files and yaml files.
-- The principal file of a reconciliation is always named `main.liquid` while every part is stored inside `/text_parts`.
+- As you can see in the previous diagram, we use `handle` for Reconciliation Texts, `name` for Shared Parts and Export Files and `name_nl` for Account Templates as their identifiers. We _strongly recommend to keep them unique_ since they will be used to name the directories, liquid files and yaml files and also to identify templates while running each of the commands. The only case where duplicate handles are supported in a single firm, are templates that are added from a marketplace package (so you could have one custom reconciliation text and one from the marketplace using the same handle, the CLI will skip the one from the marketplace and try to identify the custom one).
+- The principal file of a Reconciliation Text, Export File or Account Template is always named `main.liquid` while every part is stored inside `/text_parts`.
 - For shared parts, since there is only one liquid file, we use the `name` property to give the name to the liquid file.
-- Both reconciliations and shared parts always have a `config.json` file, where all the details of the template are stored.
-- Reconciliations can stored Liquid Tests inside `/test`. You could store here multiple YAML files if needed, but only one will be used by the CLI to run the tests, and it's the one that follows the naming convetion shown in the previous diagram (`[handle]_liquid_test.yml`). Note as well that we stick to using `.yml` instead of `.yaml`
+- All templates always have a `config.json` file, where all the details of the template are stored.
+
+### Test files
+
+- Reconciliation Texts and Account Templates can stored Liquid Tests inside `/test`. You could store here multiple YAML files if needed, but only one will be used by the CLI to run the tests, and it's the one that follows the naming convetion shown in the previous diagram (`[handle]_liquid_test.yml` for Reconciliation Texts ot `[name_nl]_liquid_test.yml for Account Templates`). Note as well that we stick to using `.yml` instead of `.yaml`
 
 ## How to use it ?
 
@@ -94,7 +125,7 @@ By installing the CLI globally, you will be able to run it simply with the comma
 
 ### Help
 
-The only command that you really need to know. It will provide you with a list of all the available commands.
+The only command that you really need to know, since it will provide you with a list of all the available commands.
 
 ```bash
 silverfin --help
@@ -165,9 +196,9 @@ silverfin import-shared-part --shared-part <handle>
 silverfin update-shared-part --shared-part <handle>
 ```
 
-### Adding a shared part to a reconciliation
+### Adding a shared part to a template
 
-When you `include` a shared part in one of your reconciliations, you need to add it to create their link. You can add a shared part to a reconciliation using the following command:
+When you `include` a shared part in one of your templates, for example a reconciliation text, you need to add it to create their link. You can add a shared part to a reconciliation text using the following command:
 
 ```bash
 silverfin add-shared-part --handle <handle> --shared-part <handle>
@@ -178,6 +209,8 @@ You can also remove it using the following command if it's no longer needed:
 ```bash
 silverfin remove-shared-part --handle <handle> --shared-part <handle>
 ```
+
+It is important to not interact directly with `config.json` to do so, and only add or remove shared parts using the CLI. The CLI won't be able to identify those changes manually done to config files, so the relationship between them won't be updated in the Platform as desired.
 
 ### Run Liquid Tests
 
