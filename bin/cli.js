@@ -208,6 +208,98 @@ program
     }
   });
 
+// READ account template
+program
+  .command("import-account-template")
+  .description("Import account templates")
+  .requiredOption(
+    "-f, --firm <firm-id>",
+    "Specify the firm to be used",
+    firmIdDefault
+  )
+  .option("-n, --name <name>", "Import a specific account template by name")
+  .option("-i, --id <id>", "Import a specific account template by id")
+  .option("-a, --all", "Import all existing account templates")
+  .option("--yes", "Skip the prompt confirmation (optional)")
+  .action((options) => {
+    cliUtils.checkUniqueOption(["name", "id", "all"], options);
+    if (!options.yes) {
+      cliUtils.promptConfirmation();
+    }
+    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
+    if (options.name) {
+      toolkit.fetchAccountTemplate(options.firm, options.name);
+    } else if (options.id) {
+      toolkit.fetchAccountTemplateById(options.firm, options.id);
+    } else if (options.all) {
+      toolkit.fetchAllAccountTemplates(options.firm);
+    }
+  });
+
+// UPDATE account template
+program
+  .command("update-account-template")
+  .description("Update an existing account template")
+  .requiredOption(
+    "-f, --firm <firm-id>",
+    "Specify the firm to be used",
+    firmIdDefault
+  )
+  .option(
+    "-n, --name <name>",
+    "Specify the account template to be used (mandatory)"
+  )
+  .option("-a, --all", "Update all account templates")
+  .option(
+    "-m, --message <message>",
+    "Add a message to Silverfin's changelog (optional)",
+    undefined
+  )
+  .option("--yes", "Skip the prompt confirmation (optional)")
+  .action((options) => {
+    cliUtils.checkUniqueOption(["name", "all"], options);
+    if (!options.yes) {
+      cliUtils.promptConfirmation();
+    }
+    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
+    if (options.name) {
+      toolkit.publishAccountTemplateByName(
+        options.firm,
+        options.name,
+        options.message
+      );
+    } else if (options.all) {
+      toolkit.publishAllAccountTemplates(options.firm, options.message);
+    }
+  });
+
+// CREATE account template
+program
+  .command("create-account-template")
+  .description("Create a new account template")
+  .requiredOption(
+    "-f, --firm <firm-id>",
+    "Specify the firm to be used",
+    firmIdDefault
+  )
+  .option(
+    "-n, --name <name>",
+    "Specify the name of the account template to be created"
+  )
+  .option(
+    "-a, --all",
+    "Try to create all account templates stored in the repository"
+  )
+  .action((options) => {
+    cliUtils.checkUniqueOption(["name", "all"], options);
+    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
+    if (options.name) {
+      toolkit.newAccountTemplate(options.firm, options.name);
+    } else if (options.all) {
+      toolkit.newAllAccountTemplates(options.firm, options.name);
+    }
+  });
+
 // READ shared part
 program
   .command("import-shared-part")
@@ -319,6 +411,10 @@ program
     `Specify the export file that needs to be updated (used together with "--shared-part")`
   )
   .option(
+    "-at, --account-template <name>",
+    `Specify the account template that needs to be updated (used together with "--shared-part")`
+  )
+  .option(
     "-a, --all",
     "Add all shared parts to all templates (based on the config file of shared parts and the handles assigned there to each template)"
   )
@@ -330,9 +426,15 @@ program
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     cliUtils.checkUniqueOption(["sharedPart", "all"], options);
     if (options.sharedPart) {
-      cliUtils.checkUniqueOption(["handle", "exportFile"], options);
+      cliUtils.checkUniqueOption(
+        ["handle", "exportFile", "accountTemplate"],
+        options
+      );
     } else {
-      cliUtils.checkUniqueOption(["handle", "exportFile", "all"], options);
+      cliUtils.checkUniqueOption(
+        ["handle", "exportFile", "accountTemplate", "all"],
+        options
+      );
     }
     if (options.handle) {
       toolkit.addSharedPart(
@@ -347,6 +449,13 @@ program
         options.sharedPart,
         options.exportFile,
         "exportFile"
+      );
+    } else if (options.accountTemplate) {
+      toolkit.addSharedPart(
+        options.firm,
+        options.sharedPart,
+        options.accountTemplate,
+        "accountTemplate"
       );
     } else if (options.all) {
       toolkit.addAllSharedParts(options.firm);
@@ -374,13 +483,20 @@ program
     "-e, --export-file <name>",
     `Specify the export file that needs to be updated (used together with "--shared-part")`
   )
+  .option(
+    "-at, --account-template <name>",
+    `Specify the account template that needs to be updated (used together with "--shared-part")`
+  )
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     if (!options.yes) {
       cliUtils.promptConfirmation();
     }
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
-    cliUtils.checkUniqueOption(["handle", "exportFile"], options);
+    cliUtils.checkUniqueOption(
+      ["handle", "exportFile", "accountTemplate"],
+      options
+    );
     if (options.handle) {
       toolkit.removeSharedPart(
         options.firm,
@@ -394,6 +510,13 @@ program
         options.sharedPart,
         options.exportFile,
         "exportFile"
+      );
+    } else if (options.accountTemplate) {
+      toolkit.removeSharedPart(
+        options.firm,
+        options.sharedPart,
+        options.accountTemplate,
+        "accountTemplate"
       );
     }
   });
@@ -563,7 +686,6 @@ program
     }
   });
 
-// Get all the IDs of existing reconciliations
 program
   .command("get-reconciliation-id")
   .description("Fetch the ID of the reconciliation from Silverfin")
@@ -588,7 +710,6 @@ program
     }
   });
 
-// Get all the IDs of existing export files
 program
   .command("get-export-file-id")
   .description("Fetch the ID of an export file from Silverfin")
@@ -613,7 +734,30 @@ program
     }
   });
 
-// Get all the IDs of existing shared parts
+program
+  .command("get-account-template-id")
+  .description("Fetch the ID of an account template from Silverfin")
+  .requiredOption(
+    "-f, --firm <firm-id>",
+    "Specify the firm to be used",
+    firmIdDefault
+  )
+  .option("-n, --name <name>", "Fetch the account template ID by name")
+  .option("-a, --all", "Fetch the ID for every account template")
+  .option("--yes", "Skip the prompt confirmation (optional)")
+  .action((options) => {
+    cliUtils.checkUniqueOption(["name", "all"], options);
+    if (!options.yes) {
+      cliUtils.promptConfirmation();
+    }
+    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
+    if (options.name) {
+      toolkit.getTemplateId(options.firm, "accountTemplate", options.name);
+    } else if (options.all) {
+      toolkit.getAllTemplatesId(options.firm, "accountTemplate");
+    }
+  });
+
 program
   .command("get-shared-part-id")
   .description("Fetch the ID of a shared part from Silverfin")
