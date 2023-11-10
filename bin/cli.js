@@ -80,11 +80,8 @@ program
 program
   .command("update-reconciliation")
   .description("Update an existing reconciliation template")
-  .requiredOption(
-    "-f, --firm <firm-id>",
-    "Specify the firm to be used",
-    firmIdDefault
-  )
+  .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
+  .option("-p, --partner <partner-id>", "Specify the partner to be used")
   .option(
     "-h, --handle <handle>",
     "Specify the reconcilation to be used (mandatory)"
@@ -98,18 +95,29 @@ program
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     cliUtils.checkUniqueOption(["handle", "all"], options);
+    cliUtils.checkRequiredFirmOrPartner(options, ["handle", "all"]);
+    const settings = cliUtils.getCommandSettings(options);
     if (!options.yes) {
       cliUtils.promptConfirmation();
     }
-    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
+
+    if (settings.type == "firm") {
+      cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
+    }
+
     if (options.handle) {
       toolkit.publishReconciliationByHandle(
-        options.firm,
+        settings.type,
+        settings.envId,
         options.handle,
         options.message
       );
     } else if (options.all) {
-      toolkit.publishAllReconciliations(options.firm, options.message);
+      toolkit.publishAllReconciliations(
+        settings.type,
+        settings.envId,
+        options.message
+      );
     }
   });
 
@@ -122,7 +130,6 @@ program
     "Specify the firm to be used",
     firmIdDefault
   )
-
   .option(
     "-h, --handle <handle>",
     "Specify the handle of the reconciliation text to be created"
@@ -808,24 +815,37 @@ program
 program
   .command("get-reconciliation-id")
   .description("Fetch the ID of the reconciliation from Silverfin")
-  .requiredOption(
-    "-f, --firm <firm-id>",
-    "Specify the firm to be used",
-    firmIdDefault
-  )
+  .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
+  .option("-p, --partner <partner-id>", "Specify the partner to be used")
   .option("-h, --handle <handle>", "Fetch the reconciliation ID by handle")
   .option("-a, --all", "Fetch the ID for every reconciliation")
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     cliUtils.checkUniqueOption(["handle", "all"], options);
+    cliUtils.checkRequiredFirmOrPartner(options, ["handle", "all"]);
+    const settings = cliUtils.getCommandSettings(options);
+
     if (!options.yes) {
       cliUtils.promptConfirmation();
     }
-    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
+
+    if (settings.type == "firm") {
+      cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
+    }
+
     if (options.handle) {
-      toolkit.getTemplateId(options.firm, "reconciliationText", options.handle);
+      toolkit.getTemplateId(
+        settings.type,
+        settings.envId,
+        "reconciliationText",
+        options.handle
+      );
     } else if (options.all) {
-      toolkit.getAllTemplatesId(options.firm, "reconciliationText");
+      toolkit.getAllTemplatesId(
+        settings.type,
+        settings.envId,
+        "reconciliationText"
+      );
     }
   });
 

@@ -30,6 +30,11 @@ async function fetchReconciliationById(type, envId, id) {
 
 async function fetchReconciliationByHandle(type, envId, handle) {
   const templateConfig = fsUtils.readConfig("reconciliationText", handle);
+
+  if (!templateConfig) {
+    errorUtils.missingConfig(handle);
+  }
+
   let id =
     type == "firm" ? templateConfig.id[envId] : templateConfig.partnerId[envId];
   let existingTemplate;
@@ -82,28 +87,46 @@ async function fetchExistingReconciliations(firmId) {
 }
 
 async function publishReconciliationByHandle(
-  firmId,
+  type,
+  envId,
   handle,
-  message = "Updated through the API"
+  message = "Updated with the Silverfin CLI"
 ) {
   try {
     const configPresent = fsUtils.configExists("reconciliationText", handle);
+
     if (!configPresent) {
       errorUtils.missingReconciliationId(handle);
       return false;
     }
+
     const templateConfig = fsUtils.readConfig("reconciliationText", handle);
-    if (!templateConfig || !templateConfig.id[firmId]) {
+
+    let templateId =
+      type == "firm"
+        ? templateConfig?.id?.[envId]
+        : templateConfig?.partnerId?.[envId];
+
+    if (!templateId) {
       errorUtils.missingReconciliationId(handle);
       return false;
     }
-    let templateId = templateConfig.id[firmId];
+
     consola.debug(`Updating reconciliation ${handle}...`);
+
     const template = await ReconciliationText.read(handle);
     if (!template) return;
+
+    // Add API-only required fields
     template.version_comment = message;
+
+    if (type == "partner") {
+      template.version_significant_change = false;
+    }
+
     const response = await SF.updateReconciliationText(
-      firmId,
+      type,
+      envId,
       templateId,
       template
     );
@@ -133,6 +156,7 @@ async function publishAllReconciliations(
 async function newReconciliation(firmId, handle) {
   try {
     const existingTemplate = await SF.findReconciliationTextByHandle(
+      "firm",
       firmId,
       handle
     );
@@ -144,8 +168,12 @@ async function newReconciliation(firmId, handle) {
     }
     const template = await ReconciliationText.read(handle);
     if (!template) return;
-    template.version_comment = "Created through the API";
-    const response = await SF.createReconciliationText(firmId, template);
+    template.version_comment = "Created with the Silverfin CLI";
+    const response = await SF.createReconciliationText(
+      "firm",
+      firmId,
+      template
+    );
 
     // Store new id
     if (response && response.status == 201) {
@@ -837,34 +865,52 @@ async function removeSharedPart(
 
 // Look for the template in Silverfin with the handle/name and get it's ID
 // Type has to be either "reconciliationText", "exportFile". "accountTemplate" or "sharedPart"
-async function getTemplateId(firmId, type, handle) {
+async function getTemplateId(type, envId, templateType, handle) {
   consola.debug(`Getting ID for ${handle}...`);
   let templateText;
-  switch (type) {
+  switch (templateType) {
     case "reconciliationText":
-      templateText = await SF.findReconciliationTextByHandle(firmId, handle);
+      templateText = await SF.findReconciliationTextByHandle(
+        type,
+        envId,
+        handle
+      );
       break;
     case "exportFile":
-      templateText = await SF.findExportFileByName(firmId, handle);
+      templateText = await SF.findExportFileByName(type, envId, handle);
       break;
     case "sharedPart":
-      templateText = await SF.findSharedPartByName(firmId, handle);
+      templateText = await SF.findSharedPartByName(type, envId, handle);
       break;
     case "accountTemplate":
-      templateText = await SF.findAccountTemplateByName(firmId, handle);
+      templateText = await SF.findAccountTemplateByName(type, envId, handle);
       break;
   }
+
   if (!templateText) {
     consola.warn(`Template ${handle} wasn't found (${type})`);
     return false;
   }
-  const config = fsUtils.readConfig(type, handle);
+  const config = fsUtils.readConfig(templateType, handle);
+
   if (typeof config.id !== "object") {
     config.id = {};
   }
-  config.id[firmId] = templateText.id;
-  fsUtils.writeConfig(type, handle, config);
-  consola.success(`Template ${handle}: ID updated (${type})`);
+
+  if (typeof config.partnerId !== "object") {
+    config.partnerId = {};
+  }
+
+  if (type == "firm") {
+    config.id[envId] = templateText.id;
+  } else {
+    config.partnerId[envId] = templateText.id;
+  }
+
+  fsUtils.writeConfig(templateType, handle, config);
+  consola.success(
+    `Template ${handle}: ID updated from ${type} (${templateType})`
+  );
   return true;
 }
 
@@ -873,17 +919,17 @@ async function getTemplateId(firmId, type, handle) {
  * @param {Number} firmId
  * @param {String} type Options: `reconciliationText`, `accountTemplate`, `exportFile` or `sharedPart`
  */
-async function getAllTemplatesId(firmId, type) {
+async function getAllTemplatesId(type, envId, templateType) {
   try {
-    let templates = fsUtils.getAllTemplatesOfAType(type);
+    let templates = fsUtils.getAllTemplatesOfAType(templateType);
     for (let templateName of templates) {
-      let configTemplate = fsUtils.readConfig(type, templateName);
+      let configTemplate = fsUtils.readConfig(templateType, templateName);
       let handle =
         configTemplate.handle || configTemplate.name || configTemplate.name_nl;
       if (!handle) {
         continue;
       }
-      await getTemplateId(firmId, type, handle);
+      await getTemplateId(type, envId, templateType, handle);
     }
   } catch (error) {
     errorUtils.errorHandler(error);
