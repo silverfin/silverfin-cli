@@ -345,12 +345,10 @@ program
 program
   .command("import-shared-part")
   .description("Import an existing shared part")
-  .requiredOption(
-    "-f, --firm <firm-id>",
-    "Specify the firm to be used",
-    firmIdDefault
-  )
+  .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
+  .option("-p, --partner <partner-id>", "Specify the partner to be used")
   .option("-s, --shared-part <name>", "Import a specific shared part")
+  .option("-i, --id <id>", "Import a specific shared part by id")
   .option("-a, --all", "Import all shared parts")
   .option(
     "-e, --existing",
@@ -358,15 +356,36 @@ program
   )
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
-    cliUtils.checkUniqueOption(["sharedPart", "all", "existing"], options);
+    cliUtils.checkUniqueOption(
+      ["sharedPart", "id", "all", "existing"],
+      options
+    );
+    cliUtils.checkRequiredFirmOrPartner(options, [
+      "sharedPart",
+      "id",
+      "all",
+      "existing",
+    ]);
+    const settings = cliUtils.getCommandSettings(options);
+
     if (!options.yes) {
       cliUtils.promptConfirmation();
     }
-    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
+
+    if (settings.type == "firm") {
+      cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
+    }
+
     if (options.sharedPart) {
-      toolkit.fetchSharedPart(options.firm, options.sharedPart);
+      toolkit.fetchSharedPartByName(
+        settings.type,
+        settings.envId,
+        options.sharedPart
+      );
+    } else if (options.id) {
+      toolkit.fetchSharedPartById(settings.type, settings.envId, options.id);
     } else if (options.all) {
-      toolkit.fetchAllSharedParts(options.firm);
+      toolkit.fetchAllSharedParts(settings.type, settings.envId);
     } else if (options.existing) {
       toolkit.fetchExistingSharedParts(options.firm);
     }

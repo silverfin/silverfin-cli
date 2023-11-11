@@ -10,22 +10,27 @@ const { AccountTemplate } = require("./lib/templates/accountTemplate");
 const { consola } = require("consola");
 
 async function fetchReconciliationById(type, envId, id) {
-  const template = await SF.readReconciliationTextById(type, envId, id);
-  if (!template || !template.data) {
-    consola.error(`Reconciliation with id ${id} wasn't found`);
+  try {
+    const template = await SF.readReconciliationTextById(type, envId, id);
+    if (!template || !template.data) {
+      consola.error(`Reconciliation with id ${id} wasn't found`);
+      process.exit(1);
+    }
+
+    ReconciliationText.save(type, envId, template.data);
+    consola.success(
+      `Reconciliation "${template.data.handle}" imported from ${type} ${envId}`
+    );
+
+    return {
+      type,
+      envId,
+      template,
+    };
+  } catch (error) {
+    consola.error(error);
     process.exit(1);
   }
-
-  ReconciliationText.save(type, envId, template.data);
-  consola.success(
-    `Reconciliation "${template.data.handle}" imported from ${type} ${envId}`
-  );
-
-  return {
-    type,
-    envId,
-    template,
-  };
 }
 
 async function fetchReconciliationByHandle(type, envId, handle) {
@@ -476,51 +481,30 @@ async function newAllAccountTemplates(firmId) {
   }
 }
 
-async function fetchSharedPart(firmId, name) {
-  const configPresent = fsUtils.configExists("sharedPart", name);
-  let templateConfig;
-  if (configPresent) {
-    templateConfig = fsUtils.readConfig("sharedPart", name);
-  }
-  if (templateConfig?.id[firmId]) {
-    await fetchSharedPartById(firmId, templateConfig.id[firmId]);
-  } else {
-    await fetchSharedPartByName(firmId, name);
-  }
-}
-
-async function fetchSharedPartById(firmId, id) {
-  const template = await SF.readSharedPartById(firmId, id);
-  if (!template || !template.data) {
-    consola.error(`Shared part ${id} wasn't found.`);
+async function fetchSharedPartById(type, envId, sharedPartId) {
+  try {
+    const template = await SF.readSharedPartById(type, envId, sharedPartId);
+    if (!template || !template.data) {
+      consola.error(`Shared part ${sharedPartId} wasn't found.`);
+      process.exit(1);
+    }
+    await SharedPart.save(type, envId, template.data);
+    consola.success(`Shared part "${template.data.name}" imported`);
+    process.exit(0);
+  } catch (error) {
+    consola.error(error);
     process.exit(1);
   }
-  const saved = await SharedPart.save(firmId, template.data);
-  if (saved) {
-    consola.success(`Shared part "${template.data.name}" imported`);
-  }
 }
 
-async function fetchSharedPartByName(firmId, name) {
-  const sharedPartByName = await SF.findSharedPartByName(firmId, name);
+async function fetchSharedPartByName(type, envId, name) {
+  const sharedPartByName = await SF.findSharedPartByName(type, envId, name);
   if (!sharedPartByName) {
     consola.error(`Shared part "${name}" wasn't found.`);
     process.exit(1);
   }
-  return fetchSharedPartById(firmId, sharedPartByName.id);
-}
 
-async function fetchSharedPartById(firmId, id) {
-  const sharedPart = await SF.readSharedPartById(firmId, id);
-
-  if (!sharedPart) {
-    consola.error(`Shared part ${id} wasn't found.`);
-    process.exit(1);
-  }
-  const saved = await SharedPart.save(firmId, sharedPart.data);
-  if (saved) {
-    consola.success(`Shared part "${sharedPart.data.name}" imported`);
-  }
+  fetchSharedPartById(type, envId, sharedPartByName.id);
 }
 
 async function fetchAllSharedParts(firmId, page = 1) {
@@ -978,7 +962,6 @@ module.exports = {
   fetchExistingAccountTemplates,
   newAccountTemplate,
   newAllAccountTemplates,
-  fetchSharedPart,
   fetchSharedPartByName,
   fetchSharedPartById,
   fetchAllSharedParts,
