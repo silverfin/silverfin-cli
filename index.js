@@ -389,7 +389,6 @@ async function newAllExportFiles(type, firmId) {
 async function fetchAccountTemplateByName(type, envId, name) {
   try {
     const template = await SF.findAccountTemplateByName(type, envId, name);
-
     if (!template) {
       consola.error(`Account template "${name}" wasn't found`);
       process.exit(1);
