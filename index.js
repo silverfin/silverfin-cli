@@ -368,8 +368,8 @@ async function fetchAccountTemplateById(type, envId, id) {
   }
 }
 
-async function fetchAllAccountTemplates(firmId, page = 1) {
-  const templates = await SF.readAccountTemplates(firmId, page);
+async function fetchAllAccountTemplates(type, envId, page = 1) {
+  const templates = await SF.readAccountTemplates(type, envId, page);
   if (templates.length == 0) {
     if (page == 1) {
       consola.warn("No account templates found");
@@ -382,7 +382,7 @@ async function fetchAllAccountTemplates(firmId, page = 1) {
       consola.success(`Account template "${template?.name_nl}" imported`);
     }
   });
-  fetchAllAccountTemplates(firmId, page + 1);
+  fetchAllAccountTemplates(type, envId, page + 1);
 }
 
 async function fetchExistingAccountTemplates(firmId) {

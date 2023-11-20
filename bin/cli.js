@@ -276,7 +276,11 @@ program
     }
 
     if (options.name) {
-      toolkit.fetchAccountTemplateByName(settings.type, settings.envId, options.name);
+      toolkit.fetchAccountTemplateByName(
+        settings.type,
+        settings.envId,
+        options.name
+      );
     } else if (options.id) {
       toolkit.fetchAccountTemplateById(
         settings.type,
@@ -284,7 +288,7 @@ program
         options.id
       );
     } else if (options.all) {
-      toolkit.fetchAllAccountTemplates(options.firm);
+      toolkit.fetchAllAccountTemplates(settings.type, settings.envId);
     } else if (options.existing) {
       toolkit.fetchExistingAccountTemplates(options.firm);
     }
@@ -294,11 +298,8 @@ program
 program
   .command("update-account-template")
   .description("Update an existing account template")
-  .requiredOption(
-    "-f, --firm <firm-id>",
-    "Specify the firm to be used",
-    firmIdDefault
-  )
+  .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
+  .option("-p, --partner <partner-id>", "Specify the partner to be used")
   .option(
     "-n, --name <name>",
     "Specify the account template to be used (mandatory)"
@@ -312,10 +313,17 @@ program
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     cliUtils.checkUniqueOption(["name", "all"], options);
+    cliUtils.checkRequiredFirmOrPartner(options, ["name", "all"]);
+    const settings = cliUtils.getCommandSettings(options);
+
     if (!options.yes) {
       cliUtils.promptConfirmation();
     }
-    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
+
+    if (settings.type == "firm") {
+      cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
+    }
+
     if (options.name) {
       toolkit.publishAccountTemplateByName(
         options.firm,
