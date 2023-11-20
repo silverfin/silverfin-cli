@@ -276,7 +276,7 @@ program
     }
 
     if (options.name) {
-      toolkit.fetchAccountTemplate(settings.type, settings.envId, options.name);
+      toolkit.fetchAccountTemplateByName(settings.type, settings.envId, options.name);
     } else if (options.id) {
       toolkit.fetchAccountTemplateById(
         settings.type,

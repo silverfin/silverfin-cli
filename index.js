@@ -334,28 +334,18 @@ async function newAllExportFiles(firmId) {
   }
 }
 
-async function fetchAccountTemplate(firmId, name) {
-  const configPresent = fsUtils.configExists("accountTemplate", name);
-  let templateConfig;
-  if (configPresent) {
-    templateConfig = fsUtils.readConfig("accountTemplate", name);
-  }
-  if (templateConfig?.id[firmId]) {
-    await fetchAccountTemplateById(firmId, templateConfig.id[firmId]);
-  } else {
-    await fetchAccountTemplateByName(firmId, name);
-  }
-}
-
-async function fetchAccountTemplateByName(firmId, name) {
-  const template = await SF.findAccountTemplateByName(firmId, name);
-  if (!template) {
-    consola.error(`Account template "${name}" wasn't found`);
-    process.exit(1);
-  }
-  const saved = AccountTemplate.save(firmId, template);
-  if (saved) {
+async function fetchAccountTemplateByName(type, envId, name) {
+  try {
+    const template = await SF.findAccountTemplateByName(type, envId, name);
+    if (!template) {
+      consola.error(`Account template "${name}" wasn't found`);
+      process.exit(1);
+    }
+    AccountTemplate.save(type, envId, template);
     consola.success(`Account template "${template?.name_nl}" imported`);
+  } catch (error) {
+    consola.error(error);
+    process.exit(1);
   }
 }
 
@@ -368,10 +358,10 @@ async function fetchAccountTemplateById(type, envId, id) {
       process.exit(1);
     }
 
-  const saved = AccountTemplate.save(firmId, template);
-  if (saved) {
-    consola.success(`Account template "${template?.name_nl}" imported`);
-  } 
+    const saved = AccountTemplate.save(type, envId, template);
+    if (saved) {
+      consola.success(`Account template "${template?.name_nl}" imported`);
+    }
   } catch (error) {
     consola.error(error);
     process.exit(1);
@@ -958,7 +948,6 @@ module.exports = {
   publishAllExportFiles,
   newExportFile,
   newAllExportFiles,
-  fetchAccountTemplate,
   fetchAccountTemplateByName,
   fetchAccountTemplateById,
   fetchAllAccountTemplates,
