@@ -359,17 +359,22 @@ async function fetchAccountTemplateByName(firmId, name) {
   }
 }
 
-async function fetchAccountTemplateById(firmId, id) {
-  const template = await SF.readAccountTemplateById(firmId, id);
+async function fetchAccountTemplateById(type, envId, id) {
+  try {
+    const template = await SF.readAccountTemplateById(type, envId, id);
 
-  if (!template) {
-    consola.error(`Account template ${id} wasn't found`);
-    process.exit(1);
-  }
+    if (!template) {
+      consola.error(`Account template ${id} wasn't found`);
+      process.exit(1);
+    }
 
   const saved = AccountTemplate.save(firmId, template);
   if (saved) {
     consola.success(`Account template "${template?.name_nl}" imported`);
+  } 
+  } catch (error) {
+    consola.error(error);
+    process.exit(1);
   }
 }
 

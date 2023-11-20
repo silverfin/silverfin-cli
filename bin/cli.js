@@ -247,11 +247,8 @@ program
 program
   .command("import-account-template")
   .description("Import account templates")
-  .requiredOption(
-    "-f, --firm <firm-id>",
-    "Specify the firm to be used",
-    firmIdDefault
-  )
+  .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
+  .option("-p, --partner <partner-id>", "Specify the partner to be used")
   .option("-n, --name <name>", "Import a specific account template by name")
   .option("-i, --id <id>", "Import a specific account template by id")
   .option("-a, --all", "Import all existing account templates")
@@ -262,14 +259,30 @@ program
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     cliUtils.checkUniqueOption(["name", "id", "all", "existing"], options);
+    cliUtils.checkRequiredFirmOrPartner(options, [
+      "name",
+      "id",
+      "all",
+      "existing",
+    ]);
+    const settings = cliUtils.getCommandSettings(options);
+
     if (!options.yes) {
       cliUtils.promptConfirmation();
     }
-    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
+
+    if (settings.type == "firm") {
+      cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
+    }
+
     if (options.name) {
-      toolkit.fetchAccountTemplate(options.firm, options.name);
+      toolkit.fetchAccountTemplate(settings.type, settings.envId, options.name);
     } else if (options.id) {
-      toolkit.fetchAccountTemplateById(options.firm, options.id);
+      toolkit.fetchAccountTemplateById(
+        settings.type,
+        settings.envId,
+        options.id
+      );
     } else if (options.all) {
       toolkit.fetchAllAccountTemplates(options.firm);
     } else if (options.existing) {
