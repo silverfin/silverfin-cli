@@ -28,7 +28,7 @@ async function fetchReconciliationByHandle(firmId, handle) {
     consola.error(`Reconciliation "${handle}" wasn't found`);
     process.exit(1);
   }
-  const saved = ReconciliationText.save(firmId, template);
+  const saved = await ReconciliationText.save(firmId, template);
   if (saved) {
     consola.success(`Reconciliation "${handle}" imported`);
   }
@@ -40,7 +40,7 @@ async function fetchReconciliationById(firmId, id) {
     consola.error(`Reconciliation with id ${id} wasn't found`);
     process.exit(1);
   }
-  const saved = ReconciliationText.save(firmId, template.data);
+  const saved = await ReconciliationText.save(firmId, template.data);
   if (saved) {
     consola.success(`Reconciliation "${template.data.handle}" imported`);
   }
@@ -175,7 +175,7 @@ async function fetchExportFileByName(firmId, name) {
     consola.error(`Export file "${name}" wasn't found`);
     process.exit(1);
   }
-  const saved = ExportFile.save(firmId, template);
+  const saved = await ExportFile.save(firmId, template);
   if (saved) {
     consola.success(`Export file "${name}" imported`);
   }
@@ -187,7 +187,7 @@ async function fetchExportFileById(firmId, id) {
     consola.error(`Export file with id ${id} wasn't found`);
     process.exit(1);
   }
-  const saved = ExportFile.save(firmId, template);
+  const saved = await ExportFile.save(firmId, template);
   if (saved) {
     consola.success(`Export file "${template.name}" imported`);
   }
@@ -312,7 +312,7 @@ async function fetchAccountTemplateByName(firmId, name) {
     consola.error(`Account template "${name}" wasn't found`);
     process.exit(1);
   }
-  const saved = AccountTemplate.save(firmId, template);
+  const saved = await AccountTemplate.save(firmId, template);
   if (saved) {
     consola.success(`Account template "${template?.name_nl}" imported`);
   }
@@ -326,7 +326,7 @@ async function fetchAccountTemplateById(firmId, id) {
     process.exit(1);
   }
 
-  const saved = AccountTemplate.save(firmId, template);
+  const saved = await AccountTemplate.save(firmId, template);
   if (saved) {
     consola.success(`Account template "${template?.name_nl}" imported`);
   }
@@ -341,7 +341,7 @@ async function fetchAllAccountTemplates(firmId, page = 1) {
     return;
   }
   templates.forEach(async (template) => {
-    const saved = AccountTemplate.save(firmId, template);
+    const saved = await AccountTemplate.save(firmId, template);
     if (saved) {
       consola.success(`Account template "${template?.name_nl}" imported`);
     }
