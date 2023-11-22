@@ -14,6 +14,7 @@ const { firmCredentials } = require("../lib/api/firmCredentials");
 const SF = require("../lib/api/sfApi");
 const path = require("path");
 const { consola } = require("consola");
+const { runCommandChecks } = require("../lib/cli/utils");
 
 let firmIdDefault = cliUtils.loadDefaultFirmId();
 cliUtils.handleUncaughtErrors();
@@ -45,17 +46,11 @@ program
   )
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action(async (options) => {
-    cliUtils.checkUniqueOption(["handle", "id", "all", "existing"], options);
-    cliUtils.checkRequiredFirmOrPartner(options, ["handle", "id", "all"]);
-    const settings = cliUtils.getCommandSettings(options);
-
-    if (!options.yes) {
-      cliUtils.promptConfirmation();
-    }
-
-    if (settings.type == "firm") {
-      cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
-    }
+    const settings = runCommandChecks(
+      ["handle", "id", "all", "existing"],
+      options,
+      firmIdDefault
+    );
 
     if (options.handle) {
       toolkit.fetchReconciliationByHandle(
@@ -94,16 +89,11 @@ program
   )
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
-    cliUtils.checkUniqueOption(["handle", "all"], options);
-    cliUtils.checkRequiredFirmOrPartner(options, ["handle", "all"]);
-    const settings = cliUtils.getCommandSettings(options);
-    if (!options.yes) {
-      cliUtils.promptConfirmation();
-    }
-
-    if (settings.type == "firm") {
-      cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
-    }
+    const settings = runCommandChecks(
+      ["handle", "all"],
+      options,
+      firmIdDefault
+    );
 
     if (options.handle) {
       toolkit.publishReconciliationByHandle(
@@ -171,12 +161,22 @@ program
       cliUtils.promptConfirmation();
     }
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
+    const settings = runCommandChecks(
+      ["name", "id", "all", "existing"],
+      options,
+      firmIdDefault
+    );
+
     if (options.name) {
-      toolkit.fetchExportFile(options.firm, options.name);
+      toolkit.fetchExportFileByName(
+        settings.type,
+        settings.envId,
+        options.name
+      );
     } else if (options.id) {
-      toolkit.fetchExportFileById(options.firm, options.id);
+      toolkit.fetchExportFileById(settings.type, settings.envId, options.id);
     } else if (options.all) {
-      toolkit.fetchAllExportFiles(options.firm);
+      toolkit.fetchAllExportFiles(settings.type, settings.envId);
     } else if (options.all) {
       toolkit.fetchExistingExportFiles(options.firm);
     }
@@ -200,19 +200,21 @@ program
   )
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
-    cliUtils.checkUniqueOption(["name", "all"], options);
-    if (!options.yes) {
-      cliUtils.promptConfirmation();
-    }
-    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
+    const settings = runCommandChecks(["name", "all"], options, firmIdDefault);
+
     if (options.name) {
       toolkit.publishExportFileByName(
-        options.firm,
+        settings.type,
+        settings.envId,
         options.name,
         options.message
       );
     } else if (options.all) {
-      toolkit.publishAllExportFiles(options.firm, options.message);
+      toolkit.publishAllExportFiles(
+        settings.type,
+        settings.envId,
+        options.message
+      );
     }
   });
 
@@ -416,11 +418,8 @@ program
 program
   .command("update-shared-part")
   .description("Update an existing shared part")
-  .requiredOption(
-    "-f, --firm <firm-id>",
-    "Specify the firm to be used",
-    firmIdDefault
-  )
+  .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
+  .option("-p, --partner <partner-id>", "Specify the partner to be used")
   .option(
     "-s, --shared-part <name>",
     "Specify the shared part to be used (mandatory)"
@@ -434,18 +433,30 @@ program
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     cliUtils.checkUniqueOption(["sharedPart", "all"], options);
+    cliUtils.checkRequiredFirmOrPartner(options, ["sharedPart", "all"]);
+    const settings = cliUtils.getCommandSettings(options);
+
     if (!options.yes) {
       cliUtils.promptConfirmation();
     }
-    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
+
+    if (settings.type == "firm") {
+      cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
+    }
+
     if (options.sharedPart) {
       toolkit.publishSharedPartByName(
-        options.firm,
+        settings.type,
+        settings.envId,
         options.sharedPart,
         options.message
       );
     } else if (options.all) {
-      toolkit.publishAllSharedParts(options.firm, options.message);
+      toolkit.publishAllSharedParts(
+        settings.type,
+        settings.envId,
+        options.message
+      );
     }
   });
 
@@ -558,11 +569,8 @@ program
 program
   .command("remove-shared-part")
   .description("Remove an existing shared part from an existing template")
-  .requiredOption(
-    "-f, --firm <firm-id>",
-    "Specify the firm to be used",
-    firmIdDefault
-  )
+  .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
+  .option("-p, --partner <partner-id>", "Specify the partner to be used")
   .requiredOption(
     "-s, --shared-part <name>",
     `Specify the shared part to be removed (mandatory, used together with "--handle" or "--export-file")`
@@ -581,31 +589,32 @@ program
   )
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
-    if (!options.yes) {
-      cliUtils.promptConfirmation();
-    }
-    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
-    cliUtils.checkUniqueOption(
+    const settings = runCommandChecks(
       ["handle", "exportFile", "accountTemplate"],
-      options
+      options,
+      firmIdDefault
     );
+
     if (options.handle) {
       toolkit.removeSharedPart(
-        options.firm,
+        settings.type,
+        settings.envId,
         options.sharedPart,
         options.handle,
         "reconciliationText"
       );
     } else if (options.exportFile) {
       toolkit.removeSharedPart(
-        options.firm,
+        settings.type,
+        settings.envId,
         options.sharedPart,
         options.exportFile,
         "exportFile"
       );
     } else if (options.accountTemplate) {
       toolkit.removeSharedPart(
-        options.firm,
+        settings.type,
+        settings.envId,
         options.sharedPart,
         options.accountTemplate,
         "accountTemplate"
@@ -861,17 +870,11 @@ program
   .option("-a, --all", "Fetch the ID for every reconciliation")
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
-    cliUtils.checkUniqueOption(["handle", "all"], options);
-    cliUtils.checkRequiredFirmOrPartner(options, ["handle", "all"]);
-    const settings = cliUtils.getCommandSettings(options);
-
-    if (!options.yes) {
-      cliUtils.promptConfirmation();
-    }
-
-    if (settings.type == "firm") {
-      cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
-    }
+    const settings = runCommandChecks(
+      ["handle", "all"],
+      options,
+      firmIdDefault
+    );
 
     if (options.handle) {
       toolkit.getTemplateId(
@@ -892,72 +895,77 @@ program
 program
   .command("get-export-file-id")
   .description("Fetch the ID of an export file from Silverfin")
-  .requiredOption(
-    "-f, --firm <firm-id>",
-    "Specify the firm to be used",
-    firmIdDefault
-  )
+  .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
+  .option("-p, --partner <partner-id>", "Specify the partner to be used")
   .option("-n, --name <name>", "Fetch the export file ID by name")
   .option("-a, --all", "Fetch the ID for every export file")
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
-    cliUtils.checkUniqueOption(["name", "all"], options);
-    if (!options.yes) {
-      cliUtils.promptConfirmation();
-    }
-    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
+    const settings = runCommandChecks(["name", "all"], options, firmIdDefault);
+
     if (options.name) {
-      toolkit.getTemplateId(options.firm, "exportFile", options.name);
+      toolkit.getTemplateId(
+        settings.type,
+        settings.envId,
+        "exportFile",
+        options.name
+      );
     } else if (options.all) {
-      toolkit.getAllTemplatesId(options.firm, "exportFile");
+      toolkit.getAllTemplatesId(settings.type, settings.envId, "exportFile");
     }
   });
 
 program
   .command("get-account-template-id")
   .description("Fetch the ID of an account template from Silverfin")
-  .requiredOption(
-    "-f, --firm <firm-id>",
-    "Specify the firm to be used",
-    firmIdDefault
-  )
+  .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
+  .option("-p, --partner <partner-id>", "Specify the partner to be used")
   .option("-n, --name <name>", "Fetch the account template ID by name")
   .option("-a, --all", "Fetch the ID for every account template")
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
-    cliUtils.checkUniqueOption(["name", "all"], options);
-    if (!options.yes) {
-      cliUtils.promptConfirmation();
-    }
-    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
+    const settings = runCommandChecks(["name", "all"], options, firmIdDefault);
+
     if (options.name) {
-      toolkit.getTemplateId(options.firm, "accountTemplate", options.name);
+      toolkit.getTemplateId(
+        settings.type,
+        settings.envId,
+        "accountTemplate",
+        options.name
+      );
     } else if (options.all) {
-      toolkit.getAllTemplatesId(options.firm, "accountTemplate");
+      toolkit.getAllTemplatesId(
+        settings.type,
+        settings.envId,
+        "accountTemplate"
+      );
     }
   });
 
 program
   .command("get-shared-part-id")
   .description("Fetch the ID of a shared part from Silverfin")
-  .requiredOption(
-    "-f, --firm <firm-id>",
-    "Specify the firm to be used",
-    firmIdDefault
-  )
+  .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
+  .option("-p, --partner <partner-id>", "Specify the partner to be used")
   .option("-s, --shared-part <name>", "Fetch the shared part ID by name")
   .option("-a, --all", "Fetch the ID for every shared part")
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
-    cliUtils.checkUniqueOption(["sharedPart", "all"], options);
-    if (!options.yes) {
-      cliUtils.promptConfirmation();
-    }
-    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
+    const settings = runCommandChecks(
+      ["sharedPart", "all"],
+      options,
+      firmIdDefault
+    );
+
     if (options.sharedPart) {
-      toolkit.getTemplateId(options.firm, "sharedPart", options.sharedPart);
+      toolkit.getTemplateId(
+        settings.type,
+        settings.envId,
+        "sharedPart",
+        options.sharedPart
+      );
     } else if (options.all) {
-      toolkit.getAllTemplatesId(options.firm, "sharedPart");
+      toolkit.getAllTemplatesId(settings.type, settings.envId, "sharedPart");
     }
   });
 
@@ -992,6 +1000,7 @@ program
   .action((options) => {
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     cliUtils.checkUniqueOption(["handle", "updateTemplates"], options);
+
     if (options.updateTemplates && !options.yes) {
       cliUtils.promptConfirmation();
     }

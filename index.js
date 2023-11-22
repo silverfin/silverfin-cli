@@ -148,13 +148,14 @@ async function publishReconciliationByHandle(
 }
 
 async function publishAllReconciliations(
-  firmId,
-  message = "Updated through the API"
+  type,
+  envId,
+  message = "updated through the Silverfin CLI"
 ) {
   let templates = fsUtils.getAllTemplatesOfAType("reconciliationText");
   for (let handle of templates) {
     if (!handle) continue;
-    await publishReconciliationByHandle(firmId, handle, message);
+    await publishReconciliationByHandle(type, envId, handle, message);
   }
 }
 
@@ -197,45 +198,40 @@ async function newAllReconciliations(firmId) {
   }
 }
 
-async function fetchExportFile(firmId, name) {
-  const configPresent = fsUtils.configExists("exportFile", name);
-  let templateConfig;
-  if (configPresent) {
-    templateConfig = fsUtils.readConfig("exportFile", name);
-  }
-  if (templateConfig?.id[firmId]) {
-    await fetchExportFileById(firmId, templateConfig.id[firmId]);
-  } else {
-    await fetchExportFileByName(firmId, name);
-  }
-}
-
-async function fetchExportFileByName(firmId, name) {
-  const template = await SF.findExportFileByName(firmId, name);
-  if (!template) {
-    consola.error(`Export file "${name}" wasn't found`);
-    process.exit(1);
-  }
-  const saved = ExportFile.save(firmId, template);
-  if (saved) {
+async function fetchExportFileByName(type, envId, name) {
+  try {
+    const template = await SF.findExportFileByName(type, envId, name);
+    if (!template) {
+      consola.error(`Export file "${name}" wasn't found`);
+      process.exit(1);
+    }
+    ExportFile.save(type, envId, template);
     consola.success(`Export file "${name}" imported`);
-  }
-}
-
-async function fetchExportFileById(firmId, id) {
-  const template = await SF.readExportFileById(firmId, id);
-  if (!template) {
-    consola.error(`Export file with id ${id} wasn't found`);
+  } catch (error) {
+    consola.error(error);
     process.exit(1);
   }
-  const saved = ExportFile.save(firmId, template);
-  if (saved) {
+}
+
+async function fetchExportFileById(type, envId, id) {
+  try {
+    const template = await SF.readExportFileById(type, envId, id);
+
+    if (!template) {
+      consola.error(`Export file with id ${id} wasn't found`);
+      process.exit(1);
+    }
+
+    ExportFile.save(type, envId, template);
     consola.success(`Export file "${template.name}" imported`);
+  } catch (error) {
+    consola.error(error);
+    process.exit(1);
   }
 }
 
-async function fetchAllExportFiles(firmId, page = 1) {
-  const templates = await SF.readExportFiles(firmId, page);
+async function fetchAllExportFiles(type, envId, page = 1) {
+  const templates = await SF.readExportFiles(type, envId, page);
   if (templates.length == 0) {
     if (page == 1) {
       consola.error(`No export files found in firm ${firmId}`);
@@ -243,9 +239,9 @@ async function fetchAllExportFiles(firmId, page = 1) {
     return;
   }
   templates.forEach(async (template) => {
-    fetchExportFileById(firmId, template.id);
+    fetchExportFileById(type, envId, template.id);
   });
-  fetchAllExportFiles(firmId, page + 1);
+  fetchAllExportFiles(type, envId, page + 1);
 }
 
 async function fetchExistingExportFiles(firmId) {
@@ -259,27 +255,50 @@ async function fetchExistingExportFiles(firmId) {
 }
 
 async function publishExportFileByName(
-  firmId,
+  type,
+  envId,
   name,
-  message = "Updated through the API"
+  message = "updated through the Silverfin CLI"
 ) {
   try {
     const configPresent = fsUtils.configExists("exportFile", name);
+
     if (!configPresent) {
       errorUtils.missingExportFileId(name);
       return false;
     }
+
     const templateConfig = fsUtils.readConfig("exportFile", name);
-    if (!templateConfig || !templateConfig.id[firmId]) {
+
+    let templateId =
+      type == "firm"
+        ? templateConfig?.id?.[envId]
+        : templateConfig?.partnerId?.[envId];
+
+    if (!templateConfig || !templateId) {
       errorUtils.missingExportFileId(name);
       return false;
     }
-    let templateId = templateConfig.id[firmId];
+
     consola.debug(`Updating export file ${name}...`);
+
     const template = await ExportFile.read(name);
     if (!template) return;
+
+    // Add API-only required fields
     template.version_comment = message;
-    const response = await SF.updateExportFile(firmId, templateId, template);
+
+    if (type == "partner") {
+      template.version_significant_change = false;
+    }
+
+    const response = await SF.updateExportFile(
+      type,
+      envId,
+      templateId,
+      template
+    );
+
     if (response && response.data && response.data.name) {
       consola.success(`Export file updated: ${response.data.name}`);
       return true;
@@ -293,19 +312,24 @@ async function publishExportFileByName(
 }
 
 async function publishAllExportFiles(
-  firmId,
-  message = "Updated through the API"
+  type,
+  envId,
+  message = "updated through the Silverfin CLI"
 ) {
   let templates = fsUtils.getAllTemplatesOfAType("exportFile");
   for (let name of templates) {
     if (!name) continue;
-    await publishExportFileByName(firmId, name, message);
+    await publishExportFileByName(type, envId, name, message);
   }
 }
 
 async function newExportFile(firmId, name) {
   try {
-    const existingTemplate = await SF.findExportFileByName(firmId, name);
+    const existingTemplate = await SF.findExportFileByName(
+      "firm",
+      firmId,
+      name
+    );
     if (existingTemplate) {
       consola.info(
         `Export file "${name}" already exists. Skipping its creation`
@@ -314,7 +338,7 @@ async function newExportFile(firmId, name) {
     }
     const template = await ExportFile.read(name);
     if (!template) return;
-    template.version_comment = "Created through the API";
+    template.version_comment = "Created through the Silverfin CLI";
     const response = await SF.createExportFile(firmId, template);
 
     // Store new id
@@ -337,10 +361,12 @@ async function newAllExportFiles(firmId) {
 async function fetchAccountTemplateByName(type, envId, name) {
   try {
     const template = await SF.findAccountTemplateByName(type, envId, name);
+
     if (!template) {
       consola.error(`Account template "${name}" wasn't found`);
       process.exit(1);
     }
+
     AccountTemplate.save(type, envId, template);
     consola.success(`Account template "${template?.name_nl}" imported`);
   } catch (error) {
@@ -396,31 +422,50 @@ async function fetchExistingAccountTemplates(firmId) {
 }
 
 async function publishAccountTemplateByName(
-  firmId,
+  type,
+  envId,
   name,
-  message = "Updated through the API"
+  message = "updated through the Silverfin CLI"
 ) {
   try {
     const configPresent = fsUtils.configExists("accountTemplate", name);
+
     if (!configPresent) {
       errorUtils.missingAccountTemplateId(name);
       return false;
     }
+
     const templateConfig = fsUtils.readConfig("accountTemplate", name);
-    if (!templateConfig || !templateConfig.id[firmId]) {
+
+    let templateId =
+      type == "firm"
+        ? templateConfig?.id?.[envId]
+        : templateConfig?.partnerId?.[envId];
+
+    if (!templateConfig || !templateId) {
       errorUtils.missingAccountTemplateId(name);
       return false;
     }
-    let templateId = templateConfig.id[firmId];
+
     consola.debug(`Updating account template ${name}...`);
+
     const template = await AccountTemplate.read(name);
     if (!template) return;
+
+    // Add API-only required fields
     template.version_comment = message;
+
+    if (type == "partner") {
+      template.version_significant_change = false;
+    }
+
     const response = await SF.updateAccountTemplate(
-      firmId,
+      type,
+      envId,
       templateId,
       template
     );
+
     if (response && response.data && response.data.name_nl) {
       consola.success(`Account template updated: ${response.data.name_nl}`);
       return true;
@@ -434,19 +479,24 @@ async function publishAccountTemplateByName(
 }
 
 async function publishAllAccountTemplates(
-  firmId,
-  message = "Updated through the API"
+  type,
+  envId,
+  message = "updated through the Silverfin CLI"
 ) {
   let templates = fsUtils.getAllTemplatesOfAType("accountTemplate");
   for (let name of templates) {
     if (!name) continue;
-    await publishAccountTemplateByName(firmId, name, message);
+    await publishAccountTemplateByName(type, envId, name, message);
   }
 }
 
 async function newAccountTemplate(firmId, name) {
   try {
-    const existingTemplate = await SF.findAccountTemplateByName(firmId, name);
+    const existingTemplate = await SF.findAccountTemplateByName(
+      "firm",
+      firmId,
+      name
+    );
     if (existingTemplate) {
       consola.warn(
         `Account template "${name}" already exists. Skipping its creation`
@@ -455,7 +505,7 @@ async function newAccountTemplate(firmId, name) {
     }
     const template = await AccountTemplate.read(name);
     if (!template) return;
-    template.version_comment = "Created through the API";
+    template.version_comment = "Created through the Silverfin CLI";
     const response = await SF.createAccountTemplate(firmId, template);
     const handle = response.data.name_nl;
 
@@ -528,9 +578,10 @@ async function fetchExistingSharedParts(firmId) {
 }
 
 async function publishSharedPartByName(
-  firmId,
+  type,
+  envId,
   name,
-  message = "Updated through the API"
+  message = "Updated through the Silverfin CLI"
 ) {
   try {
     const configPresent = fsUtils.configExists("sharedPart", name);
@@ -539,19 +590,35 @@ async function publishSharedPartByName(
       return false;
     }
     const templateConfig = fsUtils.readConfig("sharedPart", name);
-    if (!templateConfig || !templateConfig.id[firmId]) {
+
+    let templateId =
+      type == "firm"
+        ? templateConfig?.id?.[envId]
+        : templateConfig?.partnerId?.[envId];
+
+    if (!templateConfig || !templateId) {
       errorUtils.missingSharedPartId(name);
       return false;
     }
     consola.debug(`Updating shared part ${name}...`);
+
     const template = await SharedPart.read(name);
     if (!template) return;
+
+    // Add API-only required fields
     template.version_comment = message;
+
+    if (type == "partner") {
+      template.version_significant_change = false;
+    }
+
     const response = await SF.updateSharedPart(
-      firmId,
-      templateConfig.id[firmId],
+      type,
+      envId,
+      templateId,
       template
     );
+
     if (response && response.data && response.data.name) {
       consola.success(`Shared part updated: ${response.data.name}`);
       return true;
@@ -566,7 +633,7 @@ async function publishSharedPartByName(
 
 async function publishAllSharedParts(
   firmId,
-  message = "Updated through the API"
+  message = "updated through the Silverfin CLI"
 ) {
   let templates = fsUtils.getAllTemplatesOfAType("sharedPart");
   for (let name of templates) {
@@ -939,7 +1006,6 @@ module.exports = {
   publishAllReconciliations,
   newReconciliation,
   newAllReconciliations,
-  fetchExportFile,
   fetchExportFileByName,
   fetchExportFileById,
   fetchAllExportFiles,
