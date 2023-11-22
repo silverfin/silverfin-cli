@@ -34,51 +34,60 @@ async function fetchReconciliationById(type, envId, id) {
 }
 
 async function fetchReconciliationByHandle(type, envId, handle) {
-  const templateConfig = fsUtils.readConfig("reconciliationText", handle);
+  try {
+    const templateConfig = fsUtils.readConfig("reconciliationText", handle);
 
-  if (!templateConfig) {
-    errorUtils.missingConfig(handle);
-  }
-
-  let id =
-    type == "firm" ? templateConfig.id[envId] : templateConfig.partnerId[envId];
-  let existingTemplate;
-
-  if (!id) {
-    existingTemplate = await SF.findReconciliationTextByHandle(
-      type,
-      envId,
-      handle
-    );
-
-    if (!existingTemplate) {
-      consola.error(
-        `Reconciliation not found inside the reconciliation_texts folder or in the ${type} ${envId}. Please run create-reconciliation if you still need to create it.`
-      );
-      process.exit(1);
-    } else {
-      id = existingTemplate.id;
+    if (!templateConfig) {
+      errorUtils.missingConfig(handle);
     }
-  }
 
-  fetchReconciliationById(type, envId, id);
+    let id =
+      type == "firm"
+        ? templateConfig?.id[envId]
+        : templateConfig?.partnerId[envId];
+    let existingTemplate;
+
+    if (!id) {
+      existingTemplate = await SF.findReconciliationTextByHandle(
+        type,
+        envId,
+        handle
+      );
+
+      if (!existingTemplate) {
+        consola.error(
+          `Reconciliation not found inside the reconciliation_texts folder or in the ${type} ${envId}. Please run create-reconciliation if you still need to create it.`
+        );
+        process.exit(1);
+      } else {
+        id = existingTemplate.id;
+      }
+    }
+
+    fetchReconciliationById(type, envId, id);
+  } catch (error) {
+    consola.error(error);
+    process.exit(1);
+  }
 }
 
-async function fetchAllReconciliations(firmId, page = 1) {
-  const templates = await SF.readReconciliationTexts(firmId, page);
+async function fetchAllReconciliations(type, envId, page = 1) {
+  const templates = await SF.readReconciliationTexts(type, envId, page);
   if (templates.length == 0) {
     if (page == 1) {
-      consola.error(`No reconciliations found in firm ${firmId}`);
+      consola.error(`No reconciliations found in ${type} ${envId}`);
     }
     return;
   }
   templates.forEach(async (template) => {
-    const saved = await ReconciliationText.save(firmId, template);
-    if (saved) {
+    try {
+      await ReconciliationText.save(type, envId, template);
       consola.success(`Reconciliation "${template.handle}" imported`);
+    } catch (error) {
+      consola.error(error);
     }
   });
-  fetchAllReconciliations(firmId, page + 1);
+  fetchAllReconciliations(type, envId, page + 1);
 }
 
 async function fetchExistingReconciliations(firmId) {
@@ -533,9 +542,11 @@ async function fetchSharedPartById(type, envId, sharedPartId) {
       consola.error(`Shared part ${sharedPartId} wasn't found.`);
       process.exit(1);
     }
+
     await SharedPart.save(type, envId, template.data);
     consola.success(`Shared part "${template.data.name}" imported`);
-    process.exit(0);
+
+    return template.data;
   } catch (error) {
     consola.error(error);
     process.exit(1);
@@ -549,22 +560,28 @@ async function fetchSharedPartByName(type, envId, name) {
     process.exit(1);
   }
 
-  fetchSharedPartById(type, envId, sharedPartByName.id);
+  const template = await fetchSharedPartById(type, envId, sharedPartByName.id);
+
+  return template;
 }
 
-async function fetchAllSharedParts(firmId, page = 1) {
-  const response = await SF.readSharedParts(firmId, page);
+async function fetchAllSharedParts(type, envId, page = 1) {
+  const response = await SF.readSharedParts(type, envId, page);
   const sharedParts = response.data;
   if (sharedParts.length == 0) {
     if (page == 1) {
-      consola.error(`No shared parts found in firm ${firmId}`);
+      consola.error(`No shared parts found in ${type} ${envId}`);
     }
     return;
   }
   sharedParts.forEach(async (sharedPart) => {
-    await fetchSharedPartById(firmId, sharedPart.id);
+    try {
+      await fetchSharedPartById(type, envId, sharedPart.id);
+    } catch (error) {
+      consola.error(error);
+    }
   });
-  await fetchAllSharedParts(firmId, page + 1);
+  await fetchAllSharedParts(type, envId, page + 1);
 }
 
 async function fetchExistingSharedParts(firmId) {
@@ -632,13 +649,14 @@ async function publishSharedPartByName(
 }
 
 async function publishAllSharedParts(
-  firmId,
+  type,
+  envId,
   message = "updated through the Silverfin CLI"
 ) {
   let templates = fsUtils.getAllTemplatesOfAType("sharedPart");
   for (let name of templates) {
     if (!name) continue;
-    await publishSharedPartByName(firmId, name, message);
+    await publishSharedPartByName(type, envId, name, message);
   }
 }
 
@@ -722,7 +740,7 @@ async function addSharedPart(
     }
 
     // Missing Shared Part ID. Try to identify it based on the name
-    if (!templateId) {
+    if (!sharedPartId) {
       const updated = await getTemplateId(
         type,
         envId,
@@ -750,7 +768,8 @@ async function addSharedPart(
         addSharedPart = SF.addSharedPartToAccountTemplate;
         break;
     }
-    let response = await addSharedPart(type, envId, templateId, sharedPartId);
+
+    let response = await addSharedPart(type, envId, sharedPartId, templateId);
 
     // Success or failure
     if (!response || !response.status || !response.status === 201) {
@@ -759,9 +778,9 @@ async function addSharedPart(
       );
       return false;
     }
-    consola.success(
-      `Shared part "${sharedPartName}" added to "${templateHandle}" (${templateType}).`
-    );
+
+    const addNewId = (currentType, typeCheck, envId, template) =>
+      currentType == typeCheck ? { [envId]: template.id } : {};
 
     // Store details in config files
     let templateIndex;
@@ -778,19 +797,38 @@ async function addSharedPart(
     // Not stored yet
     if (templateIndex === -1) {
       sharedPartConfig.used_in.push({
-        id: { [firmId]: templateConfig.id[firmId] },
+        id: {
+          ...templateConfig?.id,
+          ...addNewId(type, "firm", envId, templateConfig),
+        },
+        partnerId: {
+          ...templateConfig?.partnerId,
+          ...addNewId(type, "partner", envId, templateConfig),
+        },
         type: templateType,
         handle: templateHandle,
       });
     }
     // Previously stored
     if (templateIndex !== -1) {
-      sharedPartConfig.used_in[templateIndex].id[firmId] =
-        templateConfig.id[firmId];
+      if(type == "firm") {
+        sharedPartConfig.used_in[templateIndex].id[envId] =
+          templateConfig.id[envId];
+      }
+
+      if(type == "partner") {
+        sharedPartConfig.used_in[templateIndex].partnerId[envId] =
+          templateConfig.partnerId[envId];
+      }
     }
     // Save Configs
     fsUtils.writeConfig("sharedPart", sharedPartName, sharedPartConfig);
-    fsUtils.writeConfig(templateType, templateHandle, configTemplate);
+    fsUtils.writeConfig(templateType, templateHandle, templateConfig);
+
+    consola.success(
+      `Shared part "${sharedPartName}" added to "${templateHandle}" (${templateType}).`
+    );
+
     return true;
   } catch (error) {
     errorUtils.errorHandler(error);
@@ -871,21 +909,33 @@ async function addAllSharedParts(firmId, force = false) {
 }
 
 async function removeSharedPart(
-  firmId,
+  type,
+  envId,
   sharedPartHandle,
   templateHandle,
   templateType
 ) {
   try {
-    const configTemplate = fsUtils.readConfig(templateType, templateHandle);
-    const configSharedPart = fsUtils.readConfig("sharedPart", sharedPartHandle);
-    if (!configTemplate.id[firmId]) {
+    const templateConfig = fsUtils.readConfig(templateType, templateHandle);
+    const sharedPartConfig = fsUtils.readConfig("sharedPart", sharedPartHandle);
+    let templateId =
+      type == "firm"
+        ? templateConfig?.id?.[envId]
+        : templateConfig?.partnerId?.[envId];
+
+    if (!templateConfig || !templateId) {
       consola.warn(
         `Template id not found for ${templateHandle} (${templateType}). Skipping.`
       );
       return false;
     }
-    if (!configSharedPart.id[firmId]) {
+
+    sharedPartId =
+      type == "firm"
+        ? sharedPartConfig?.id?.[envId]
+        : sharedPartConfig?.partnerId?.[envId];
+
+    if (!sharedPartId) {
       consola.warn(`Shared part id not found for ${templateHandle}. Skipping.`);
       return false;
     }
@@ -904,9 +954,10 @@ async function removeSharedPart(
         break;
     }
     let response = await removeSharedPart(
-      firmId,
-      configSharedPart.id[firmId],
-      configTemplate.id[firmId]
+      type,
+      envId,
+      sharedPartId,
+      templateId
     );
 
     if (response.status === 200) {
@@ -916,19 +967,23 @@ async function removeSharedPart(
     }
 
     // Remove reference from shared part config
-    const templateIndex = configSharedPart.used_in.findIndex(
+    const templateIndex = sharedPartConfig.used_in.findIndex(
       (reconciliationText) =>
-        reconciliationText.id[firmId] === configTemplate.id[firmId]
+        type == "firm"
+          ? reconciliationText.id[envId]
+          : reconciliationText.partnerId[envId] === templateId
     );
     if (templateIndex !== -1) {
-      const reconciliationText = configSharedPart.used_in[templateIndex];
+      const reconciliationText = sharedPartConfig.used_in[templateIndex];
 
       if (Object.keys(reconciliationText.id).length === 1) {
-        configSharedPart.used_in.splice(templateIndex, 1);
+        sharedPartConfig.used_in.splice(templateIndex, 1);
       } else {
-        delete reconciliationText.id[firmId];
+        delete type == "firm"
+          ? reconciliationText.id[envId]
+          : reconciliationText.partnerId[envId];
       }
-      fsUtils.writeConfig("sharedPart", sharedPartHandle, configSharedPart);
+      fsUtils.writeConfig("sharedPart", sharedPartHandle, sharedPartConfig);
     }
   } catch (error) {
     errorUtils.errorHandler(error);

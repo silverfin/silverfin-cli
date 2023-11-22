@@ -65,7 +65,7 @@ program
         options.id
       );
     } else if (options.all) {
-      toolkit.fetchAllReconciliations(options.firm);
+      toolkit.fetchAllReconciliations(settings.type, settings.envId);
     } else if (options.existing) {
       toolkit.fetchExistingReconciliations(options.firm);
     }
@@ -143,7 +143,6 @@ program
   .command("import-export-file")
   .description("Import export file templates")
   .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
-  .option("-p, --partner <partner-id>", "Specify the partner to be used")
   .option("-n, --name <name>", "Import a specific export file by name")
   .option("-i, --id <id>", "Import a specific export file by id")
   .option("-a, --all", "Import all existing export files")
@@ -156,7 +155,8 @@ program
     const settings = runCommandChecks(
       ["name", "id", "all", "existing"],
       options,
-      firmIdDefault
+      firmIdDefault,
+      false
     );
 
     if (options.name) {
@@ -179,7 +179,6 @@ program
   .command("update-export-file")
   .description("Update an existing export file template")
   .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
-  .option("-p, --partner <partner-id>", "Specify the partner to be used")
   .option("-n, --name <name>", "Specify the export file to be used (mandatory)")
   .option("-a, --all", "Update all export files")
   .option(
@@ -189,7 +188,12 @@ program
   )
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
-    const settings = runCommandChecks(["name", "all"], options, firmIdDefault);
+    const settings = runCommandChecks(
+      ["name", "all"],
+      options,
+      firmIdDefault,
+      false
+    );
 
     if (options.name) {
       toolkit.publishExportFileByName(
@@ -351,7 +355,7 @@ program
     "Import all shared parts (already stored in the repository)"
   )
   .option("--yes", "Skip the prompt confirmation (optional)")
-  .action((options) => {
+  .action(async (options) => {
     const settings = runCommandChecks(
       ["sharedPart", "id", "all", "existing"],
       options,
@@ -359,15 +363,19 @@ program
     );
 
     if (options.sharedPart) {
-      toolkit.fetchSharedPartByName(
+      await toolkit.fetchSharedPartByName(
         settings.type,
         settings.envId,
         options.sharedPart
       );
     } else if (options.id) {
-      toolkit.fetchSharedPartById(settings.type, settings.envId, options.id);
+      await toolkit.fetchSharedPartById(
+        settings.type,
+        settings.envId,
+        options.id
+      );
     } else if (options.all) {
-      toolkit.fetchAllSharedParts(settings.type, settings.envId);
+      await toolkit.fetchAllSharedParts(settings.type, settings.envId);
     } else if (options.existing) {
       toolkit.fetchExistingSharedParts(options.firm);
     }
@@ -444,11 +452,8 @@ program
 program
   .command("add-shared-part")
   .description("Add an existing shared part to an existing template")
-  .requiredOption(
-    "-f, --firm <firm-id>",
-    "Specify the firm to be used",
-    firmIdDefault
-  )
+  .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
+  .option("-p, --partner <partner-id>", "Specify the partner to be used")
   .option(
     "-s, --shared-part <name>",
     `Specify the shared part to be added (used together with "--handle" or "--export-file")`
@@ -476,10 +481,12 @@ program
   )
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
+    const partnerSupported = options.exportFile ? false : true;
     const settings = runCommandChecks(
       ["sharedPart", "all"],
       options,
-      firmIdDefault
+      firmIdDefault,
+      partnerSupported
     );
 
     if (options.sharedPart) {
@@ -546,10 +553,12 @@ program
   )
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
+    const partnerSupported = options.exportFile ? false : true;
     const settings = runCommandChecks(
       ["handle", "exportFile", "accountTemplate"],
       options,
-      firmIdDefault
+      firmIdDefault,
+      partnerSupported
     );
 
     if (options.handle) {
@@ -853,12 +862,16 @@ program
   .command("get-export-file-id")
   .description("Fetch the ID of an export file from Silverfin")
   .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
-  .option("-p, --partner <partner-id>", "Specify the partner to be used")
   .option("-n, --name <name>", "Fetch the export file ID by name")
   .option("-a, --all", "Fetch the ID for every export file")
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
-    const settings = runCommandChecks(["name", "all"], options, firmIdDefault);
+    const settings = runCommandChecks(
+      ["name", "all"],
+      options,
+      firmIdDefault,
+      false
+    );
 
     if (options.name) {
       toolkit.getTemplateId(
