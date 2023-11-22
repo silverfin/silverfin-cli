@@ -682,29 +682,59 @@ async function newAllSharedParts(firmId) {
  * @returns {boolean} - Returns true if the shared part was added successfully
  */
 async function addSharedPart(
-  firmId,
+  type,
+  envId,
   sharedPartName,
   templateHandle,
   templateType
 ) {
   try {
-    let configTemplate = await fsUtils.readConfig(templateType, templateHandle);
-    let configSharedPart = await fsUtils.readConfig(
+    let templateConfig = await fsUtils.readConfig(templateType, templateHandle);
+    let sharedPartConfig = await fsUtils.readConfig(
       "sharedPart",
       sharedPartName
     );
 
+    let templateId =
+      type == "firm"
+        ? templateConfig?.id?.[envId]
+        : templateConfig?.partnerId?.[envId];
+
+    let sharedPartId =
+      type == "firm"
+        ? sharedPartConfig?.id?.[envId]
+        : sharedPartConfig?.partnerId?.[envId];
+
     // Missing Reconciliation ID. Try to identify it based on the handle
-    if (!configTemplate.id[firmId]) {
-      const updated = await getTemplateId(firmId, templateType, templateHandle);
+    if (!templateId) {
+      const updated = await getTemplateId(
+        type,
+        envId,
+        templateType,
+        templateHandle
+      );
       if (!updated) return false;
-      configTemplate = await fsUtils.readConfig(templateType, templateHandle);
+      templateConfig = await fsUtils.readConfig(templateType, templateHandle);
+      templateId =
+        type == "firm"
+          ? templateConfig?.id?.[envId]
+          : templateConfig?.partnerId?.[envId];
     }
+
     // Missing Shared Part ID. Try to identify it based on the name
-    if (!configSharedPart.id[firmId]) {
-      const updated = await getTemplateId(firmId, "sharedPart", sharedPartName);
+    if (!templateId) {
+      const updated = await getTemplateId(
+        type,
+        envId,
+        "sharedPart",
+        sharedPartName
+      );
       if (!updated) return false;
-      configSharedPart = await fsUtils.readConfig("sharedPart", sharedPartName);
+      sharedPartConfig = await fsUtils.readConfig("sharedPart", sharedPartName);
+      sharedPartId =
+        type == "firm"
+          ? sharedPartConfig?.id?.[envId]
+          : sharedPartConfig?.partnerId?.[envId];
     }
 
     // Add shared part to template
@@ -720,11 +750,7 @@ async function addSharedPart(
         addSharedPart = SF.addSharedPartToAccountTemplate;
         break;
     }
-    let response = await addSharedPart(
-      firmId,
-      configSharedPart.id[firmId],
-      configTemplate.id[firmId]
-    );
+    let response = await addSharedPart(type, envId, templateId, sharedPartId);
 
     // Success or failure
     if (!response || !response.status || !response.status === 201) {
@@ -739,31 +765,31 @@ async function addSharedPart(
 
     // Store details in config files
     let templateIndex;
-    if (!configSharedPart.used_in) {
+    if (!sharedPartConfig.used_in) {
       templateIndex = -1;
-      configSharedPart.used_in = [];
+      sharedPartConfig.used_in = [];
     } else {
       // Previously stored ?
-      templateIndex = configSharedPart.used_in.findIndex(
+      templateIndex = sharedPartConfig.used_in.findIndex(
         (template) =>
           templateHandle === template.handle || templateHandle === template.name
       );
     }
     // Not stored yet
     if (templateIndex === -1) {
-      configSharedPart.used_in.push({
-        id: { [firmId]: configTemplate.id[firmId] },
+      sharedPartConfig.used_in.push({
+        id: { [firmId]: templateConfig.id[firmId] },
         type: templateType,
         handle: templateHandle,
       });
     }
     // Previously stored
     if (templateIndex !== -1) {
-      configSharedPart.used_in[templateIndex].id[firmId] =
-        configTemplate.id[firmId];
+      sharedPartConfig.used_in[templateIndex].id[firmId] =
+        templateConfig.id[firmId];
     }
     // Save Configs
-    fsUtils.writeConfig("sharedPart", sharedPartName, configSharedPart);
+    fsUtils.writeConfig("sharedPart", sharedPartName, sharedPartConfig);
     fsUtils.writeConfig(templateType, templateHandle, configTemplate);
     return true;
   } catch (error) {

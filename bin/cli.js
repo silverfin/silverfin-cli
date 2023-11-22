@@ -142,11 +142,8 @@ program
 program
   .command("import-export-file")
   .description("Import export file templates")
-  .requiredOption(
-    "-f, --firm <firm-id>",
-    "Specify the firm to be used",
-    firmIdDefault
-  )
+  .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
+  .option("-p, --partner <partner-id>", "Specify the partner to be used")
   .option("-n, --name <name>", "Import a specific export file by name")
   .option("-i, --id <id>", "Import a specific export file by id")
   .option("-a, --all", "Import all existing export files")
@@ -156,11 +153,6 @@ program
   )
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
-    cliUtils.checkUniqueOption(["name", "id", "all", "existing"], options);
-    if (!options.yes) {
-      cliUtils.promptConfirmation();
-    }
-    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     const settings = runCommandChecks(
       ["name", "id", "all", "existing"],
       options,
@@ -186,11 +178,8 @@ program
 program
   .command("update-export-file")
   .description("Update an existing export file template")
-  .requiredOption(
-    "-f, --firm <firm-id>",
-    "Specify the firm to be used",
-    firmIdDefault
-  )
+  .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
+  .option("-p, --partner <partner-id>", "Specify the partner to be used")
   .option("-n, --name <name>", "Specify the export file to be used (mandatory)")
   .option("-a, --all", "Update all export files")
   .option(
@@ -260,22 +249,11 @@ program
   )
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
-    cliUtils.checkUniqueOption(["name", "id", "all", "existing"], options);
-    cliUtils.checkRequiredFirmOrPartner(options, [
-      "name",
-      "id",
-      "all",
-      "existing",
-    ]);
-    const settings = cliUtils.getCommandSettings(options);
-
-    if (!options.yes) {
-      cliUtils.promptConfirmation();
-    }
-
-    if (settings.type == "firm") {
-      cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
-    }
+    const settings = runCommandChecks(
+      ["name", "id", "all", "existing"],
+      options,
+      firmIdDefault
+    );
 
     if (options.name) {
       toolkit.fetchAccountTemplateByName(
@@ -314,26 +292,21 @@ program
   )
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
-    cliUtils.checkUniqueOption(["name", "all"], options);
-    cliUtils.checkRequiredFirmOrPartner(options, ["name", "all"]);
-    const settings = cliUtils.getCommandSettings(options);
-
-    if (!options.yes) {
-      cliUtils.promptConfirmation();
-    }
-
-    if (settings.type == "firm") {
-      cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
-    }
+    const settings = runCommandChecks(["name", "all"], options, firmIdDefault);
 
     if (options.name) {
       toolkit.publishAccountTemplateByName(
-        options.firm,
+        settings.type,
+        settings.envId,
         options.name,
         options.message
       );
     } else if (options.all) {
-      toolkit.publishAllAccountTemplates(options.firm, options.message);
+      toolkit.publishAllAccountTemplates(
+        settings.type,
+        settings.envId,
+        options.message
+      );
     }
   });
 
@@ -379,25 +352,11 @@ program
   )
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
-    cliUtils.checkUniqueOption(
+    const settings = runCommandChecks(
       ["sharedPart", "id", "all", "existing"],
-      options
+      options,
+      firmIdDefault
     );
-    cliUtils.checkRequiredFirmOrPartner(options, [
-      "sharedPart",
-      "id",
-      "all",
-      "existing",
-    ]);
-    const settings = cliUtils.getCommandSettings(options);
-
-    if (!options.yes) {
-      cliUtils.promptConfirmation();
-    }
-
-    if (settings.type == "firm") {
-      cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
-    }
 
     if (options.sharedPart) {
       toolkit.fetchSharedPartByName(
@@ -432,17 +391,11 @@ program
   )
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
-    cliUtils.checkUniqueOption(["sharedPart", "all"], options);
-    cliUtils.checkRequiredFirmOrPartner(options, ["sharedPart", "all"]);
-    const settings = cliUtils.getCommandSettings(options);
-
-    if (!options.yes) {
-      cliUtils.promptConfirmation();
-    }
-
-    if (settings.type == "firm") {
-      cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
-    }
+    const settings = runCommandChecks(
+      ["sharedPart", "all"],
+      options,
+      firmIdDefault
+    );
 
     if (options.sharedPart) {
       toolkit.publishSharedPartByName(
@@ -523,11 +476,12 @@ program
   )
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
-    if (!options.yes) {
-      cliUtils.promptConfirmation();
-    }
-    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
-    cliUtils.checkUniqueOption(["sharedPart", "all"], options);
+    const settings = runCommandChecks(
+      ["sharedPart", "all"],
+      options,
+      firmIdDefault
+    );
+
     if (options.sharedPart) {
       cliUtils.checkUniqueOption(
         ["handle", "exportFile", "accountTemplate"],
@@ -541,27 +495,30 @@ program
     }
     if (options.handle) {
       toolkit.addSharedPart(
-        options.firm,
+        settings.type,
+        settings.envId,
         options.sharedPart,
         options.handle,
         "reconciliationText"
       );
     } else if (options.exportFile) {
       toolkit.addSharedPart(
-        options.firm,
+        settings.type,
+        settings.envId,
         options.sharedPart,
         options.exportFile,
         "exportFile"
       );
     } else if (options.accountTemplate) {
       toolkit.addSharedPart(
-        options.firm,
+        settings.type,
+        settings.envId,
         options.sharedPart,
         options.accountTemplate,
         "accountTemplate"
       );
     } else if (options.all) {
-      toolkit.addAllSharedParts(options.firm, options.force);
+      toolkit.addAllSharedParts(settings.type, settings.envId, options.force);
     }
   });
 
