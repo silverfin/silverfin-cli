@@ -662,7 +662,11 @@ async function publishAllSharedParts(
 
 async function newSharedPart(firmId, name) {
   try {
-    const existingSharedPart = await SF.findSharedPartByName(firmId, name);
+    const existingSharedPart = await SF.findSharedPartByName(
+      "firm",
+      firmId,
+      name
+    );
     if (existingSharedPart) {
       consola.warn(
         `Shared part "${name}" already exists. Skipping its creation`
@@ -707,6 +711,14 @@ async function addSharedPart(
   templateType
 ) {
   try {
+    // Add a check for export files that are not supported
+    if (type == "partner" && templateType == "exportFile") {
+      consola.warn(
+        "Adding shared parts to export files on partner is not supported. Skipping."
+      );
+      return false;
+    }
+
     let templateConfig = await fsUtils.readConfig(templateType, templateHandle);
     let sharedPartConfig = await fsUtils.readConfig(
       "sharedPart",
@@ -756,20 +768,25 @@ async function addSharedPart(
     }
 
     // Add shared part to template
-    let addSharedPart;
+    let addSharedPartOnPlatform;
     switch (templateType) {
       case "reconciliationText":
-        addSharedPart = SF.addSharedPartToReconciliation;
+        addSharedPartOnPlatform = SF.addSharedPartToReconciliation;
         break;
       case "exportFile":
-        addSharedPart = SF.addSharedPartToExportFile;
+        addSharedPartOnPlatform = SF.addSharedPartToExportFile;
         break;
       case "accountTemplate":
-        addSharedPart = SF.addSharedPartToAccountTemplate;
+        addSharedPartOnPlatform = SF.addSharedPartToAccountTemplate;
         break;
     }
 
-    let response = await addSharedPart(type, envId, sharedPartId, templateId);
+    let response = await addSharedPartOnPlatform(
+      type,
+      envId,
+      sharedPartId,
+      templateId
+    );
 
     // Success or failure
     if (!response || !response.status || !response.status === 201) {
@@ -778,9 +795,6 @@ async function addSharedPart(
       );
       return false;
     }
-
-    const addNewId = (currentType, typeCheck, envId, template) =>
-      currentType == typeCheck ? { [envId]: template.id } : {};
 
     // Store details in config files
     let templateIndex;
@@ -794,42 +808,41 @@ async function addSharedPart(
           templateHandle === template.handle || templateHandle === template.name
       );
     }
-    // Not stored yet
+
     if (templateIndex === -1) {
+      // Not stored yet
       sharedPartConfig.used_in.push({
-        id: {
-          ...templateConfig?.id,
-          ...addNewId(type, "firm", envId, templateConfig),
-        },
-        partnerId: {
-          ...templateConfig?.partnerId,
-          ...addNewId(type, "partner", envId, templateConfig),
-        },
+        id: type == "firm" ? templateConfig.id : {},
+        partnerId: type == "partner" ? templateConfig.partnerId : {},
         type: templateType,
         handle: templateHandle,
       });
-    }
-    // Previously stored
-    if (templateIndex !== -1) {
-      if(type == "firm") {
-        sharedPartConfig.used_in[templateIndex].id[envId] =
-          templateConfig.id[envId];
+    } else {
+      // Previously stored
+      const usedInTemplateConfig = sharedPartConfig.used_in[templateIndex];
+
+      if (type == "firm") {
+        usedInTemplateConfig.id[envId] = templateConfig.id[envId];
+        console.log("usedInTemplateConfig.id", usedInTemplateConfig.id);
+        console.log("templateConfig.id", templateConfig.id);
       }
 
-      if(type == "partner") {
-        sharedPartConfig.used_in[templateIndex].partnerId[envId] =
-          templateConfig.partnerId[envId];
+      if (type == "partner") {
+        usedInTemplateConfig.partnerId[envId] = templateConfig.partnerId[envId];
       }
+
+      sharedPartConfig.used_in[templateIndex] = usedInTemplateConfig;
     }
+
     // Save Configs
-    fsUtils.writeConfig("sharedPart", sharedPartName, sharedPartConfig);
     fsUtils.writeConfig(templateType, templateHandle, templateConfig);
+    fsUtils.writeConfig("sharedPart", sharedPartName, sharedPartConfig);
 
     consola.success(
       `Shared part "${sharedPartName}" added to "${templateHandle}" (${templateType}).`
     );
 
-    return true;
+    return sharedPartConfig;
   } catch (error) {
     errorUtils.errorHandler(error);
     return false;
@@ -838,70 +851,43 @@ async function addSharedPart(
 
 /**
  * This function loops through all shared parts (config files) and tries to add the shared part to each template listed in 'used_in'. It will make a POST request to the API. If the ID of one of the templates is missing, it will try to fetch it first by making a GET request. In case of success, it will store the details in the corresponding config files.
- * @param {Number} firmId
+ * @param {String} type - Options: `firm` or `partner`
+ * @param {Number} envId
  * @param {boolean} force - If true, it will add the shared part to all templates, even if it's already present
  */
-async function addAllSharedParts(firmId, force = false) {
+async function addAllSharedParts(type, envId, force = false) {
   const sharedPartsArray = fsUtils.getAllTemplatesOfAType("sharedPart");
-  for await (let sharedPartName of sharedPartsArray) {
-    let configSharedPart = await fsUtils.readConfig(
-      "sharedPart",
-      sharedPartName
-    );
-    if (!configSharedPart?.id[firmId]) {
-      consola.warn(
-        `Shared part ${sharedPartName} has no id associated to firm ${firmId}. Skipping.`
-      );
-      continue;
-    }
-    let sharedPartData = await SF.readSharedPartById(
-      firmId,
-      configSharedPart.id[firmId]
-    );
-    if (!sharedPartData) {
-      consola.warn(
-        `Shared part ${sharedPartName} not found in firm ${firmId}. Skipping.`
-      );
-      continue;
-    }
-    const existingLinks = sharedPartData.data.used_in;
+  for (let sharedPartName of sharedPartsArray) {
+    let sharedPartConfig = fsUtils.readConfig("sharedPart", sharedPartName);
 
-    for await (let template of configSharedPart.used_in) {
-      template = SharedPart.checkTemplateType(template);
-      if (!template.handle) {
+    if (!sharedPartConfig.used_in) {
+      consola.warn(
+        `Shared part ${sharedPartName} has no used_in array. Skipping.`
+      );
+      continue;
+    }
+
+    for (let template of sharedPartConfig.used_in) {
+      if (!template.handle && !template.name) {
         consola.warn(`Template has no handle or name. Skipping.`);
         continue;
       }
-      const configPresent = fsUtils.configExists(
-        template.type,
-        template.handle
-      );
-      if (!configPresent) {
+
+      const folder = fsUtils.FOLDERS[template.type];
+
+      const handle = template.handle || template.name;
+      if (!fs.existsSync(`./${folder}/${handle}`)) {
         consola.warn(
           `Template ${template.type} ${template.handle} not found in the repository. Skipping.`
         );
         continue;
       }
-      // TODO: check also the template type, not only the id
-      if (!force) {
-        let alreadyAdded = await existingLinks.find(
-          (existing) => existing.id === template.id[firmId]
-        );
-        if (alreadyAdded) {
-          consola.info(
-            `Template ${template.type} ${template.handle} already has this shared part. Skipping.`
-          );
-          continue;
-        }
-      }
 
-      // add arbitrary delay to avoid rate limiting
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      addSharedPart(
-        firmId,
-        configSharedPart.name,
-        template.handle,
+      await addSharedPart(
+        type,
+        envId,
+        sharedPartConfig.name,
+        handle,
         template.type
       );
     }
@@ -918,7 +904,8 @@ async function removeSharedPart(
   try {
     const templateConfig = fsUtils.readConfig(templateType, templateHandle);
     const sharedPartConfig = fsUtils.readConfig("sharedPart", sharedPartHandle);
-    let templateId =
+
+    const templateId =
       type == "firm"
         ? templateConfig?.id?.[envId]
         : templateConfig?.partnerId?.[envId];
@@ -930,7 +917,7 @@ async function removeSharedPart(
       return false;
     }
 
-    sharedPartId =
+    const sharedPartId =
       type == "firm"
         ? sharedPartConfig?.id?.[envId]
         : sharedPartConfig?.partnerId?.[envId];
@@ -939,6 +926,7 @@ async function removeSharedPart(
       consola.warn(`Shared part id not found for ${templateHandle}. Skipping.`);
       return false;
     }
+
     // Remove shared part from template
     let removeSharedPart;
     switch (templateType) {
@@ -960,31 +948,56 @@ async function removeSharedPart(
       templateId
     );
 
-    if (response.status === 200) {
-      consola.success(
-        `Shared part "${sharedPartHandle}" removed from template "${templateHandle}" (${templateType}).`
+    if (response && response?.status === 200) {
+      consola.debug(
+        `Remove shared part with id ${sharedPartId} removed from ${templateType} with id ${templateId} on the platform.`
       );
     }
 
     // Remove reference from shared part config
     const templateIndex = sharedPartConfig.used_in.findIndex(
-      (reconciliationText) =>
-        type == "firm"
-          ? reconciliationText.id[envId]
-          : reconciliationText.partnerId[envId] === templateId
+      (template) =>
+        templateHandle === template.handle || templateHandle === template.name
     );
-    if (templateIndex !== -1) {
-      const reconciliationText = sharedPartConfig.used_in[templateIndex];
 
-      if (Object.keys(reconciliationText.id).length === 1) {
-        sharedPartConfig.used_in.splice(templateIndex, 1);
-      } else {
-        delete type == "firm"
-          ? reconciliationText.id[envId]
-          : reconciliationText.partnerId[envId];
+    if (templateIndex === -1) {
+      consola.debug(
+        `${templateType} with id ${templateId} not found in shared part config. No update in local shared part config occured.`
+      );
+    } else {
+      const usedInTemplateConfig = sharedPartConfig.used_in[templateIndex];
+
+      // In case there's only one id & partnerId in the template config, remove the whole template config
+      const totalIds =
+        Object.keys(usedInTemplateConfig.id).length +
+        Object.keys(usedInTemplateConfig.partnerId).length;
+      const targetId =
+        type == "firm"
+          ? usedInTemplateConfig.id[envId]
+          : usedInTemplateConfig.partnerId[envId];
+
+      // Remove reference of specific firm or partner id in the template config in the shared part used in array
+      if (targetId) {
+        if (totalIds <= 1 && templateId.toString() === targetId.toString()) {
+          sharedPartConfig.used_in.splice(templateIndex, 1);
+        } else {
+          // Only delete the specific id or partnerId if other ids exist in the template config
+          if (type == "firm") {
+            delete usedInTemplateConfig.id[envId];
+          } else {
+            delete usedInTemplateConfig.partnerId[envId];
+          }
+
+          sharedPartConfig.used_in[templateIndex] = usedInTemplateConfig;
+        }
       }
+
       fsUtils.writeConfig("sharedPart", sharedPartHandle, sharedPartConfig);
     }
+
+    consola.success(
+      `Shared part "${sharedPartHandle}" removed from template "${templateHandle}" (${templateType}).`
+    );
   } catch (error) {
     errorUtils.errorHandler(error);
   }

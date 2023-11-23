@@ -687,7 +687,7 @@ program
 program
   .command("authorize-partner")
   .description(
-    "Authorize a Silverfin partner environment by entering the API key and credentials"
+    "Authorize a Silverfin partner environment by entering the API key and partner information"
   )
   .requiredOption(
     "-i, --partner-id <partner-id>",
