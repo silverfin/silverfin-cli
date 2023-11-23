@@ -1,6 +1,6 @@
 {
   "name": "silverfin-cli",
-  "version": "1.24.1",
+  "version": "1.24.2",
   "description": "Command line tool for Silverfin template development",
   "main": "index.js",
   "license": "MIT",
@@ -21,7 +21,7 @@
     "silverfin": "./node_modules/silverfin-cli/bin/cli.js"
   },
   "dependencies": {
-    "axios": "^0.26.1",
+    "axios": "^1.6.2",
     "chalk": "4.1.2",
     "command-exists": "^1.2.9",
     "commander": "^9.4.0",
