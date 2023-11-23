@@ -38,7 +38,6 @@ async function fetchReconciliationById(type, envId, id) {
 
 async function fetchReconciliationByHandle(type, envId, handle) {
   try {
-<<<<<<< HEAD
     const configPresent = fsUtils.configExists("reconciliationText", handle);
 
     let id;
@@ -52,19 +51,6 @@ async function fetchReconciliationByHandle(type, envId, handle) {
           ? templateConfig?.id?.[envId]
           : templateConfig?.partner_id?.[envId];
     }
-=======
-    const templateConfig = fsUtils.readConfig("reconciliationText", handle);
-
-    if (!templateConfig) {
-      errorUtils.missingConfig(handle);
-    }
-
-    let id =
-      type == "firm"
-        ? templateConfig?.id[envId]
-        : templateConfig?.partnerId[envId];
-    let existingTemplate;
->>>>>>> test all commands until add/remove shared parts
 
     if (!id) {
       existingTemplate = await SF.findReconciliationTextByHandle(
@@ -632,23 +618,15 @@ async function fetchAllSharedParts(type, envId, page = 1) {
     }
     return;
   }
-<<<<<<< HEAD
 
   for (let sharedPart of sharedParts) {
-=======
-  sharedParts.forEach(async (sharedPart) => {
->>>>>>> test all commands until add/remove shared parts
     try {
       await fetchSharedPartById(type, envId, sharedPart.id);
     } catch (error) {
       consola.error(error);
     }
-<<<<<<< HEAD
   }
 
-=======
-  });
->>>>>>> test all commands until add/remove shared parts
   await fetchAllSharedParts(type, envId, page + 1);
 }
 
@@ -865,16 +843,12 @@ async function addSharedPart(
         break;
     }
 
-<<<<<<< HEAD
     let response = await addSharedPartOnPlatform(
       type,
       envId,
       sharedPartId,
       templateId
     );
-=======
-    let response = await addSharedPart(type, envId, sharedPartId, templateId);
->>>>>>> test all commands until add/remove shared parts
 
     // Success or failure
     if (!response || !response.status || !response.status === 201) {
@@ -883,12 +857,6 @@ async function addSharedPart(
       );
       return false;
     }
-<<<<<<< HEAD
-=======
-
-    const addNewId = (currentType, typeCheck, envId, template) =>
-      currentType == typeCheck ? { [envId]: template.id } : {};
->>>>>>> test all commands until add/remove shared parts
 
     // Store details in config files
     let templateIndex;
@@ -906,19 +874,8 @@ async function addSharedPart(
     if (templateIndex === -1) {
       // Not stored yet
       sharedPartConfig.used_in.push({
-<<<<<<< HEAD
         id: type == "firm" ? templateConfig?.id : {},
         partner_id: type == "partner" ? templateConfig?.partner_id : {},
-=======
-        id: {
-          ...templateConfig?.id,
-          ...addNewId(type, "firm", envId, templateConfig),
-        },
-        partnerId: {
-          ...templateConfig?.partnerId,
-          ...addNewId(type, "partner", envId, templateConfig),
-        },
->>>>>>> test all commands until add/remove shared parts
         type: templateType,
         handle: templateHandle,
       });
@@ -945,39 +902,15 @@ async function addSharedPart(
 
       sharedPartConfig.used_in[templateIndex] = usedInTemplateConfig;
     }
-<<<<<<< HEAD
-
-=======
-    // Previously stored
-    if (templateIndex !== -1) {
-      if(type == "firm") {
-        sharedPartConfig.used_in[templateIndex].id[envId] =
-          templateConfig.id[envId];
-      }
-
-      if(type == "partner") {
-        sharedPartConfig.used_in[templateIndex].partnerId[envId] =
-          templateConfig.partnerId[envId];
-      }
-    }
->>>>>>> test all commands until add/remove shared parts
     // Save Configs
     fsUtils.writeConfig(templateType, templateHandle, templateConfig);
     fsUtils.writeConfig("sharedPart", sharedPartName, sharedPartConfig);
-<<<<<<< HEAD
-=======
-    fsUtils.writeConfig(templateType, templateHandle, templateConfig);
->>>>>>> test all commands until add/remove shared parts
 
     consola.success(
       `Shared part "${sharedPartName}" added to "${templateHandle}" (${templateType}).`
     );
 
-<<<<<<< HEAD
     return sharedPartConfig;
-=======
-    return true;
->>>>>>> test all commands until add/remove shared parts
   } catch (error) {
     errorUtils.errorHandler(error);
     return false;
@@ -1039,18 +972,11 @@ async function removeSharedPart(
   try {
     const templateConfig = fsUtils.readConfig(templateType, templateHandle);
     const sharedPartConfig = fsUtils.readConfig("sharedPart", sharedPartHandle);
-<<<<<<< HEAD
 
     const templateId =
       type == "firm"
         ? templateConfig?.id?.[envId]
         : templateConfig?.partner_id?.[envId];
-=======
-    let templateId =
-      type == "firm"
-        ? templateConfig?.id?.[envId]
-        : templateConfig?.partnerId?.[envId];
->>>>>>> test all commands until add/remove shared parts
 
     if (!templateConfig || !templateId) {
       consola.warn(
@@ -1059,17 +985,10 @@ async function removeSharedPart(
       return false;
     }
 
-<<<<<<< HEAD
     const sharedPartId =
       type == "firm"
         ? sharedPartConfig?.id?.[envId]
         : sharedPartConfig?.partner_id?.[envId];
-=======
-    sharedPartId =
-      type == "firm"
-        ? sharedPartConfig?.id?.[envId]
-        : sharedPartConfig?.partnerId?.[envId];
->>>>>>> test all commands until add/remove shared parts
 
     if (!sharedPartId) {
       consola.warn(`Shared part id not found for ${templateHandle}. Skipping.`);
@@ -1105,7 +1024,6 @@ async function removeSharedPart(
 
     // Remove reference from shared part config
     const templateIndex = sharedPartConfig.used_in.findIndex(
-<<<<<<< HEAD
       (template) =>
         templateHandle === template.handle || templateHandle === template.name
     );
@@ -1142,23 +1060,6 @@ async function removeSharedPart(
         }
       }
 
-=======
-      (reconciliationText) =>
-        type == "firm"
-          ? reconciliationText.id[envId]
-          : reconciliationText.partnerId[envId] === templateId
-    );
-    if (templateIndex !== -1) {
-      const reconciliationText = sharedPartConfig.used_in[templateIndex];
-
-      if (Object.keys(reconciliationText.id).length === 1) {
-        sharedPartConfig.used_in.splice(templateIndex, 1);
-      } else {
-        delete type == "firm"
-          ? reconciliationText.id[envId]
-          : reconciliationText.partnerId[envId];
-      }
->>>>>>> test all commands until add/remove shared parts
       fsUtils.writeConfig("sharedPart", sharedPartHandle, sharedPartConfig);
     }
 
