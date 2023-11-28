@@ -114,6 +114,7 @@ The CLI will stick to some conventions regarding the structure and organization 
 - The principal file of a Reconciliation Text, Export File or Account Template is always named `main.liquid` while every part is stored inside `/text_parts`.
 - For shared parts, since there is only one liquid file, we use the `name` property to give the name to the liquid file.
 - All templates always have a `config.json` file, where all the details of the template are stored.
+- Reconciliation Texts and Shared Parts must be named using only alphanumeric characters and underscores. Meanwhile, Account Templates and Export Files should exclude backslashes and forward slashes from their name, to avoid any potential conflicts with the directory structure.
 
 ### Test files
 
