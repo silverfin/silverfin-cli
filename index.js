@@ -43,8 +43,8 @@ async function fetchReconciliationByHandle(type, envId, handle) {
 
     let id =
       type == "firm"
-        ? templateConfig?.id[envId]
-        : templateConfig?.partnerId[envId];
+        ? templateConfig?.id?.[envId]
+        : templateConfig?.partnerId?.[envId];
     let existingTemplate;
 
     if (!id) {
@@ -812,8 +812,8 @@ async function addSharedPart(
     if (templateIndex === -1) {
       // Not stored yet
       sharedPartConfig.used_in.push({
-        id: type == "firm" ? templateConfig.id : {},
-        partnerId: type == "partner" ? templateConfig.partnerId : {},
+        id: type == "firm" ? templateConfig?.id : {},
+        partnerId: type == "partner" ? templateConfig?.partnerId : {},
         type: templateType,
         handle: templateHandle,
       });
@@ -828,7 +828,8 @@ async function addSharedPart(
       }
 
       if (type == "partner") {
-        usedInTemplateConfig.partnerId[envId] = templateConfig.partnerId[envId];
+        usedInTemplateConfig.partnerId[envId] =
+          templateConfig?.partnerId[envId];
       }
 
       sharedPartConfig.used_in[templateIndex] = usedInTemplateConfig;
