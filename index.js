@@ -823,8 +823,6 @@ async function addSharedPart(
 
       if (type == "firm") {
         usedInTemplateConfig.id[envId] = templateConfig.id[envId];
-        console.log("usedInTemplateConfig.id", usedInTemplateConfig.id);
-        console.log("templateConfig.id", templateConfig.id);
       }
 
       if (type == "partner") {
