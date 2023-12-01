@@ -10,8 +10,12 @@ const { AccountTemplate } = require("./lib/templates/accountTemplate");
 const { consola } = require("consola");
 
 async function fetchReconciliation(firmId, handle) {
-  const templateConfig = fsUtils.readConfig("reconciliationText", handle);
-  if (templateConfig && templateConfig.id[firmId]) {
+  const configPresent = fsUtils.configExists("reconciliationText", handle);
+  let templateConfig;
+  if (configPresent) {
+    templateConfig = fsUtils.readConfig("reconciliationText", handle);
+  }
+  if (templateConfig?.id[firmId]) {
     await fetchReconciliationById(firmId, templateConfig.id[firmId]);
   } else {
     await fetchReconciliationByHandle(firmId, handle);
@@ -141,8 +145,12 @@ async function newAllReconciliations(firmId) {
 }
 
 async function fetchExportFile(firmId, name) {
-  const templateConfig = fsUtils.readConfig("exportFile", name);
-  if (templateConfig && templateConfig.id[firmId]) {
+  const configPresent = fsUtils.configExists("exportFile", name);
+  let templateConfig;
+  if (configPresent) {
+    templateConfig = fsUtils.readConfig("exportFile", name);
+  }
+  if (templateConfig?.id[firmId]) {
     await fetchExportFileById(firmId, templateConfig.id[firmId]);
   } else {
     await fetchExportFileByName(firmId, name);
@@ -262,8 +270,12 @@ async function newAllExportFiles(firmId) {
 }
 
 async function fetchAccountTemplate(firmId, name) {
-  const templateConfig = fsUtils.readConfig("accountTemplate", name);
-  if (templateConfig && templateConfig.id[firmId]) {
+  const configPresent = fsUtils.configExists("accountTemplate", name);
+  let templateConfig;
+  if (configPresent) {
+    templateConfig = fsUtils.readConfig("accountTemplate", name);
+  }
+  if (templateConfig?.id[firmId]) {
     await fetchAccountTemplateById(firmId, templateConfig.id[firmId]);
   } else {
     await fetchAccountTemplateByName(firmId, name);
@@ -393,8 +405,12 @@ async function newAllAccountTemplates(firmId) {
 }
 
 async function fetchSharedPart(firmId, name) {
-  const templateConfig = fsUtils.readConfig("sharedPart", name);
-  if (templateConfig && templateConfig.id[firmId]) {
+  const configPresent = fsUtils.configExists("sharedPart", name);
+  let templateConfig;
+  if (configPresent) {
+    templateConfig = fsUtils.readConfig("sharedPart", name);
+  }
+  if (templateConfig?.id[firmId]) {
     await fetchSharedPartById(firmId, templateConfig.id[firmId]);
   } else {
     await fetchSharedPartByName(firmId, name);
