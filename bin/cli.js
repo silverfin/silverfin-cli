@@ -137,9 +137,13 @@ program
   .option("-n, --name <name>", "Import a specific export file by name")
   .option("-i, --id <id>", "Import a specific export file by id")
   .option("-a, --all", "Import all existing export files")
+  .option(
+    "-e, --existing",
+    "Import all reconciliations (already stored in the repository)"
+  )
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
-    cliUtils.checkUniqueOption(["name", "id", "all"], options);
+    cliUtils.checkUniqueOption(["name", "id", "all", "existing"], options);
     if (!options.yes) {
       cliUtils.promptConfirmation();
     }
@@ -150,6 +154,8 @@ program
       toolkit.fetchExportFileById(options.firm, options.id);
     } else if (options.all) {
       toolkit.fetchAllExportFiles(options.firm);
+    } else if (options.all) {
+      toolkit.fetchExistingExportFiles(options.firm);
     }
   });
 

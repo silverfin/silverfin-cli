@@ -205,6 +205,16 @@ async function fetchAllExportFiles(firmId, page = 1) {
   fetchAllExportFiles(firmId, page + 1);
 }
 
+async function fetchExistingExportFiles(firmId) {
+  const templates = fsUtils.getAllTemplatesOfAType("exportFile");
+  if (!templates) return;
+  templates.forEach(async (name) => {
+    templateConfig = fsUtils.readConfig("exportFile", name);
+    if (!templateConfig || !templateConfig.id[firmId]) return;
+    await fetchExportFileById(firmId, templateConfig.id[firmId]);
+  });
+}
+
 async function publishExportFileByName(
   firmId,
   name,
@@ -838,6 +848,7 @@ module.exports = {
   fetchExportFileByName,
   fetchExportFileById,
   fetchAllExportFiles,
+  fetchExistingExportFiles,
   publishExportFileByName,
   publishAllExportFiles,
   newExportFile,
