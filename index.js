@@ -476,6 +476,16 @@ async function fetchAllSharedParts(firmId, page = 1) {
   await fetchAllSharedParts(firmId, page + 1);
 }
 
+async function fetchExistingSharedParts(firmId) {
+  const templates = fsUtils.getAllTemplatesOfAType("sharedPart");
+  if (!templates) return;
+  templates.forEach(async (name) => {
+    templateConfig = fsUtils.readConfig("sharedPart", name);
+    if (!templateConfig || !templateConfig.id[firmId]) return;
+    await fetchSharedPartById(firmId, templateConfig.id[firmId]);
+  });
+}
+
 async function publishSharedPartByName(
   firmId,
   name,
@@ -844,6 +854,7 @@ module.exports = {
   fetchSharedPartByName,
   fetchSharedPartById,
   fetchAllSharedParts,
+  fetchExistingSharedParts,
   publishSharedPartByName,
   publishAllSharedParts,
   newSharedPart,

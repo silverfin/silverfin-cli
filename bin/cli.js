@@ -317,9 +317,13 @@ program
   )
   .option("-s, --shared-part <name>", "Import a specific shared part")
   .option("-a, --all", "Import all shared parts")
+  .option(
+    "-e, --existing",
+    "Import all reconciliations (already stored in the repository)"
+  )
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
-    cliUtils.checkUniqueOption(["sharedPart", "all"], options);
+    cliUtils.checkUniqueOption(["sharedPart", "all", "existing"], options);
     if (!options.yes) {
       cliUtils.promptConfirmation();
     }
@@ -328,6 +332,8 @@ program
       toolkit.fetchSharedPart(options.firm, options.sharedPart);
     } else if (options.all) {
       toolkit.fetchAllSharedParts(options.firm);
+    } else if (options.existing) {
+      toolkit.fetchExistingSharedParts(options.firm);
     }
   });
 
