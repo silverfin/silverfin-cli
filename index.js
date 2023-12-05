@@ -345,6 +345,16 @@ async function fetchAllAccountTemplates(firmId, page = 1) {
   fetchAllAccountTemplates(firmId, page + 1);
 }
 
+async function fetchExistingAccountTemplates(firmId) {
+  const templates = fsUtils.getAllTemplatesOfAType("accountTemplate");
+  if (!templates) return;
+  templates.forEach(async (name) => {
+    templateConfig = fsUtils.readConfig("accountTemplate", name);
+    if (!templateConfig || !templateConfig.id[firmId]) return;
+    await fetchAccountTemplateById(firmId, templateConfig.id[firmId]);
+  });
+}
+
 async function publishAccountTemplateByName(
   firmId,
   name,
@@ -859,6 +869,7 @@ module.exports = {
   fetchAllAccountTemplates,
   publishAccountTemplateByName,
   publishAllAccountTemplates,
+  fetchExistingAccountTemplates,
   newAccountTemplate,
   newAllAccountTemplates,
   fetchSharedPart,
