@@ -63,6 +63,16 @@ async function fetchAllReconciliations(firmId, page = 1) {
   fetchAllReconciliations(firmId, page + 1);
 }
 
+async function fetchExistingReconciliations(firmId) {
+  const templates = fsUtils.getAllTemplatesOfAType("reconciliationText");
+  if (!templates) return;
+  templates.forEach(async (handle) => {
+    templateConfig = fsUtils.readConfig("reconciliationText", handle);
+    if (!templateConfig || !templateConfig.id[firmId]) return;
+    await fetchReconciliationById(firmId, templateConfig.id[firmId]);
+  });
+}
+
 async function publishReconciliationByHandle(
   firmId,
   handle,
@@ -809,6 +819,7 @@ module.exports = {
   fetchReconciliationByHandle,
   fetchReconciliationById,
   fetchAllReconciliations,
+  fetchExistingReconciliations,
   publishReconciliationByHandle,
   publishAllReconciliations,
   newReconciliation,

@@ -39,9 +39,13 @@ program
   .option("-h, --handle <handle>", "Import a specific reconciliation by handle")
   .option("-i, --id <id>", "Import a specific reconciliation by id")
   .option("-a, --all", "Import all reconciliations")
+  .option(
+    "-e, --existing",
+    "Import all reconciliations (already stored in the repository)"
+  )
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
-    cliUtils.checkUniqueOption(["handle", "id", "all"], options);
+    cliUtils.checkUniqueOption(["handle", "id", "all", "existing"], options);
     if (!options.yes) {
       cliUtils.promptConfirmation();
     }
@@ -52,6 +56,8 @@ program
       toolkit.fetchReconciliationById(options.firm, options.id);
     } else if (options.all) {
       toolkit.fetchAllReconciliations(options.firm);
+    } else if (options.existing) {
+      toolkit.fetchExistingReconciliations(options.firm);
     }
   });
 
