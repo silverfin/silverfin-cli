@@ -39,9 +39,13 @@ program
   .option("-h, --handle <handle>", "Import a specific reconciliation by handle")
   .option("-i, --id <id>", "Import a specific reconciliation by id")
   .option("-a, --all", "Import all reconciliations")
+  .option(
+    "-e, --existing",
+    "Import all reconciliations (already stored in the repository)"
+  )
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
-    cliUtils.checkUniqueOption(["handle", "id", "all"], options);
+    cliUtils.checkUniqueOption(["handle", "id", "all", "existing"], options);
     if (!options.yes) {
       cliUtils.promptConfirmation();
     }
@@ -52,6 +56,8 @@ program
       toolkit.fetchReconciliationById(options.firm, options.id);
     } else if (options.all) {
       toolkit.fetchAllReconciliations(options.firm);
+    } else if (options.existing) {
+      toolkit.fetchExistingReconciliations(options.firm);
     }
   });
 
@@ -131,9 +137,13 @@ program
   .option("-n, --name <name>", "Import a specific export file by name")
   .option("-i, --id <id>", "Import a specific export file by id")
   .option("-a, --all", "Import all existing export files")
+  .option(
+    "-e, --existing",
+    "Import all export files (already stored in the repository)"
+  )
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
-    cliUtils.checkUniqueOption(["name", "id", "all"], options);
+    cliUtils.checkUniqueOption(["name", "id", "all", "existing"], options);
     if (!options.yes) {
       cliUtils.promptConfirmation();
     }
@@ -144,6 +154,8 @@ program
       toolkit.fetchExportFileById(options.firm, options.id);
     } else if (options.all) {
       toolkit.fetchAllExportFiles(options.firm);
+    } else if (options.all) {
+      toolkit.fetchExistingExportFiles(options.firm);
     }
   });
 
@@ -220,9 +232,13 @@ program
   .option("-n, --name <name>", "Import a specific account template by name")
   .option("-i, --id <id>", "Import a specific account template by id")
   .option("-a, --all", "Import all existing account templates")
+  .option(
+    "-e, --existing",
+    "Import all account templates (already stored in the repository)"
+  )
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
-    cliUtils.checkUniqueOption(["name", "id", "all"], options);
+    cliUtils.checkUniqueOption(["name", "id", "all", "existing"], options);
     if (!options.yes) {
       cliUtils.promptConfirmation();
     }
@@ -233,6 +249,8 @@ program
       toolkit.fetchAccountTemplateById(options.firm, options.id);
     } else if (options.all) {
       toolkit.fetchAllAccountTemplates(options.firm);
+    } else if (options.existing) {
+      toolkit.fetchExistingAccountTemplates(options.firm);
     }
   });
 
@@ -311,9 +329,13 @@ program
   )
   .option("-s, --shared-part <name>", "Import a specific shared part")
   .option("-a, --all", "Import all shared parts")
+  .option(
+    "-e, --existing",
+    "Import all shared parts (already stored in the repository)"
+  )
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
-    cliUtils.checkUniqueOption(["sharedPart", "all"], options);
+    cliUtils.checkUniqueOption(["sharedPart", "all", "existing"], options);
     if (!options.yes) {
       cliUtils.promptConfirmation();
     }
@@ -322,6 +344,8 @@ program
       toolkit.fetchSharedPart(options.firm, options.sharedPart);
     } else if (options.all) {
       toolkit.fetchAllSharedParts(options.firm);
+    } else if (options.existing) {
+      toolkit.fetchExistingSharedParts(options.firm);
     }
   });
 

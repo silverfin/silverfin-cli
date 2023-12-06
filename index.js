@@ -63,6 +63,16 @@ async function fetchAllReconciliations(firmId, page = 1) {
   fetchAllReconciliations(firmId, page + 1);
 }
 
+async function fetchExistingReconciliations(firmId) {
+  const templates = fsUtils.getAllTemplatesOfAType("reconciliationText");
+  if (!templates) return;
+  templates.forEach(async (handle) => {
+    templateConfig = fsUtils.readConfig("reconciliationText", handle);
+    if (!templateConfig || !templateConfig.id[firmId]) return;
+    await fetchReconciliationById(firmId, templateConfig.id[firmId]);
+  });
+}
+
 async function publishReconciliationByHandle(
   firmId,
   handle,
@@ -195,6 +205,16 @@ async function fetchAllExportFiles(firmId, page = 1) {
   fetchAllExportFiles(firmId, page + 1);
 }
 
+async function fetchExistingExportFiles(firmId) {
+  const templates = fsUtils.getAllTemplatesOfAType("exportFile");
+  if (!templates) return;
+  templates.forEach(async (name) => {
+    templateConfig = fsUtils.readConfig("exportFile", name);
+    if (!templateConfig || !templateConfig.id[firmId]) return;
+    await fetchExportFileById(firmId, templateConfig.id[firmId]);
+  });
+}
+
 async function publishExportFileByName(
   firmId,
   name,
@@ -323,6 +343,16 @@ async function fetchAllAccountTemplates(firmId, page = 1) {
     }
   });
   fetchAllAccountTemplates(firmId, page + 1);
+}
+
+async function fetchExistingAccountTemplates(firmId) {
+  const templates = fsUtils.getAllTemplatesOfAType("accountTemplate");
+  if (!templates) return;
+  templates.forEach(async (name) => {
+    templateConfig = fsUtils.readConfig("accountTemplate", name);
+    if (!templateConfig || !templateConfig.id[firmId]) return;
+    await fetchAccountTemplateById(firmId, templateConfig.id[firmId]);
+  });
 }
 
 async function publishAccountTemplateByName(
@@ -464,6 +494,16 @@ async function fetchAllSharedParts(firmId, page = 1) {
     await fetchSharedPartById(firmId, sharedPart.id);
   });
   await fetchAllSharedParts(firmId, page + 1);
+}
+
+async function fetchExistingSharedParts(firmId) {
+  const templates = fsUtils.getAllTemplatesOfAType("sharedPart");
+  if (!templates) return;
+  templates.forEach(async (name) => {
+    templateConfig = fsUtils.readConfig("sharedPart", name);
+    if (!templateConfig || !templateConfig.id[firmId]) return;
+    await fetchSharedPartById(firmId, templateConfig.id[firmId]);
+  });
 }
 
 async function publishSharedPartByName(
@@ -650,20 +690,51 @@ async function addAllSharedParts(firmId) {
   const sharedPartsArray = fsUtils.getAllTemplatesOfAType("sharedPart");
   for (let sharedPartName of sharedPartsArray) {
     let configSharedPart = fsUtils.readConfig("sharedPart", sharedPartName);
+    if (!configSharedPart?.id[firmId]) {
+      consola.warn(
+        `Shared part ${sharedPartName} has no id associated to firm ${firmId}. Skipping.`
+      );
+      continue;
+    }
+    let sharedPartData = await SF.readSharedPartById(
+      firmId,
+      configSharedPart.id[firmId]
+    );
+    if (!sharedPartData) {
+      consola.warn(
+        `Shared part ${sharedPartName} not found in firm ${firmId}. Skipping.`
+      );
+      continue;
+    }
+    const existingLinks = sharedPartData.data.used_in;
+
     for (let template of configSharedPart.used_in) {
       template = SharedPart.checkReconciliationType(template);
       if (!template.handle && !template.name) {
         consola.warn(`Template has no handle or name. Skipping.`);
         continue;
       }
-      const folder = fsUtils.FOLDERS[template.type];
-      const handle = template.handle || template.name;
-      if (!fs.existsSync(`./${folder}/${handle}`)) {
+      const configPresent = fsUtils.configExists(
+        template.type,
+        template.handle
+      );
+      if (!configPresent) {
         consola.warn(
-          `Template ${template.type} ${handle} not found. Skipping.`
+          `Template ${template.type} ${template.handle} not found in the repository. Skipping.`
         );
         continue;
       }
+      // TODO: check also the template type, not only the id
+      let alreadyAdded = await existingLinks.find(
+        (existing) => existing.id === template.id[firmId]
+      );
+      if (alreadyAdded) {
+        consola.info(
+          "Template ${tempalte.type} ${template.handle} already has this shared part. Skipping."
+        );
+        continue;
+      }
+
       addSharedPart(firmId, configSharedPart.name, handle, template.type);
     }
   }
@@ -809,6 +880,7 @@ module.exports = {
   fetchReconciliationByHandle,
   fetchReconciliationById,
   fetchAllReconciliations,
+  fetchExistingReconciliations,
   publishReconciliationByHandle,
   publishAllReconciliations,
   newReconciliation,
@@ -817,6 +889,7 @@ module.exports = {
   fetchExportFileByName,
   fetchExportFileById,
   fetchAllExportFiles,
+  fetchExistingExportFiles,
   publishExportFileByName,
   publishAllExportFiles,
   newExportFile,
@@ -827,12 +900,14 @@ module.exports = {
   fetchAllAccountTemplates,
   publishAccountTemplateByName,
   publishAllAccountTemplates,
+  fetchExistingAccountTemplates,
   newAccountTemplate,
   newAllAccountTemplates,
   fetchSharedPart,
   fetchSharedPartByName,
   fetchSharedPartById,
   fetchAllSharedParts,
+  fetchExistingSharedParts,
   publishSharedPartByName,
   publishAllSharedParts,
   newSharedPart,
