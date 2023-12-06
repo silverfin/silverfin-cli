@@ -710,7 +710,7 @@ async function addAllSharedParts(firmId) {
 
     for (let template of configSharedPart.used_in) {
       template = SharedPart.checkReconciliationType(template);
-      if (!template.handle && !template.name) {
+      if (!template.handle) {
         consola.warn(`Template has no handle or name. Skipping.`);
         continue;
       }
@@ -730,12 +730,17 @@ async function addAllSharedParts(firmId) {
       );
       if (alreadyAdded) {
         consola.info(
-          "Template ${tempalte.type} ${template.handle} already has this shared part. Skipping."
+          `Template ${template.type} ${template.handle} already has this shared part. Skipping.`
         );
         continue;
       }
 
-      addSharedPart(firmId, configSharedPart.name, handle, template.type);
+      addSharedPart(
+        firmId,
+        configSharedPart.name,
+        template.handle,
+        template.type
+      );
     }
   }
 }
