@@ -688,8 +688,11 @@ async function addSharedPart(
  */
 async function addAllSharedParts(firmId) {
   const sharedPartsArray = fsUtils.getAllTemplatesOfAType("sharedPart");
-  for (let sharedPartName of sharedPartsArray) {
-    let configSharedPart = fsUtils.readConfig("sharedPart", sharedPartName);
+  for await (let sharedPartName of sharedPartsArray) {
+    let configSharedPart = await fsUtils.readConfig(
+      "sharedPart",
+      sharedPartName
+    );
     if (!configSharedPart?.id[firmId]) {
       consola.warn(
         `Shared part ${sharedPartName} has no id associated to firm ${firmId}. Skipping.`
@@ -708,7 +711,7 @@ async function addAllSharedParts(firmId) {
     }
     const existingLinks = sharedPartData.data.used_in;
 
-    for (let template of configSharedPart.used_in) {
+    for await (let template of configSharedPart.used_in) {
       template = SharedPart.checkReconciliationType(template);
       if (!template.handle) {
         consola.warn(`Template has no handle or name. Skipping.`);
