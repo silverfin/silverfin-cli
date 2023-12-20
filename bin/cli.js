@@ -442,6 +442,11 @@ program
     "-a, --all",
     "Add all shared parts to all templates (based on the config file of shared parts and the handles assigned there to each template)"
   )
+  .option(
+    "-f, --force",
+    `Force adding shared parts to all templates, even if they already have it. It can only be used together with "--all" (optional)`,
+    false
+  )
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     if (!options.yes) {
@@ -482,7 +487,7 @@ program
         "accountTemplate"
       );
     } else if (options.all) {
-      toolkit.addAllSharedParts(options.firm);
+      toolkit.addAllSharedParts(options.firm, options.force);
     }
   });
 
