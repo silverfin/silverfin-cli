@@ -713,7 +713,7 @@ async function addAllSharedParts(firmId, force = false) {
     const existingLinks = sharedPartData.data.used_in;
 
     for await (let template of configSharedPart.used_in) {
-      template = SharedPart.checkReconciliationType(template);
+      template = SharedPart.checkTemplateType(template);
       if (!template.handle) {
         consola.warn(`Template has no handle or name. Skipping.`);
         continue;
