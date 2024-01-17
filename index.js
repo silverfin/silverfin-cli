@@ -383,7 +383,7 @@ async function publishAccountTemplateByName(
       consola.success(`Account template updated: ${response.data.name_nl}`);
       return true;
     } else {
-      consola.error(`Account template update failed: ${handle}`);
+      consola.error(`Account template update failed: ${name}`);
       return false;
     }
   } catch (error) {
