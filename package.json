@@ -33,5 +33,9 @@
   },
   "devDependencies": {
     "eslint": "^8.21.0"
+  },
+  "prettier": {
+    "trailingComma": "es5",
+    "tabWidth": 2
   }
 }
