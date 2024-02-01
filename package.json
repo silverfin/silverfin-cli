@@ -1,6 +1,6 @@
 {
   "name": "silverfin-cli",
-  "version": "1.25.7",
+  "version": "1.25.8",
   "description": "Command line tool for Silverfin template development",
   "main": "index.js",
   "license": "MIT",
