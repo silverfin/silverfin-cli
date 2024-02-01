@@ -82,10 +82,12 @@ async function publishReconciliationByHandle(
     const configPresent = fsUtils.configExists("reconciliationText", handle);
     if (!configPresent) {
       errorUtils.missingReconciliationId(handle);
+      return false;
     }
     const templateConfig = fsUtils.readConfig("reconciliationText", handle);
     if (!templateConfig || !templateConfig.id[firmId]) {
       errorUtils.missingReconciliationId(handle);
+      return false;
     }
     let templateId = templateConfig.id[firmId];
     consola.debug(`Updating reconciliation ${handle}...`);
@@ -224,10 +226,12 @@ async function publishExportFileByName(
     const configPresent = fsUtils.configExists("exportFile", name);
     if (!configPresent) {
       errorUtils.missingExportFileId(name);
+      return false;
     }
     const templateConfig = fsUtils.readConfig("exportFile", name);
     if (!templateConfig || !templateConfig.id[firmId]) {
       errorUtils.missingExportFileId(name);
+      return false;
     }
     let templateId = templateConfig.id[firmId];
     consola.debug(`Updating export file ${name}...`);
@@ -364,10 +368,12 @@ async function publishAccountTemplateByName(
     const configPresent = fsUtils.configExists("accountTemplate", name);
     if (!configPresent) {
       errorUtils.missingAccountTemplateId(name);
+      return false;
     }
     const templateConfig = fsUtils.readConfig("accountTemplate", name);
     if (!templateConfig || !templateConfig.id[firmId]) {
       errorUtils.missingAccountTemplateId(name);
+      return false;
     }
     let templateId = templateConfig.id[firmId];
     consola.debug(`Updating account template ${name}...`);
@@ -515,10 +521,12 @@ async function publishSharedPartByName(
     const configPresent = fsUtils.configExists("sharedPart", name);
     if (!configPresent) {
       errorUtils.missingSharedPartId(name);
+      return false;
     }
     const templateConfig = fsUtils.readConfig("sharedPart", name);
     if (!templateConfig || !templateConfig.id[firmId]) {
       errorUtils.missingSharedPartId(name);
+      return false;
     }
     consola.debug(`Updating shared part ${name}...`);
     const template = await SharedPart.read(name);
