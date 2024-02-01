@@ -17,10 +17,13 @@ async function fetchReconciliationById(type, envId, id) {
       process.exit(1);
     }
 
-    ReconciliationText.save(type, envId, template.data);
-    consola.success(
-      `Reconciliation "${template.data.handle}" imported from ${type} ${envId}`
-    );
+    const saved = await ReconciliationText.save(type, envId, template.data);
+
+    if (saved) {
+      consola.success(
+        `Reconciliation "${template.data.handle}" imported from ${type} ${envId}`
+      );
+    }
 
     return {
       type,
@@ -35,17 +38,19 @@ async function fetchReconciliationById(type, envId, id) {
 
 async function fetchReconciliationByHandle(type, envId, handle) {
   try {
-    const templateConfig = fsUtils.readConfig("reconciliationText", handle);
+    const configPresent = fsUtils.configExists("reconciliationText", handle);
 
-    if (!templateConfig) {
-      errorUtils.missingConfig(handle);
-    }
-
-    let id =
-      type == "firm"
-        ? templateConfig?.id?.[envId]
-        : templateConfig?.partnerId?.[envId];
+    let id;
     let existingTemplate;
+
+    if (configPresent) {
+      templateConfig = fsUtils.readConfig("reconciliationText", handle);
+
+      id =
+        type == "firm"
+          ? templateConfig?.id?.[envId]
+          : templateConfig?.partnerId?.[envId];
+    }
 
     if (!id) {
       existingTemplate = await SF.findReconciliationTextByHandle(
@@ -90,13 +95,28 @@ async function fetchAllReconciliations(type, envId, page = 1) {
   fetchAllReconciliations(type, envId, page + 1);
 }
 
-async function fetchExistingReconciliations(firmId) {
+async function fetchExistingReconciliations(type, envId) {
   const templates = fsUtils.getAllTemplatesOfAType("reconciliationText");
   if (!templates) return;
   templates.forEach(async (handle) => {
+    const configPresent = fsUtils.configExists("reconciliationText", handle);
+
+    if (!configPresent) return;
+
     templateConfig = fsUtils.readConfig("reconciliationText", handle);
-    if (!templateConfig || !templateConfig.id[firmId]) return;
-    await fetchReconciliationById(firmId, templateConfig.id[firmId]);
+
+    let templateId =
+      type == "firm"
+        ? templateConfig?.id?.[envId]
+        : templateConfig?.partnerId?.[envId];
+
+    if (!templateId) {
+      errorUtils.missingReconciliationId(handle);
+      return false;
+    }
+
+    if (!templateConfig || !templateId) return;
+    await fetchReconciliationById(type, envId, templateId);
   });
 }
 
@@ -144,6 +164,7 @@ async function publishReconciliationByHandle(
       templateId,
       template
     );
+
     if (response && response.data && response.data.handle) {
       consola.success(`Reconciliation updated: ${response.data.handle}`);
       return true;
@@ -214,8 +235,10 @@ async function fetchExportFileByName(type, envId, name) {
       consola.error(`Export file "${name}" wasn't found`);
       process.exit(1);
     }
-    ExportFile.save(type, envId, template);
-    consola.success(`Export file "${name}" imported`);
+    const saved = await ExportFile.save(type, envId, template);
+    if (saved) {
+      consola.success(`Export file "${name}" imported`);
+    }
   } catch (error) {
     consola.error(error);
     process.exit(1);
@@ -420,13 +443,22 @@ async function fetchAllAccountTemplates(type, envId, page = 1) {
   fetchAllAccountTemplates(type, envId, page + 1);
 }
 
-async function fetchExistingAccountTemplates(firmId) {
+async function fetchExistingAccountTemplates(type, envId) {
   const templates = fsUtils.getAllTemplatesOfAType("accountTemplate");
   if (!templates) return;
   templates.forEach(async (name) => {
     templateConfig = fsUtils.readConfig("accountTemplate", name);
-    if (!templateConfig || !templateConfig.id[firmId]) return;
-    await fetchAccountTemplateById(firmId, templateConfig.id[firmId]);
+    let templateId =
+      type == "firm"
+        ? templateConfig?.id?.[envId]
+        : templateConfig?.partnerId?.[envId];
+
+    if (!templateId) {
+      errorUtils.missingAccountTemplateId(name);
+      return false;
+    }
+
+    await fetchAccountTemplateById(type, envId, templateId);
   });
 }
 
@@ -584,13 +616,28 @@ async function fetchAllSharedParts(type, envId, page = 1) {
   await fetchAllSharedParts(type, envId, page + 1);
 }
 
-async function fetchExistingSharedParts(firmId) {
+async function fetchExistingSharedParts(type, envId) {
   const templates = fsUtils.getAllTemplatesOfAType("sharedPart");
   if (!templates) return;
   templates.forEach(async (name) => {
+    const configPresent = fsUtils.configExists("sharedPart", name);
+
+    if (!configPresent) return;
+
     templateConfig = fsUtils.readConfig("sharedPart", name);
-    if (!templateConfig || !templateConfig.id[firmId]) return;
-    await fetchSharedPartById(firmId, templateConfig.id[firmId]);
+
+    let templateId =
+      type == "firm"
+        ? templateConfig?.id?.[envId]
+        : templateConfig?.partnerId?.[envId];
+
+    if (!templateId) {
+      errorUtils.missingSharedPartId(name);
+      return false;
+    }
+
+    if (!templateConfig || !templateId) return;
+    await fetchSharedPartById(type, envId, templateId);
   });
 }
 

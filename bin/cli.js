@@ -67,7 +67,7 @@ program
     } else if (options.all) {
       toolkit.fetchAllReconciliations(settings.type, settings.envId);
     } else if (options.existing) {
-      toolkit.fetchExistingReconciliations(options.firm);
+      toolkit.fetchExistingReconciliations(settings.type, settings.envId);
     }
   });
 
@@ -274,7 +274,7 @@ program
     } else if (options.all) {
       toolkit.fetchAllAccountTemplates(settings.type, settings.envId);
     } else if (options.existing) {
-      toolkit.fetchExistingAccountTemplates(options.firm);
+      toolkit.fetchExistingAccountTemplates(settings.type, settings.envId);
     }
   });
 
@@ -377,7 +377,7 @@ program
     } else if (options.all) {
       await toolkit.fetchAllSharedParts(settings.type, settings.envId);
     } else if (options.existing) {
-      toolkit.fetchExistingSharedParts(options.firm);
+      toolkit.fetchExistingSharedParts(settings.type, settings.envId);
     }
   });
 
