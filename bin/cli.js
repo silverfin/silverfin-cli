@@ -700,7 +700,7 @@ program
   )
   .action((options) => {
     const stored = firmCredentials.storePartnerApiKey(
-      options.partnerId,
+      options.partner_id,
       options.apiKey,
       options.partnerName
     );
@@ -829,7 +829,7 @@ program
 
       if (refreshedTokens && refreshedTokens.partnerId) {
         consola.success(
-          `Partner API key refreshed for partner ID: ${refreshedTokens.partnerId}`
+          `Partner API key refreshed for partner ID: ${refreshedTokens.partner_id}`
         );
       }
     }
