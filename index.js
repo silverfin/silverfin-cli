@@ -398,8 +398,10 @@ async function fetchAccountTemplateByName(type, envId, name) {
       process.exit(1);
     }
 
-    AccountTemplate.save(type, envId, template);
-    consola.success(`Account template "${template?.name_nl}" imported`);
+    const saved = AccountTemplate.save(type, envId, template);
+    if (saved) {
+      consola.success(`Account template "${template?.name_nl}" imported`);
+    }
   } catch (error) {
     consola.error(error);
     process.exit(1);
@@ -489,11 +491,18 @@ async function publishAccountTemplateByName(
 
     consola.debug(`Updating account template ${name}...`);
 
-    const template = await AccountTemplate.read(name);
+    const template = AccountTemplate.read(name);
     if (!template) return;
 
     // Add API-only required fields
     template.version_comment = message;
+
+    // Filter out the mapping_list_ranges that do not have this "type" and "envId"
+    template.mapping_list_ranges = template.mapping_list_ranges.filter(
+      (range) => {
+        return range.type === type && range.env_id === envId;
+      }
+    );
 
     if (type == "partner") {
       template.version_significant_change = false;
