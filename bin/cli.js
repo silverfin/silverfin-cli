@@ -700,7 +700,7 @@ program
   )
   .action((options) => {
     const stored = firmCredentials.storePartnerApiKey(
-      options.partner_id,
+      options.partnerId,
       options.apiKey,
       options.partnerName
     );
