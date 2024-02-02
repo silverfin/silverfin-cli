@@ -49,7 +49,7 @@ async function fetchReconciliationByHandle(type, envId, handle) {
       id =
         type == "firm"
           ? templateConfig?.id?.[envId]
-          : templateConfig?.partnerId?.[envId];
+          : templateConfig?.partner_id?.[envId];
     }
 
     if (!id) {
@@ -98,7 +98,8 @@ async function fetchAllReconciliations(type, envId, page = 1) {
 async function fetchExistingReconciliations(type, envId) {
   const templates = fsUtils.getAllTemplatesOfAType("reconciliationText");
   if (!templates) return;
-  templates.forEach(async (handle) => {
+
+  for (let handle of templates) {
     const configPresent = fsUtils.configExists("reconciliationText", handle);
 
     if (!configPresent) return;
@@ -108,16 +109,14 @@ async function fetchExistingReconciliations(type, envId) {
     let templateId =
       type == "firm"
         ? templateConfig?.id?.[envId]
-        : templateConfig?.partnerId?.[envId];
+        : templateConfig?.partner_id?.[envId];
 
     if (!templateId) {
       errorUtils.missingReconciliationId(handle);
-      return false;
+    } else {
+      await fetchReconciliationById(type, envId, templateId);
     }
-
-    if (!templateConfig || !templateId) return;
-    await fetchReconciliationById(type, envId, templateId);
-  });
+  }
 }
 
 async function publishReconciliationByHandle(
@@ -139,7 +138,7 @@ async function publishReconciliationByHandle(
     let templateId =
       type == "firm"
         ? templateConfig?.id?.[envId]
-        : templateConfig?.partnerId?.[envId];
+        : templateConfig?.partner_id?.[envId];
 
     if (!templateId) {
       errorUtils.missingReconciliationId(handle);
@@ -305,7 +304,7 @@ async function publishExportFileByName(
     let templateId =
       type == "firm"
         ? templateConfig?.id?.[envId]
-        : templateConfig?.partnerId?.[envId];
+        : templateConfig?.partner_id?.[envId];
 
     if (!templateConfig || !templateId) {
       errorUtils.missingExportFileId(name);
@@ -451,7 +450,7 @@ async function fetchExistingAccountTemplates(type, envId) {
     let templateId =
       type == "firm"
         ? templateConfig?.id?.[envId]
-        : templateConfig?.partnerId?.[envId];
+        : templateConfig?.partner_id?.[envId];
 
     if (!templateId) {
       errorUtils.missingAccountTemplateId(name);
@@ -481,7 +480,7 @@ async function publishAccountTemplateByName(
     let templateId =
       type == "firm"
         ? templateConfig?.id?.[envId]
-        : templateConfig?.partnerId?.[envId];
+        : templateConfig?.partner_id?.[envId];
 
     if (!templateConfig || !templateId) {
       errorUtils.missingAccountTemplateId(name);
@@ -629,7 +628,7 @@ async function fetchExistingSharedParts(type, envId) {
     let templateId =
       type == "firm"
         ? templateConfig?.id?.[envId]
-        : templateConfig?.partnerId?.[envId];
+        : templateConfig?.partner_id?.[envId];
 
     if (!templateId) {
       errorUtils.missingSharedPartId(name);
@@ -658,7 +657,7 @@ async function publishSharedPartByName(
     let templateId =
       type == "firm"
         ? templateConfig?.id?.[envId]
-        : templateConfig?.partnerId?.[envId];
+        : templateConfig?.partner_id?.[envId];
 
     if (!templateConfig || !templateId) {
       errorUtils.missingSharedPartId(name);
@@ -775,12 +774,12 @@ async function addSharedPart(
     let templateId =
       type == "firm"
         ? templateConfig?.id?.[envId]
-        : templateConfig?.partnerId?.[envId];
+        : templateConfig?.partner_id?.[envId];
 
     let sharedPartId =
       type == "firm"
         ? sharedPartConfig?.id?.[envId]
-        : sharedPartConfig?.partnerId?.[envId];
+        : sharedPartConfig?.partner_id?.[envId];
 
     // Missing Reconciliation ID. Try to identify it based on the handle
     if (!templateId) {
@@ -795,7 +794,7 @@ async function addSharedPart(
       templateId =
         type == "firm"
           ? templateConfig?.id?.[envId]
-          : templateConfig?.partnerId?.[envId];
+          : templateConfig?.partner_id?.[envId];
     }
 
     // Missing Shared Part ID. Try to identify it based on the name
@@ -811,7 +810,7 @@ async function addSharedPart(
       sharedPartId =
         type == "firm"
           ? sharedPartConfig?.id?.[envId]
-          : sharedPartConfig?.partnerId?.[envId];
+          : sharedPartConfig?.partner_id?.[envId];
     }
 
     // Add shared part to template
@@ -860,7 +859,7 @@ async function addSharedPart(
       // Not stored yet
       sharedPartConfig.used_in.push({
         id: type == "firm" ? templateConfig?.id : {},
-        partnerId: type == "partner" ? templateConfig?.partnerId : {},
+        partner_id: type == "partner" ? templateConfig?.partner_id : {},
         type: templateType,
         handle: templateHandle,
       });
@@ -873,8 +872,8 @@ async function addSharedPart(
       }
 
       if (type == "partner") {
-        usedInTemplateConfig.partnerId[envId] =
-          templateConfig?.partnerId[envId];
+        usedInTemplateConfig.partner_id[envId] =
+          templateConfig?.partner_id[envId];
       }
 
       sharedPartConfig.used_in[templateIndex] = usedInTemplateConfig;
@@ -954,7 +953,7 @@ async function removeSharedPart(
     const templateId =
       type == "firm"
         ? templateConfig?.id?.[envId]
-        : templateConfig?.partnerId?.[envId];
+        : templateConfig?.partner_id?.[envId];
 
     if (!templateConfig || !templateId) {
       consola.warn(
@@ -966,7 +965,7 @@ async function removeSharedPart(
     const sharedPartId =
       type == "firm"
         ? sharedPartConfig?.id?.[envId]
-        : sharedPartConfig?.partnerId?.[envId];
+        : sharedPartConfig?.partner_id?.[envId];
 
     if (!sharedPartId) {
       consola.warn(`Shared part id not found for ${templateHandle}. Skipping.`);
@@ -1013,25 +1012,25 @@ async function removeSharedPart(
     } else {
       const usedInTemplateConfig = sharedPartConfig.used_in[templateIndex];
 
-      // In case there's only one id & partnerId in the template config, remove the whole template config
+      // In case there's only one id & partner_id in the template config, remove the whole template config
       const totalIds =
         Object.keys(usedInTemplateConfig.id).length +
-        Object.keys(usedInTemplateConfig.partnerId).length;
+        Object.keys(usedInTemplateConfig.partner_id).length;
       const targetId =
         type == "firm"
           ? usedInTemplateConfig.id[envId]
-          : usedInTemplateConfig.partnerId[envId];
+          : usedInTemplateConfig.partner_id[envId];
 
       // Remove reference of specific firm or partner id in the template config in the shared part used in array
       if (targetId) {
         if (totalIds <= 1 && templateId.toString() === targetId.toString()) {
           sharedPartConfig.used_in.splice(templateIndex, 1);
         } else {
-          // Only delete the specific id or partnerId if other ids exist in the template config
+          // Only delete the specific id or partner_id if other ids exist in the template config
           if (type == "firm") {
             delete usedInTemplateConfig.id[envId];
           } else {
-            delete usedInTemplateConfig.partnerId[envId];
+            delete usedInTemplateConfig.partner_id[envId];
           }
 
           sharedPartConfig.used_in[templateIndex] = usedInTemplateConfig;
@@ -1083,14 +1082,14 @@ async function getTemplateId(type, envId, templateType, handle) {
     config.id = {};
   }
 
-  if (typeof config.partnerId !== "object") {
-    config.partnerId = {};
+  if (typeof config.partner_id !== "object") {
+    config.partner_id = {};
   }
 
   if (type == "firm") {
     config.id[envId] = templateText.id;
   } else {
-    config.partnerId[envId] = templateText.id;
+    config.partner_id[envId] = templateText.id;
   }
 
   fsUtils.writeConfig(templateType, handle, config);

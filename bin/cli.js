@@ -703,7 +703,7 @@ program
   )
   .action((options) => {
     const stored = firmCredentials.storePartnerApiKey(
-      options.partnerId,
+      options.partner_id,
       options.apiKey,
       options.partnerName
     );
@@ -748,7 +748,7 @@ program
   )
   .addOption(
     new Option(
-      "--refresh-partner-token [partnerId]",
+      "--refresh-partner-token [partner_id]",
       "Get a new partner api key using the stored api key"
     )
   )
@@ -819,9 +819,9 @@ program
         options.refreshPartnerToken
       );
 
-      if (refreshedTokens && refreshedTokens.partnerId) {
+      if (refreshedTokens && refreshedTokens.partner_id) {
         consola.success(
-          `Partner API key refreshed for partner ID: ${refreshedTokens.partnerId}`
+          `Partner API key refreshed for partner ID: ${refreshedTokens.partner_id}`
         );
       }
     }
