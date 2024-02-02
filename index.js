@@ -605,20 +605,23 @@ async function fetchAllSharedParts(type, envId, page = 1) {
     }
     return;
   }
-  sharedParts.forEach(async (sharedPart) => {
+
+  for (let sharedPart of sharedParts) {
     try {
       await fetchSharedPartById(type, envId, sharedPart.id);
     } catch (error) {
       consola.error(error);
     }
-  });
+  }
+
   await fetchAllSharedParts(type, envId, page + 1);
 }
 
 async function fetchExistingSharedParts(type, envId) {
   const templates = fsUtils.getAllTemplatesOfAType("sharedPart");
   if (!templates) return;
-  templates.forEach(async (name) => {
+
+  for (let name of templates) {
     const configPresent = fsUtils.configExists("sharedPart", name);
 
     if (!configPresent) return;
@@ -637,7 +640,7 @@ async function fetchExistingSharedParts(type, envId) {
 
     if (!templateConfig || !templateId) return;
     await fetchSharedPartById(type, envId, templateId);
-  });
+  }
 }
 
 async function publishSharedPartByName(
