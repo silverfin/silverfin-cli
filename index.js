@@ -155,6 +155,7 @@ async function publishReconciliationByHandle(
 
     if (type == "partner") {
       template.version_significant_change = false;
+      delete template.is_active;
     }
 
     const response = await SF.updateReconciliationText(
