@@ -1027,12 +1027,12 @@ async function removeSharedPart(
 
       // In case there's only one id & partner_id in the template config, remove the whole template config
       const totalIds =
-        Object.keys(usedInTemplateConfig.id).length +
-        Object.keys(usedInTemplateConfig.partner_id).length;
+        Object.keys(usedInTemplateConfig?.id || []).length +
+        Object.keys(usedInTemplateConfig?.partner_id || []).length;
       const targetId =
         type == "firm"
-          ? usedInTemplateConfig.id[envId]
-          : usedInTemplateConfig.partner_id[envId];
+          ? usedInTemplateConfig?.id[envId]
+          : usedInTemplateConfig?.partner_id[envId];
 
       // Remove reference of specific firm or partner id in the template config in the shared part used in array
       if (targetId) {
