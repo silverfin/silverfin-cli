@@ -556,6 +556,14 @@ async function newAccountTemplate(firmId, name) {
     const template = await AccountTemplate.read(name);
     if (!template) return;
     template.version_comment = "Created through the Silverfin CLI";
+
+    // Only keep the mapping_list_ranges that belong to this firm or partner for the request
+    template.mapping_list_ranges = template.mapping_list_ranges.filter(
+      (range) => {
+        return range.type === "firm" && range.env_id === firmId;
+      }
+    );
+
     const response = await SF.createAccountTemplate(firmId, template);
     const handle = response.data.name_nl;
 
