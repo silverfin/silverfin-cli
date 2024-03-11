@@ -499,11 +499,10 @@ async function publishAccountTemplateByName(
     template.version_comment = message;
 
     // Filter out the mapping_list_ranges that do not have this "type" and "envId"
-    template.mapping_list_ranges = template.mapping_list_ranges.filter(
-      (range) => {
+    template.mapping_list_ranges =
+      template.mapping_list_ranges?.filter((range) => {
         return range.type === type && range.env_id === envId;
-      }
-    );
+      }) || [];
 
     if (type == "partner") {
       template.version_significant_change = false;
