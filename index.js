@@ -888,10 +888,18 @@ async function addSharedPart(
       const usedInTemplateConfig = sharedPartConfig.used_in[templateIndex];
 
       if (type == "firm") {
+        if (!usedInTemplateConfig.id) {
+          usedInTemplateConfig.id = {};
+        }
+
         usedInTemplateConfig.id[envId] = templateConfig.id[envId];
       }
 
       if (type == "partner") {
+        if (!usedInTemplateConfig.partner_id) {
+          usedInTemplateConfig.partner_id = {};
+        }
+
         usedInTemplateConfig.partner_id[envId] =
           templateConfig?.partner_id[envId];
       }
