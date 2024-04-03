@@ -44,7 +44,7 @@ async function fetchReconciliationByHandle(type, envId, handle) {
     let existingTemplate;
 
     if (configPresent) {
-      templateConfig = fsUtils.readConfig("reconciliationText", handle);
+      const templateConfig = fsUtils.readConfig("reconciliationText", handle);
 
       id =
         type == "firm"
@@ -104,7 +104,7 @@ async function fetchExistingReconciliations(type, envId) {
 
     if (!configPresent) return;
 
-    templateConfig = fsUtils.readConfig("reconciliationText", handle);
+    const templateConfig = fsUtils.readConfig("reconciliationText", handle);
 
     let templateId =
       type == "firm"
@@ -189,10 +189,10 @@ async function publishAllReconciliations(
   }
 }
 
-async function newReconciliation(firmId, handle) {
+async function newReconciliation(type, firmId, handle) {
   try {
     const existingTemplate = await SF.findReconciliationTextByHandle(
-      "firm",
+      type,
       firmId,
       handle
     );
@@ -221,10 +221,10 @@ async function newReconciliation(firmId, handle) {
   }
 }
 
-async function newAllReconciliations(firmId) {
+async function newAllReconciliations(type, firmId) {
   const templates = fsUtils.getAllTemplatesOfAType("reconciliationText");
   for (let handle of templates) {
-    await newReconciliation(firmId, handle);
+    await newReconciliation(type, firmId, handle);
   }
 }
 
@@ -280,7 +280,7 @@ async function fetchExistingExportFiles(firmId) {
   const templates = fsUtils.getAllTemplatesOfAType("exportFile");
   if (!templates) return;
   templates.forEach(async (name) => {
-    templateConfig = fsUtils.readConfig("exportFile", name);
+    const templateConfig = fsUtils.readConfig("exportFile", name);
     if (!templateConfig || !templateConfig.id[firmId]) return;
     await fetchExportFileById(firmId, templateConfig.id[firmId]);
   });
@@ -355,15 +355,15 @@ async function publishAllExportFiles(
   }
 }
 
-async function newExportFile(firmId, name) {
+async function newExportFile(type, firmId, name) {
   try {
     const existingTemplate = await SF.findExportFileByName(
-      "firm",
+      type,
       firmId,
       name
     );
     if (existingTemplate) {
-      consola.info(
+      consola.warn(
         `Export file "${name}" already exists. Skipping its creation`
       );
       return;
@@ -383,10 +383,10 @@ async function newExportFile(firmId, name) {
   }
 }
 
-async function newAllExportFiles(firmId) {
+async function newAllExportFiles(type, firmId) {
   const templates = fsUtils.getAllTemplatesOfAType("exportFile");
   for (let name of templates) {
-    await newExportFile(firmId, name);
+    await newExportFile(type, firmId, name);
   }
 }
 
@@ -449,7 +449,7 @@ async function fetchExistingAccountTemplates(type, envId) {
   const templates = fsUtils.getAllTemplatesOfAType("accountTemplate");
   if (!templates) return;
   templates.forEach(async (name) => {
-    templateConfig = fsUtils.readConfig("accountTemplate", name);
+    const templateConfig = fsUtils.readConfig("accountTemplate", name);
     let templateId =
       type == "firm"
         ? templateConfig?.id?.[envId]
@@ -539,10 +539,10 @@ async function publishAllAccountTemplates(
   }
 }
 
-async function newAccountTemplate(firmId, name) {
+async function newAccountTemplate(type, firmId, name) {
   try {
     const existingTemplate = await SF.findAccountTemplateByName(
-      "firm",
+      type,
       firmId,
       name
     );
@@ -576,10 +576,10 @@ async function newAccountTemplate(firmId, name) {
   }
 }
 
-async function newAllAccountTemplates(firmId) {
+async function newAllAccountTemplates(type, firmId) {
   const templates = fsUtils.getAllTemplatesOfAType("accountTemplate");
   for (let name of templates) {
-    await newAccountTemplate(firmId, name);
+    await newAccountTemplate(type, firmId, name);
   }
 }
 
@@ -643,7 +643,7 @@ async function fetchExistingSharedParts(type, envId) {
 
     if (!configPresent) return;
 
-    templateConfig = fsUtils.readConfig("sharedPart", name);
+    const templateConfig = fsUtils.readConfig("sharedPart", name);
 
     let templateId =
       type == "firm"
@@ -726,10 +726,10 @@ async function publishAllSharedParts(
   }
 }
 
-async function newSharedPart(firmId, name) {
+async function newSharedPart(type, firmId, name) {
   try {
     const existingSharedPart = await SF.findSharedPartByName(
-      "firm",
+      type,
       firmId,
       name
     );
@@ -754,10 +754,10 @@ async function newSharedPart(firmId, name) {
   }
 }
 
-async function newAllSharedParts(firmId) {
+async function newAllSharedParts(type, firmId) {
   const templates = fsUtils.getAllTemplatesOfAType("sharedPart");
   for (let name of templates) {
-    await newSharedPart(firmId, name);
+    await newSharedPart(type, firmId, name);
   }
 }
 
