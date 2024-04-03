@@ -44,7 +44,7 @@ async function fetchReconciliationByHandle(type, envId, handle) {
     let existingTemplate;
 
     if (configPresent) {
-      templateConfig = fsUtils.readConfig("reconciliationText", handle);
+      const templateConfig = fsUtils.readConfig("reconciliationText", handle);
 
       id =
         type == "firm"
@@ -104,7 +104,7 @@ async function fetchExistingReconciliations(type, envId) {
 
     if (!configPresent) return;
 
-    templateConfig = fsUtils.readConfig("reconciliationText", handle);
+    const templateConfig = fsUtils.readConfig("reconciliationText", handle);
 
     let templateId =
       type == "firm"
@@ -280,7 +280,7 @@ async function fetchExistingExportFiles(firmId) {
   const templates = fsUtils.getAllTemplatesOfAType("exportFile");
   if (!templates) return;
   templates.forEach(async (name) => {
-    templateConfig = fsUtils.readConfig("exportFile", name);
+    const templateConfig = fsUtils.readConfig("exportFile", name);
     if (!templateConfig || !templateConfig.id[firmId]) return;
     await fetchExportFileById(firmId, templateConfig.id[firmId]);
   });
@@ -449,7 +449,7 @@ async function fetchExistingAccountTemplates(type, envId) {
   const templates = fsUtils.getAllTemplatesOfAType("accountTemplate");
   if (!templates) return;
   templates.forEach(async (name) => {
-    templateConfig = fsUtils.readConfig("accountTemplate", name);
+    const templateConfig = fsUtils.readConfig("accountTemplate", name);
     let templateId =
       type == "firm"
         ? templateConfig?.id?.[envId]
@@ -643,7 +643,7 @@ async function fetchExistingSharedParts(type, envId) {
 
     if (!configPresent) return;
 
-    templateConfig = fsUtils.readConfig("sharedPart", name);
+    const templateConfig = fsUtils.readConfig("sharedPart", name);
 
     let templateId =
       type == "firm"
