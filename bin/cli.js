@@ -132,9 +132,9 @@ program
     cliUtils.checkUniqueOption(["handle", "all"], options);
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     if (options.handle) {
-      toolkit.newReconciliation(options.firm, options.handle);
+      toolkit.newReconciliation("firm", options.firm, options.handle);
     } else if (options.all) {
-      toolkit.newAllReconciliations(options.firm);
+      toolkit.newAllReconciliations("firm", options.firm);
     }
   });
 
@@ -232,9 +232,9 @@ program
     cliUtils.checkUniqueOption(["name", "all"], options);
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     if (options.name) {
-      toolkit.newExportFile(options.firm, options.name);
+      toolkit.newExportFile("firm", options.firm, options.name);
     } else if (options.all) {
-      toolkit.newAllExportFiles(options.firm, options.name);
+      toolkit.newAllExportFiles("firm", options.firm, options.name);
     }
   });
 
@@ -335,9 +335,9 @@ program
     cliUtils.checkUniqueOption(["name", "all"], options);
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     if (options.name) {
-      toolkit.newAccountTemplate(options.firm, options.name);
+      toolkit.newAccountTemplate("firm", options.firm, options.name);
     } else if (options.all) {
-      toolkit.newAllAccountTemplates(options.firm, options.name);
+      toolkit.newAllAccountTemplates("firm", options.firm, options.name);
     }
   });
 
@@ -442,9 +442,9 @@ program
     cliUtils.checkUniqueOption(["sharedPart", "all"], options);
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     if (options.sharedPart) {
-      toolkit.newSharedPart(options.firm, options.sharedPart);
+      toolkit.newSharedPart("firm", options.firm, options.sharedPart);
     } else if (options.all) {
-      toolkit.newAllSharedParts(options.firm);
+      toolkit.newAllSharedParts("firm", options.firm);
     }
   });
 
