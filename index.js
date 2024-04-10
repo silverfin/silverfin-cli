@@ -902,6 +902,7 @@ async function addSharedPart(
 
       sharedPartConfig.used_in[templateIndex] = usedInTemplateConfig;
     }
+
     // Save Configs
     fsUtils.writeConfig(templateType, templateHandle, templateConfig);
     fsUtils.writeConfig("sharedPart", sharedPartName, sharedPartConfig);
