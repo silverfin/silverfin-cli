@@ -1,6 +1,6 @@
 {
   "name": "silverfin-cli",
-  "version": "1.26.4",
+  "version": "1.26.5",
   "description": "Command line tool for Silverfin template development",
   "main": "index.js",
   "license": "MIT",
@@ -27,6 +27,7 @@
     "commander": "^9.4.0",
     "consola": "^3.2.3",
     "is-wsl": "^2.2.0",
+    "lodash.debounce": "^4.0.8",
     "open": "^8.4.0",
     "prompt-sync": "^4.2.0",
     "yaml": "^2.2.1"
