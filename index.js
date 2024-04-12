@@ -357,7 +357,11 @@ async function publishAllExportFiles(
 
 async function newExportFile(type, firmId, name) {
   try {
-    const existingTemplate = await SF.findExportFileByName(type, firmId, name);
+    const existingTemplate = await SF.findExportFileByName(
+      type,
+      firmId,
+      name
+    );
     if (existingTemplate) {
       consola.warn(
         `Export file "${name}" already exists. Skipping its creation`
