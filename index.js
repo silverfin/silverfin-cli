@@ -655,8 +655,11 @@ async function fetchExistingSharedParts(type, envId) {
   for (let name of templates) {
     const configPresent = fsUtils.configExists("sharedPart", name);
 
-    if (!configPresent)
-      consola.warn(`Config file for shared part "${name}" not found`);
+    if (!configPresent) {
+      consola.error(`Config file for shared part "${name}" not found`);
+
+      return;
+    }
 
     const templateConfig = fsUtils.readConfig("sharedPart", name);
 
