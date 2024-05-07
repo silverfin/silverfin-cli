@@ -102,7 +102,7 @@ async function fetchAllReconciliations(type, envId, page = 1) {
 async function fetchExistingReconciliations(type, envId) {
   const templates = fsUtils.getAllTemplatesOfAType("reconciliationText");
 
-  if (templates.length == 0) {
+  if (!templates || templates.length == 0) {
     consola.warn("No reconciliation templates with a valid config found");
     return;
   }
