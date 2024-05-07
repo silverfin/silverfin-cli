@@ -229,12 +229,7 @@ async function newReconciliation(type, firmId, handle) {
 
     // Store new id
     if (response && response.status == 201) {
-      ReconciliationText.updateTemplateId(
-        "firm",
-        firmId,
-        handle,
-        response.data.id
-      );
+      ReconciliationText.updateTemplateId(firmId, handle, response.data.id);
       consola.success(`Reconciliation "${handle}" created`);
     }
   } catch (error) {
