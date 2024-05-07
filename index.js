@@ -38,37 +38,36 @@ async function fetchReconciliationById(type, envId, id) {
 
 async function fetchReconciliationByHandle(type, envId, handle) {
   try {
-    const existingTemplate = await SF.findReconciliationTextByHandle(
-      type,
-      envId,
-      handle
-    );
-
-    if (!existingTemplate) {
-      throw new Error(
-        `Reconciliation "${handle}" not found in ${type} ${envId}`
-      );
-    }
-
     const configPresent = fsUtils.configExists("reconciliationText", handle);
 
-    if (!configPresent) {
-      fsUtils.createConfigIfMissing("reconciliationText", handle);
+    let id;
+    let existingTemplate;
+
+    if (configPresent) {
+      const templateConfig = fsUtils.readConfig("reconciliationText", handle);
+
+      id =
+        type == "firm"
+          ? templateConfig?.id?.[envId]
+          : templateConfig?.partner_id?.[envId];
     }
 
-    ReconciliationText.updateTemplateId(
-      type,
-      envId,
-      handle,
-      existingTemplate.id
-    );
+    if (!id) {
+      existingTemplate = await SF.findReconciliationTextByHandle(
+        type,
+        envId,
+        handle
+      );
 
-    const templateConfig = fsUtils.readConfig("reconciliationText", handle);
-    
-    const id =
-      type == "firm"
-        ? templateConfig?.id?.[envId]
-        : templateConfig?.partner_id?.[envId];
+      if (!existingTemplate) {
+        consola.error(
+          `Reconciliation not found inside the reconciliation_texts folder or in the ${type} ${envId}. Please run create-reconciliation if you still need to create it.`
+        );
+        process.exit(1);
+      } else {
+        id = existingTemplate.id;
+      }
+    }
 
     fetchReconciliationById(type, envId, id);
   } catch (error) {
@@ -86,22 +85,24 @@ async function fetchAllReconciliations(type, envId, page = 1) {
     return;
   }
 
-  for(let template of templates) {
+  for (let template of templates) {
     try {
-      await ReconciliationText.save(type, envId, template);
-      consola.success(`Reconciliation "${template.handle}" imported`);
+      const saved = await ReconciliationText.save(type, envId, template);
+
+      if (saved)
+        consola.success(`Reconciliation "${template.handle}" imported`);
     } catch (error) {
       consola.error(error);
     }
   }
-  
+
   fetchAllReconciliations(type, envId, page + 1);
 }
 
 async function fetchExistingReconciliations(type, envId) {
   const templates = fsUtils.getAllTemplatesOfAType("reconciliationText");
-  
-  if (templates.length == 0) {    
+
+  if (templates.length == 0) {
     consola.warn("No reconciliation templates with a valid config found");
     return;
   }
@@ -109,9 +110,11 @@ async function fetchExistingReconciliations(type, envId) {
   for (let handle of templates) {
     try {
       const configPresent = fsUtils.configExists("reconciliationText", handle);
-      
+
       if (!configPresent) {
-        consola.error(`Config file for reconciliationText "${handle}" not found`);
+        consola.error(
+          `Config file for reconciliationText "${handle}" not found`
+        );
       }
 
       const templateConfig = fsUtils.readConfig("reconciliationText", handle);
@@ -226,7 +229,12 @@ async function newReconciliation(type, firmId, handle) {
 
     // Store new id
     if (response && response.status == 201) {
-      ReconciliationText.updateTemplateId(firmId, handle, response.data.id);
+      ReconciliationText.updateTemplateId(
+        "firm",
+        firmId,
+        handle,
+        response.data.id
+      );
       consola.success(`Reconciliation "${handle}" created`);
     }
   } catch (error) {
@@ -439,17 +447,19 @@ async function fetchAccountTemplateById(type, envId, id) {
 
 async function fetchAllAccountTemplates(type, envId, page = 1) {
   const templates = await SF.readAccountTemplates(type, envId, page);
+
   if (templates.length == 0) {
     if (page == 1) {
       consola.warn("No account templates found");
     }
     return;
   }
+
   templates.forEach(async (template) => {
-    const saved = AccountTemplate.save(firmId, template);
-    if (saved) {
+    const saved = AccountTemplate.save(type, envId, template);
+
+    if (saved)
       consola.success(`Account template "${template?.name_nl}" imported`);
-    }
   });
   fetchAllAccountTemplates(type, envId, page + 1);
 }
@@ -650,9 +660,8 @@ async function fetchExistingSharedParts(type, envId) {
   for (let name of templates) {
     const configPresent = fsUtils.configExists("sharedPart", name);
 
-    if (!configPresent) {
-      fsUtils.createConfigIfMissing("sharedPart", name);
-    }
+    if (!configPresent)
+      consola.warn(`Config file for shared part "${name}" not found`);
 
     const templateConfig = fsUtils.readConfig("sharedPart", name);
 

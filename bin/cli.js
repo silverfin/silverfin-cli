@@ -413,11 +413,7 @@ program
         options.message
       );
     } else if (options.all) {
-      toolkit.publishAllSharedParts(
-        "firm",
-        settings.envId,
-        options.message
-      );
+      toolkit.publishAllSharedParts("firm", settings.envId, options.message);
     }
   });
 
@@ -643,6 +639,7 @@ program
         );
         process.exit(1);
       }
+
       liquidTestRunner.runTestsWithOutput(
         options.firm,
         options.handle,
