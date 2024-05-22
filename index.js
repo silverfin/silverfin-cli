@@ -653,28 +653,30 @@ async function fetchExistingSharedParts(type, envId) {
   if (!templates) return;
 
   for (let name of templates) {
-    const configPresent = fsUtils.configExists("sharedPart", name);
+    try {
+      const configPresent = fsUtils.configExists("sharedPart", name);
 
-    if (!configPresent) {
-      consola.error(`Config file for shared part "${name}" not found`);
+      if (!configPresent) {
+        consola.error(`Config file for shared part "${name}" not found`);
 
-      return;
+        return;
+      }
+
+      const templateConfig = fsUtils.readConfig("sharedPart", name);
+
+      let templateId =
+        type == "firm"
+          ? templateConfig?.id?.[envId]
+          : templateConfig?.partner_id?.[envId];
+
+      if (!templateId) {
+        errorUtils.missingSharedPartId(name);
+      } else {
+        await fetchSharedPartById(type, envId, templateId);
+      }
+    } catch (error) {
+      consola.error(error);
     }
-
-    const templateConfig = fsUtils.readConfig("sharedPart", name);
-
-    let templateId =
-      type == "firm"
-        ? templateConfig?.id?.[envId]
-        : templateConfig?.partner_id?.[envId];
-
-    if (!templateId) {
-      errorUtils.missingSharedPartId(name);
-      return false;
-    }
-
-    if (!templateConfig || !templateId) return;
-    await fetchSharedPartById(type, envId, templateId);
   }
 }
 
