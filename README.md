@@ -1,5 +1,7 @@
 # Silverfin CLI
 
+![tests-workflow](https://github.com/silverfin/silverfin-cli/actions/workflows/tests.yml/badge.svg)
+
 A command-line tool for Silverfin template development.
 
 ## Why a CLI ?
