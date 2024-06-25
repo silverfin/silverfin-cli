@@ -71,7 +71,7 @@ program
     }
   });
 
-// UPDATE reconciliation (TODO)
+// UPDATE reconciliation
 program
   .command("update-reconciliation")
   .description("Update an existing reconciliation template")
@@ -92,7 +92,9 @@ program
     const settings = runCommandChecks(
       ["handle", "all"],
       options,
-      firmIdDefault
+      firmIdDefault,
+      true,
+      true // Message required
     );
 
     if (options.handle) {
@@ -192,7 +194,8 @@ program
       ["name", "all"],
       options,
       firmIdDefault,
-      false
+      false,
+      true // Message required (added for later)
     );
 
     if (options.name) {
@@ -296,7 +299,13 @@ program
   )
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
-    const settings = runCommandChecks(["name", "all"], options, firmIdDefault);
+    const settings = runCommandChecks(
+      ["name", "all"], 
+      options, 
+      firmIdDefault,
+      true,
+      true // Message required
+    );
 
     if (options.name) {
       toolkit.publishAccountTemplateByName(
@@ -402,7 +411,9 @@ program
     const settings = runCommandChecks(
       ["sharedPart", "all"],
       options,
-      firmIdDefault
+      firmIdDefault,
+      true,
+      true // Message required
     );
 
     if (options.sharedPart) {
