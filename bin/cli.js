@@ -606,8 +606,12 @@ program
     "Specify the firm to be used",
     firmIdDefault
   )
-  .requiredOption(
+  .option(
     "-h, --handle <handle>",
+    "Specify the reconciliation to be used (mandatory)"
+  )
+  .option(
+    "-at, --account-template <name>",
     "Specify the reconciliation to be used (mandatory)"
   )
   .option(
@@ -636,11 +640,25 @@ program
     false
   )
   .action((options) => {
-    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
+    if (!options.handle && !options.accountTemplate) {
+      consola.error(
+        "You need to specify either a handle or an account template"
+      );
+      process.exit(1);
+    }
+
+    const templateType = options.handle
+      ? "reconciliationText"
+      : "accountTemplate";
+    const templateName = options.handle
+      ? options.handle
+      : options.accountTemplate;
+
     if (options.status) {
       liquidTestRunner.runTestsStatusOnly(
         options.firm,
-        options.handle,
+        templateType,
+        templateName,
         options.test
       );
     } else {
@@ -653,7 +671,8 @@ program
 
       liquidTestRunner.runTestsWithOutput(
         options.firm,
-        options.handle,
+        templateType,
+        templateName,
         options.test,
         options.previewOnly,
         options.htmlInput,
