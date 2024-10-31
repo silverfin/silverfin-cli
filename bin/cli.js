@@ -300,8 +300,8 @@ program
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     const settings = runCommandChecks(
-      ["name", "all"], 
-      options, 
+      ["name", "all"],
+      options,
       firmIdDefault,
       true,
       true // Message required
@@ -760,6 +760,15 @@ program
       "Get a new partner api key using the stored api key"
     )
   )
+  .addOption(
+    new Option(
+      "--set-host [host]",
+      "Set a custom host for the Silverfin API (e.g. https://live.getsilverfin.com)"
+    )
+  )
+  .addOption(
+    new Option("--get-host", "Get the current host for the Silverfin API")
+  )
   .action(async (options) => {
     cliUtils.checkUniqueOption(
       [
@@ -769,6 +778,8 @@ program
         "updateName",
         "refreshToken",
         "refreshPartnerToken",
+        "setHost",
+        "getHost",
       ],
       options
     );
@@ -832,6 +843,14 @@ program
           `Partner API key refreshed for partner ID: ${refreshedTokens.partner_id}`
         );
       }
+    }
+    if (options.setHost) {
+      firmCredentials.setHost(options.setHost);
+      consola.success(`Host set to: ${options.setHost}`);
+    }
+    if (options.getHost) {
+      const host = firmCredentials.getHost();
+      consola.info(`Current host: ${host}`);
     }
   });
 
