@@ -55,7 +55,11 @@ export SF_API_CLIENT_ID=...
 export SF_API_SECRET=...
 ```
 
-In case you need to use a different host, you can also set it up as an environmental variable. By default it would be `https://live.getsilverfin.com`.
+### Host
+
+In case you need to use a different host, you can set it up by using the command `silverfin config --set-host [url]`. By default it would be `https://live.getsilverfin.com`.
+
+It is also possible to set it up as an environmental variable, but this has been deprecated and will be removed in future versions.
 
 ```bash
 export SF_HOST=...
