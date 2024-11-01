@@ -1028,5 +1028,6 @@ if (pkg.repository && pkg.repository.url) {
 (async function () {
   // Check if there is a new version available
   await cliUpdates.checkVersions();
+  cliUtils.logCurrentEnvironments();
   await program.parseAsync();
 })();
