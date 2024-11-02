@@ -822,10 +822,7 @@ program
     }
     if (options.refreshToken) {
       cliUtils.checkDefaultFirm(options.refreshToken, firmIdDefault);
-      const refreshedTokens = await SF.refreshTokens(
-        "firm",
-        options.refreshToken
-      );
+      const refreshedTokens = await SF.refreshFirmTokens(options.refreshToken);
 
       if (refreshedTokens) {
         consola.success(
