@@ -400,7 +400,7 @@ program
     "-s, --shared-part <name>",
     "Specify the shared part to be used (mandatory)"
   )
-  .option("-a, --all", "Import all shared parts")
+  .option("-a, --all", "Update all shared parts")
   .option(
     "-m, --message <message>",
     "Add a message to Silverfin's changelog (optional)",
