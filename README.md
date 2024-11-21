@@ -65,6 +65,16 @@ It is also possible to set it up as an environmental variable, but this has been
 export SF_HOST=...
 ```
 
+### Staging environment
+
+If you need to use the CLI with a staging environment, you can set it up by using the command `silverfin config --set-host [url]` and setting the proper host.
+
+Staging environments implement Basic Authentitation on top of the existing OAuth2.0 authentication, so to make use of it you will need to set up the following environmental variables:
+
+```bash
+export SF_BASIC_AUTH=...
+```
+
 ## Important considerations and assumptions that we adder to
 
 ## Advanced Settings
