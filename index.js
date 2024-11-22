@@ -949,9 +949,14 @@ async function addSharedPart(
  * @param {boolean} force - If true, it will add the shared part to all templates, even if it's already present
  */
 async function addAllSharedParts(type, envId, force = false) {
+  const envConfigKey = type === "partner" ? "partner_id" : "id";
   const sharedPartsArray = fsUtils.getAllTemplatesOfAType("sharedPart");
-  for (let sharedPartName of sharedPartsArray) {
-    let sharedPartConfig = fsUtils.readConfig("sharedPart", sharedPartName);
+
+  for await (let sharedPartName of sharedPartsArray) {
+    let sharedPartConfig = await fsUtils.readConfig(
+      "sharedPart",
+      sharedPartName
+    );
 
     if (!sharedPartConfig.used_in) {
       consola.warn(
@@ -960,27 +965,74 @@ async function addAllSharedParts(type, envId, force = false) {
       continue;
     }
 
-    for (let template of sharedPartConfig.used_in) {
+    if (!sharedPartConfig?.[envConfigKey][envId]) {
+      consola.warn(
+        `Shared part ${sharedPartName} has no id associated to ${type} ${envId}. Skipping.`
+      );
+      continue;
+    }
+
+    // Fetch shared part from the platform
+    const sharedPartId = sharedPartConfig[envConfigKey][envId];
+    const sharedPartData = await SF.readSharedPartById(
+      type,
+      envId,
+      sharedPartId
+    );
+    if (!sharedPartData) {
+      consola.warn(
+        `Shared part ${sharedPartName} not found in ${type} ${envId}. Skipping.`
+      );
+      continue;
+    }
+    const existingLinks = sharedPartData.data.used_in;
+
+    for await (let template of sharedPartConfig.used_in) {
+      template = SharedPart.checkTemplateType(template);
       if (!template.handle && !template.name) {
-        consola.warn(`Template has no handle or name. Skipping.`);
-        continue;
-      }
-
-      const folder = fsUtils.FOLDERS[template.type];
-
-      const handle = template.handle || template.name;
-      if (!fs.existsSync(`./${folder}/${handle}`)) {
         consola.warn(
-          `Template ${template.type} ${template.handle} not found in the repository. Skipping.`
+          `Template stored in used_in has no handle or name. Skipping.`
         );
         continue;
       }
 
-      await addSharedPart(
+      const configPresent = fsUtils.configExists(
+        template.type,
+        template.handle
+      );
+      if (!configPresent) {
+        consola.warn(
+          `Template ${template.type} ${template.handle} not found in local repository. Skipping.`
+        );
+        continue;
+      }
+
+      // When the template is already linked to the shared part, skip unless force is true
+      if (!force) {
+        let alreadyAdded = await existingLinks.find((existing) => {
+          existing = SharedPart.checkTemplateType(existing);
+          // we check both id and type to avoid (rare) false positives
+          return (
+            existing.id === template[envConfigKey][envId] &&
+            existing.type === template.type
+          );
+        });
+        if (alreadyAdded) {
+          consola.info(
+            `Template ${template.type} ${template.handle} already has this shared part. Skipping.`
+          );
+          continue;
+        }
+      }
+
+      // add arbitrary delay to avoid rate limiting
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      addSharedPart(
         type,
         envId,
         sharedPartConfig.name,
-        handle,
+        template.handle,
         template.type
       );
     }
