@@ -452,5 +452,35 @@ describe("ReconciliationText", () => {
 
       expect(result.text_parts).toEqual([{ name: "empty_part", content: "" }]);
     });
+
+    it("should exclude downloadable_as_docx and show warning when externally_managed is false", () => {
+      const invalidCombinationConfig = {
+        ...configContent,
+        externally_managed: false,
+        downloadable_as_docx: true
+      };
+      fs.writeFileSync(configPath, JSON.stringify(invalidCombinationConfig));
+
+      const result = ReconciliationText.read(handle);
+
+      expect(result.downloadable_as_docx).toBeUndefined();
+      expect(require("consola").warn).toHaveBeenCalledWith(
+        "The following attributes were skipped because they can only be updated when the template is externally managed: downloadable_as_docx."
+      );
+    });
+
+    it("should include downloadable_as_docx when externally_managed is true", () => {
+      const validCombinationConfig = {
+        ...configContent,
+        externally_managed: true,
+        downloadable_as_docx: true
+      };
+      fs.writeFileSync(configPath, JSON.stringify(validCombinationConfig));
+
+      const result = ReconciliationText.read(handle);
+
+      expect(result.downloadable_as_docx).toBe(true);
+    });
+
   });
 });
