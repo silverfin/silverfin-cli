@@ -274,7 +274,15 @@ async function fetchExportFileById(type, envId, id) {
 
     const saved = ExportFile.save(type, envId, template);
     if (saved) {
-      consola.success(`Export file "${template.name}" imported`);
+      consola.success(
+        `Export file "${template.name}" imported from ${type} ${envId}`
+      );
+    }
+
+    return {
+      type,
+      envId,
+      template,
     }
   } catch (error) {
     consola.error(error);
