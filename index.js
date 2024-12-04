@@ -247,11 +247,13 @@ async function newAllReconciliations(type, firmId) {
 async function fetchExportFileByName(type, envId, name) {
   try {
     const template = await SF.findExportFileByName(type, envId, name);
+    
     if (!template) {
       consola.error(`Export file "${name}" wasn't found`);
       process.exit(1);
     }
-    const saved = await ExportFile.save(type, envId, template);
+
+    const saved = ExportFile.save(type, envId, template);
     if (saved) {
       consola.success(`Export file "${name}" imported`);
     }
@@ -270,8 +272,10 @@ async function fetchExportFileById(type, envId, id) {
       process.exit(1);
     }
 
-    ExportFile.save(type, envId, template);
-    consola.success(`Export file "${template.name}" imported`);
+    const saved = ExportFile.save(type, envId, template);
+    if (saved) {
+      consola.success(`Export file "${template.name}" imported`);
+    }
   } catch (error) {
     consola.error(error);
     process.exit(1);
@@ -280,25 +284,44 @@ async function fetchExportFileById(type, envId, id) {
 
 async function fetchAllExportFiles(type, envId, page = 1) {
   const templates = await SF.readExportFiles(type, envId, page);
+
   if (templates.length == 0) {
     if (page == 1) {
-      consola.error(`No export files found in firm ${firmId}`);
+      consola.error("No export files found in firm");
     }
     return;
   }
+
   templates.forEach(async (template) => {
-    fetchExportFileById(type, envId, template.id);
+    const saved = ExportFile.save(type, envId, template.id);
+
+    if (saved) {
+      consola.success(`Export file "${template.name}" imported`);
+    }
   });
   fetchAllExportFiles(type, envId, page + 1);
 }
 
-async function fetchExistingExportFiles(firmId) {
+async function fetchExistingExportFiles(type, envId) {
   const templates = fsUtils.getAllTemplatesOfAType("exportFile");
-  if (!templates) return;
+  if (!templates) {
+    consola.warn("No export files found");
+    return;
+  }
+
   templates.forEach(async (name) => {
     const templateConfig = fsUtils.readConfig("exportFile", name);
-    if (!templateConfig || !templateConfig.id[firmId]) return;
-    await fetchExportFileById(firmId, templateConfig.id[firmId]);
+    let templateId = 
+      type == "firm"
+        ? templateConfig?.id?.[envId]
+        : templateConfig?.partner_id?.[envId]
+    
+    if (!templateId) {
+      errorUtils.missingExportFileId(name);
+      return false;
+    }
+
+    await fetchExportFileById(type, envId, templateId);
   });
 }
 
@@ -383,6 +406,7 @@ async function newExportFile(type, firmId, name) {
     const template = await ExportFile.read(name);
     if (!template) return;
     template.version_comment = "Created through the Silverfin CLI";
+
     const response = await SF.createExportFile(firmId, template);
 
     // Store new id
@@ -461,7 +485,11 @@ async function fetchAllAccountTemplates(type, envId, page = 1) {
 
 async function fetchExistingAccountTemplates(type, envId) {
   const templates = fsUtils.getAllTemplatesOfAType("accountTemplate");
-  if (!templates) return;
+  if (!templates) {
+    consola.warn("No account templates found");
+    return;
+  }
+
   templates.forEach(async (name) => {
     const templateConfig = fsUtils.readConfig("accountTemplate", name);
     let templateId =
@@ -506,7 +534,7 @@ async function publishAccountTemplateByName(
 
     consola.debug(`Updating account template ${name}...`);
 
-    const template = AccountTemplate.read(name);
+    const template = await AccountTemplate.read(name);
     if (!template) return;
 
     // Add API-only required fields
@@ -782,8 +810,8 @@ async function newAllSharedParts(type, firmId) {
 }
 
 /** This function adds a shared part to a template. It will make a POST request to the API. If the ID of one of the templates is missing, it will try to fetch it first by making a GET request. In case of success, it will store the details in the corresponding config files.
- *
- * @param {Number} firmId
+ * @param {String} type - Options: `firm` or `partner`
+ * @param {Number} envId
  * @param {string} sharedPartName
  * @param {string} templateHandle
  * @param {string} templateType has to be either `reconciliationText`, `exportFile`or `accountTemplate`
@@ -797,14 +825,6 @@ async function addSharedPart(
   templateType
 ) {
   try {
-    // Add a check for export files that are not supported
-    if (type == "partner" && templateType == "exportFile") {
-      consola.warn(
-        "Adding shared parts to export files on partner is not supported. Skipping."
-      );
-      return false;
-    }
-
     let templateConfig = await fsUtils.readConfig(templateType, templateHandle);
     let sharedPartConfig = await fsUtils.readConfig(
       "sharedPart",
