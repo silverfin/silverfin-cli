@@ -145,6 +145,7 @@ program
   .command("import-export-file")
   .description("Import export file templates")
   .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
+  .option("-p, --partner <partner-id>", "Specify the partner to be used")
   .option("-n, --name <name>", "Import a specific export file by name")
   .option("-i, --id <id>", "Import a specific export file by id")
   .option("-a, --all", "Import all existing export files")
@@ -158,7 +159,7 @@ program
       ["name", "id", "all", "existing"],
       options,
       firmIdDefault,
-      false
+      true // Partner supported
     );
 
     if (options.name) {
@@ -168,11 +169,15 @@ program
         options.name
       );
     } else if (options.id) {
-      toolkit.fetchExportFileById(settings.type, settings.envId, options.id);
+      toolkit.fetchExportFileById(
+        settings.type, 
+        settings.envId, 
+        options.id
+      );
     } else if (options.all) {
       toolkit.fetchAllExportFiles(settings.type, settings.envId);
-    } else if (options.all) {
-      toolkit.fetchExistingExportFiles(options.firm);
+    } else if (options.existing) {
+      toolkit.fetchExistingExportFiles(settings.type, settings.envId);
     }
   });
 
@@ -181,6 +186,7 @@ program
   .command("update-export-file")
   .description("Update an existing export file template")
   .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
+  .option("-p, --partner <partner-id>", "Specify the partner to be used")
   .option("-n, --name <name>", "Specify the export file to be used (mandatory)")
   .option("-a, --all", "Update all export files")
   .option(
@@ -194,8 +200,8 @@ program
       ["name", "all"],
       options,
       firmIdDefault,
-      false,
-      true // Message required (added for later)
+      true, // Partner supported
+      true // Message required
     );
 
     if (options.name) {
@@ -207,7 +213,7 @@ program
       );
     } else if (options.all) {
       toolkit.publishAllExportFiles(
-        settings.type,
+        "firm",
         settings.envId,
         options.message
       );
@@ -237,7 +243,7 @@ program
     if (options.name) {
       toolkit.newExportFile("firm", options.firm, options.name);
     } else if (options.all) {
-      toolkit.newAllExportFiles("firm", options.firm, options.name);
+      toolkit.newAllExportFiles("firm", options.firm);
     }
   });
 
@@ -488,12 +494,11 @@ program
   )
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
-    const partnerSupported = options.exportFile ? false : true;
     const settings = runCommandChecks(
       ["sharedPart", "all"],
       options,
       firmIdDefault,
-      partnerSupported
+      true // Partner supported
     );
 
     if (options.sharedPart) {
@@ -560,12 +565,11 @@ program
   )
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
-    const partnerSupported = options.exportFile ? false : true;
     const settings = runCommandChecks(
       ["handle", "exportFile", "accountTemplate"],
       options,
       firmIdDefault,
-      partnerSupported
+      true // Partner supported
     );
 
     if (options.handle) {
@@ -886,6 +890,7 @@ program
   .command("get-export-file-id")
   .description("Fetch the ID of an export file from Silverfin")
   .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
+  .option("-p, --partner <partner-id>", "Specify the partner to be used")
   .option("-n, --name <name>", "Fetch the export file ID by name")
   .option("-a, --all", "Fetch the ID for every export file")
   .option("--yes", "Skip the prompt confirmation (optional)")
@@ -894,7 +899,7 @@ program
       ["name", "all"],
       options,
       firmIdDefault,
-      false
+      true // Partner supported
     );
 
     if (options.name) {
@@ -905,7 +910,11 @@ program
         options.name
       );
     } else if (options.all) {
-      toolkit.getAllTemplatesId(settings.type, settings.envId, "exportFile");
+      toolkit.getAllTemplatesId(
+        settings.type, 
+        settings.envId, 
+        "exportFile"
+      );
     }
   });
 
