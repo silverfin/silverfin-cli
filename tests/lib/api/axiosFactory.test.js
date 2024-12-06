@@ -470,4 +470,59 @@ describe("AxiosFactory", () => {
       });
     });
   });
+
+  describe("Create auth instance for firm", () => {
+    const mockHost = "https://test-api.com";
+
+    it("should not thrown an error for missing tokens", () => {
+      firmCredentials.getHost.mockReturnValue(mockHost);
+      firmCredentials.getTokenPair.mockReturnValue(null);
+
+      const axiosInstance = AxiosFactory.createAuthInstanceForFirm(123);
+
+      expect(axiosInstance).toBeDefined();
+      expect(axios.create).toHaveBeenCalled();
+
+      expect(consola.error).not.toHaveBeenCalled();
+      expect(exitSpy).not.toHaveBeenCalled();
+    });
+
+    it("should not attempt to refresh tokens", async () => {
+      firmCredentials.getHost.mockReturnValue(mockHost);
+
+      const axiosInstance = AxiosFactory.createAuthInstanceForFirm(123);
+
+      expect(axiosInstance).toBeDefined();
+      expect(axios.create).toHaveBeenCalled();
+
+      axiosMockAdapter.onGet("/test-endpoint").reply(401, "Unauthorized");
+      jest.spyOn(axiosInstance, "post");
+
+      try {
+        await axiosInstance.get("/test-endpoint");
+        fail("Expected an error to be thrown");
+      } catch (error) {
+        expect(firmCredentials.storeNewTokenPair).not.toHaveBeenCalled();
+        expect(axiosInstance.post).not.toHaveBeenCalled();
+        expect(error.response.status).toBe(401);
+      }
+    });
+
+    it("should use basic auth for firm instance in staging", () => {
+      const mockHost = "https://test-api.staging.getsilverfin.com";
+      const firmId = 50000;
+      firmCredentials.getHost.mockReturnValue(mockHost);
+
+      const axiosInstance = AxiosFactory.createAuthInstanceForFirm(firmId);
+
+      expect(axiosInstance).toBeDefined();
+      expect(axiosInstance.defaults.baseURL).toBe(
+        `https://test-api.staging.getsilverfin.com/api/v4/f/50000`
+      );
+
+      expect(axiosInstance.defaults.headers.Authorization).toBe(
+        "Basic test_basic_auth"
+      );
+    });
+  });
 });

@@ -756,13 +756,13 @@ program
   )
   .addOption(
     new Option(
-      "--refresh-partner-token [partner_id]",
+      "--refresh-partner-token <partnerId>",
       "Get a new partner api key using the stored api key"
     )
   )
   .addOption(
     new Option(
-      "--set-host [host]",
+      "--set-host <host>",
       "Set a custom host for the Silverfin API (e.g. https://live.getsilverfin.com)"
     )
   )
@@ -835,9 +835,9 @@ program
         options.refreshPartnerToken
       );
 
-      if (refreshedTokens && refreshedTokens.partner_id) {
+      if (refreshedTokens) {
         consola.success(
-          `Partner API key refreshed for partner ID: ${refreshedTokens.partner_id}`
+          `Partner API key refreshed for partner ID: ${options.refreshPartnerToken}`
         );
       }
     }
