@@ -688,7 +688,7 @@ program
   .command("authorize")
   .description("Authorize the CLI by entering your Silverfin API credentials")
   .action(() => {
-    SF.authorizeApp(firmIdDefault);
+    SF.authorizeFirm(firmIdDefault);
   });
 
 // Authorize PARTNER
