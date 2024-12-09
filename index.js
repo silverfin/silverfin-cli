@@ -46,10 +46,7 @@ async function fetchReconciliationByHandle(type, envId, handle) {
     if (configPresent) {
       const templateConfig = fsUtils.readConfig("reconciliationText", handle);
 
-      id =
-        type == "firm"
-          ? templateConfig?.id?.[envId]
-          : templateConfig?.partner_id?.[envId];
+      id = fsUtils.getTemplateId(type, envId, templateConfig);
     }
 
     if (!id) {
@@ -118,11 +115,7 @@ async function fetchExistingReconciliations(type, envId) {
       }
 
       const templateConfig = fsUtils.readConfig("reconciliationText", handle);
-
-      let templateId =
-        type == "firm"
-          ? templateConfig?.id?.[envId]
-          : templateConfig?.partner_id?.[envId];
+      let templateId = fsUtils.getTemplateId(type, envId, templateConfig);
 
       if (!templateId) {
         errorUtils.missingReconciliationId(handle);
@@ -150,11 +143,7 @@ async function publishReconciliationByHandle(
     }
 
     const templateConfig = fsUtils.readConfig("reconciliationText", handle);
-
-    let templateId =
-      type == "firm"
-        ? templateConfig?.id?.[envId]
-        : templateConfig?.partner_id?.[envId];
+    let templateId = fsUtils.getTemplateId(type, envId, templateConfig);
 
     if (!templateId) {
       errorUtils.missingReconciliationId(handle);
@@ -319,10 +308,7 @@ async function fetchExistingExportFiles(type, envId) {
 
   templates.forEach(async (name) => {
     const templateConfig = fsUtils.readConfig("exportFile", name);
-    let templateId = 
-      type == "firm"
-        ? templateConfig?.id?.[envId]
-        : templateConfig?.partner_id?.[envId]
+    let templateId = fsUtils.getTemplateId(type, envId, templateConfig);
     
     if (!templateId) {
       errorUtils.missingExportFileId(name);
@@ -348,11 +334,7 @@ async function publishExportFileByName(
     }
 
     const templateConfig = fsUtils.readConfig("exportFile", name);
-
-    let templateId =
-      type == "firm"
-        ? templateConfig?.id?.[envId]
-        : templateConfig?.partner_id?.[envId];
+    let templateId = fsUtils.getTemplateId(type, envId, templateConfig);
 
     if (!templateConfig || !templateId) {
       errorUtils.missingExportFileId(name);
@@ -500,10 +482,7 @@ async function fetchExistingAccountTemplates(type, envId) {
 
   templates.forEach(async (name) => {
     const templateConfig = fsUtils.readConfig("accountTemplate", name);
-    let templateId =
-      type == "firm"
-        ? templateConfig?.id?.[envId]
-        : templateConfig?.partner_id?.[envId];
+    let templateId = fsUtils.getTemplateId(type, envId, templateConfig);
 
     if (!templateId) {
       errorUtils.missingAccountTemplateId(name);
@@ -529,11 +508,7 @@ async function publishAccountTemplateByName(
     }
 
     const templateConfig = fsUtils.readConfig("accountTemplate", name);
-
-    let templateId =
-      type == "firm"
-        ? templateConfig?.id?.[envId]
-        : templateConfig?.partner_id?.[envId];
+    let templateId = fsUtils.getTemplateId(type, envId, templateConfig);
 
     if (!templateConfig || !templateId) {
       errorUtils.missingAccountTemplateId(name);
@@ -699,11 +674,7 @@ async function fetchExistingSharedParts(type, envId) {
       }
 
       const templateConfig = fsUtils.readConfig("sharedPart", name);
-
-      let templateId =
-        type == "firm"
-          ? templateConfig?.id?.[envId]
-          : templateConfig?.partner_id?.[envId];
+      let templateId = fsUtils.getTemplateId(type, envId, templateConfig);
 
       if (!templateId) {
         errorUtils.missingSharedPartId(name);
@@ -729,11 +700,7 @@ async function publishSharedPartByName(
       return false;
     }
     const templateConfig = fsUtils.readConfig("sharedPart", name);
-
-    let templateId =
-      type == "firm"
-        ? templateConfig?.id?.[envId]
-        : templateConfig?.partner_id?.[envId];
+    let templateId = fsUtils.getTemplateId(type, envId, templateConfig);
 
     if (!templateConfig || !templateId) {
       errorUtils.missingSharedPartId(name);
@@ -839,10 +806,7 @@ async function addSharedPart(
       sharedPartName
     );
 
-    let templateId =
-      type == "firm"
-        ? templateConfig?.id?.[envId]
-        : templateConfig?.partner_id?.[envId];
+    let templateId = fsUtils.getTemplateId(type, envId, templateConfig);
 
     let sharedPartId =
       type == "firm"
@@ -859,10 +823,7 @@ async function addSharedPart(
       );
       if (!updated) return false;
       templateConfig = await fsUtils.readConfig(templateType, templateHandle);
-      templateId =
-        type == "firm"
-          ? templateConfig?.id?.[envId]
-          : templateConfig?.partner_id?.[envId];
+      templateId = fsUtils.getTemplateId(type, envId, templateConfig);
     }
 
     // Missing Shared Part ID. Try to identify it based on the name
@@ -1077,11 +1038,7 @@ async function removeSharedPart(
   try {
     const templateConfig = fsUtils.readConfig(templateType, templateHandle);
     const sharedPartConfig = fsUtils.readConfig("sharedPart", sharedPartHandle);
-
-    const templateId =
-      type == "firm"
-        ? templateConfig?.id?.[envId]
-        : templateConfig?.partner_id?.[envId];
+    let templateId = fsUtils.getTemplateId(type, envId, templateConfig);
 
     if (!templateConfig || !templateId) {
       consola.warn(
