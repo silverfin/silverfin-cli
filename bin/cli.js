@@ -93,7 +93,6 @@ program
       ["handle", "all"],
       options,
       firmIdDefault,
-      true,
       true // Message required
     );
 
@@ -159,7 +158,6 @@ program
       ["name", "id", "all", "existing"],
       options,
       firmIdDefault,
-      true // Partner supported
     );
 
     if (options.name) {
@@ -200,7 +198,6 @@ program
       ["name", "all"],
       options,
       firmIdDefault,
-      true, // Partner supported
       true // Message required
     );
 
@@ -309,7 +306,6 @@ program
       ["name", "all"],
       options,
       firmIdDefault,
-      true,
       true // Message required
     );
 
@@ -418,7 +414,6 @@ program
       ["sharedPart", "all"],
       options,
       firmIdDefault,
-      true,
       true // Message required
     );
 
@@ -498,7 +493,6 @@ program
       ["sharedPart", "all"],
       options,
       firmIdDefault,
-      true // Partner supported
     );
 
     if (options.sharedPart) {
@@ -569,7 +563,6 @@ program
       ["handle", "exportFile", "accountTemplate"],
       options,
       firmIdDefault,
-      true // Partner supported
     );
 
     if (options.handle) {
@@ -899,7 +892,6 @@ program
       ["name", "all"],
       options,
       firmIdDefault,
-      true // Partner supported
     );
 
     if (options.name) {
