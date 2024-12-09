@@ -13,7 +13,7 @@ async function fetchReconciliationById(type, envId, id) {
   try {
     const template = await SF.readReconciliationTextById(type, envId, id);
     if (!template || !template.data) {
-      consola.error(`Reconciliation with id ${id} wasn't found`);
+      consola.error(`Reconciliation with id ${id} wasn't found in ${type} ${envId}`);
       process.exit(1);
     }
 
@@ -90,7 +90,7 @@ async function fetchAllReconciliations(type, envId, page = 1) {
       const saved = await ReconciliationText.save(type, envId, template);
 
       if (saved)
-        consola.success(`Reconciliation "${template.handle}" imported`);
+        consola.success(`Reconciliation "${template.handle}" imported from ${type} ${envId}`);
     } catch (error) {
       consola.error(error);
     }
@@ -103,7 +103,7 @@ async function fetchExistingReconciliations(type, envId) {
   const templates = fsUtils.getAllTemplatesOfAType("reconciliationText");
 
   if (!templates || templates.length == 0) {
-    consola.warn("No reconciliation templates with a valid config found");
+    consola.warn(`No reconciliation templates with a valid config found in ${type} ${envId}`);
     return;
   }
 
@@ -249,13 +249,13 @@ async function fetchExportFileByName(type, envId, name) {
     const template = await SF.findExportFileByName(type, envId, name);
     
     if (!template) {
-      consola.error(`Export file "${name}" wasn't found`);
+      consola.error(`Export file "${name}" wasn't found in ${type} ${envId}`);
       process.exit(1);
     }
 
     const saved = ExportFile.save(type, envId, template);
     if (saved) {
-      consola.success(`Export file "${name}" imported`);
+      consola.success(`Export file "${name}" imported from ${type} ${envId}`);
     }
   } catch (error) {
     consola.error(error);
@@ -268,7 +268,7 @@ async function fetchExportFileById(type, envId, id) {
     const template = await SF.readExportFileById(type, envId, id);
 
     if (!template) {
-      consola.error(`Export file with id ${id} wasn't found`);
+      consola.error(`Export file with id ${id} wasn't found in ${type} ${envId}`);
       process.exit(1);
     }
 
@@ -295,16 +295,16 @@ async function fetchAllExportFiles(type, envId, page = 1) {
 
   if (templates.length == 0) {
     if (page == 1) {
-      consola.error("No export files found in firm");
+      consola.error(`No export files found in ${type} ${envId}`);
     }
     return;
   }
 
   templates.forEach(async (template) => {
-    const saved = ExportFile.save(type, envId, template.id);
+    const saved = ExportFile.save(type, envId, template);
 
     if (saved) {
-      consola.success(`Export file "${template.name}" imported`);
+      consola.success(`Export file "${template.name}" imported from ${type} ${envId}`);
     }
   });
   fetchAllExportFiles(type, envId, page + 1);
@@ -313,7 +313,7 @@ async function fetchAllExportFiles(type, envId, page = 1) {
 async function fetchExistingExportFiles(type, envId) {
   const templates = fsUtils.getAllTemplatesOfAType("exportFile");
   if (!templates) {
-    consola.warn("No export files found");
+    consola.warn(`No export files found in ${type} ${envId}`);
     return;
   }
 
@@ -439,13 +439,13 @@ async function fetchAccountTemplateByName(type, envId, name) {
     const template = await SF.findAccountTemplateByName(type, envId, name);
 
     if (!template) {
-      consola.error(`Account template "${name}" wasn't found`);
+      consola.error(`Account template "${name}" wasn't found in ${type} ${envId}`);
       process.exit(1);
     }
 
     const saved = AccountTemplate.save(type, envId, template);
     if (saved) {
-      consola.success(`Account template "${template?.name_nl}" imported`);
+      consola.success(`Account template "${template?.name_nl}" imported from ${type} ${envId}`);
     }
   } catch (error) {
     consola.error(error);
@@ -458,13 +458,13 @@ async function fetchAccountTemplateById(type, envId, id) {
     const template = await SF.readAccountTemplateById(type, envId, id);
 
     if (!template) {
-      consola.error(`Account template ${id} wasn't found`);
+      consola.error(`Account template ${id} wasn't found in ${type} ${envId}`);
       process.exit(1);
     }
 
     const saved = AccountTemplate.save(type, envId, template);
     if (saved) {
-      consola.success(`Account template "${template?.name_nl}" imported`);
+      consola.success(`Account template "${template?.name_nl}" imported from ${type} ${envId}`);
     }
   } catch (error) {
     consola.error(error);
@@ -477,7 +477,7 @@ async function fetchAllAccountTemplates(type, envId, page = 1) {
 
   if (templates.length == 0) {
     if (page == 1) {
-      consola.warn("No account templates found");
+      consola.warn(`No account templates found in ${type} ${envId}`);
     }
     return;
   }
@@ -486,7 +486,7 @@ async function fetchAllAccountTemplates(type, envId, page = 1) {
     const saved = AccountTemplate.save(type, envId, template);
 
     if (saved)
-      consola.success(`Account template "${template?.name_nl}" imported`);
+      consola.success(`Account template "${template?.name_nl}" imported from ${type} ${envId}`);
   });
   fetchAllAccountTemplates(type, envId, page + 1);
 }
@@ -494,7 +494,7 @@ async function fetchAllAccountTemplates(type, envId, page = 1) {
 async function fetchExistingAccountTemplates(type, envId) {
   const templates = fsUtils.getAllTemplatesOfAType("accountTemplate");
   if (!templates) {
-    consola.warn("No account templates found");
+    consola.warn(`No account templates found in ${type} ${envId}`);
     return;
   }
 
@@ -637,12 +637,12 @@ async function fetchSharedPartById(type, envId, sharedPartId) {
   try {
     const template = await SF.readSharedPartById(type, envId, sharedPartId);
     if (!template || !template.data) {
-      consola.error(`Shared part ${sharedPartId} wasn't found.`);
+      consola.error(`Shared part ${sharedPartId} wasn't found in ${type} ${envId}`);
       process.exit(1);
     }
 
     await SharedPart.save(type, envId, template.data);
-    consola.success(`Shared part "${template.data.name}" imported`);
+    consola.success(`Shared part "${template.data.name}" imported from ${type} ${envId}`);
 
     return template.data;
   } catch (error) {
@@ -654,7 +654,7 @@ async function fetchSharedPartById(type, envId, sharedPartId) {
 async function fetchSharedPartByName(type, envId, name) {
   const sharedPartByName = await SF.findSharedPartByName(type, envId, name);
   if (!sharedPartByName) {
-    consola.error(`Shared part "${name}" wasn't found.`);
+    consola.error(`Shared part "${name}" wasn't found in ${type} ${envId}`);
     process.exit(1);
   }
 
