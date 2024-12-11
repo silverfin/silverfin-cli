@@ -105,7 +105,7 @@ program
       );
     } else if (options.all) {
       toolkit.publishAllReconciliations(
-        settings.type,
+        "firm",
         settings.envId,
         options.message
       );
@@ -210,7 +210,7 @@ program
       );
     } else if (options.all) {
       toolkit.publishAllExportFiles(
-        settings.type,
+        "firm",
         settings.envId,
         options.message
       );
@@ -318,7 +318,7 @@ program
       );
     } else if (options.all) {
       toolkit.publishAllAccountTemplates(
-        settings.type,
+        "firm",
         settings.envId,
         options.message
       );
@@ -426,7 +426,7 @@ program
       );
     } else if (options.all) {
       toolkit.publishAllSharedParts(
-        settings.type, 
+        "firm", 
         settings.envId, 
         options.message
       );
