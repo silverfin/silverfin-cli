@@ -117,10 +117,14 @@ program
 program
   .command("create-reconciliation")
   .description("Create a new reconciliation text")
-  .requiredOption(
+  .option(
     "-f, --firm <firm-id>",
     "Specify the firm to be used",
     firmIdDefault
+  )
+  .option(
+    "-p, --partner <partner-id>",
+    "Specify the partner to be used"
   )
   .option(
     "-h, --handle <handle>",
@@ -131,12 +135,23 @@ program
     "Try to create all the reconciliation texts stored in the repository"
   )
   .action((options) => {
-    cliUtils.checkUniqueOption(["handle", "all"], options);
-    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
+    const settings = runCommandChecks(
+      ["handle", "all"],
+      options,
+      firmIdDefault
+    )
+
     if (options.handle) {
-      toolkit.newReconciliation("firm", options.firm, options.handle);
+      toolkit.newReconciliation(
+        settings.type, 
+        settings.envId,
+        options.handle
+      );
     } else if (options.all) {
-      toolkit.newAllReconciliations("firm", options.firm);
+      toolkit.newAllReconciliations(
+        settings.type,
+        settings.envId,
+      );
     }
   });
 

@@ -152,7 +152,7 @@ async function publishReconciliationByHandle(
 
     consola.debug(`Updating reconciliation ${handle}...`);
 
-    const template = await ReconciliationText.read(handle);
+    const template = await ReconciliationText.read(handle, type);
     if (!template) return;
 
     // Add API-only required fields
@@ -194,42 +194,42 @@ async function publishAllReconciliations(
   }
 }
 
-async function newReconciliation(type, firmId, handle) {
+async function newReconciliation(type, envId, handle) {
   try {
     const existingTemplate = await SF.findReconciliationTextByHandle(
       type,
-      firmId,
+      envId,
       handle
     );
     if (existingTemplate) {
       consola.warn(
-        `Reconciliation "${handle}" already exists. Skipping its creation`
+        `Reconciliation "${handle}" already exists on ${type} ${envId}. Skipping its creation`
       );
       return;
     }
-    const template = await ReconciliationText.read(handle);
+
+    const template = await ReconciliationText.read(handle, type);
     if (!template) return;
     template.version_comment = "Created with the Silverfin CLI";
     const response = await SF.createReconciliationText(
-      "firm",
-      firmId,
+      type,
+      envId,
       template
     );
-
     // Store new id
     if (response && response.status == 201) {
-      ReconciliationText.updateTemplateId(firmId, handle, response.data.id);
-      consola.success(`Reconciliation "${handle}" created`);
+      ReconciliationText.updateTemplateId(type, envId, handle, response.data.id);
+      consola.success(`Reconciliation "${handle}" created on ${type} ${envId}`);
     }
   } catch (error) {
     errorUtils.errorHandler(error);
   }
 }
 
-async function newAllReconciliations(type, firmId) {
+async function newAllReconciliations(type, envId) {
   const templates = fsUtils.getAllTemplatesOfAType("reconciliationText");
   for (let handle of templates) {
-    await newReconciliation(type, firmId, handle);
+    await newReconciliation(type, envId, handle);
   }
 }
 
