@@ -152,7 +152,7 @@ async function publishReconciliationByHandle(
 
     consola.debug(`Updating reconciliation ${handle}...`);
 
-    const template = await ReconciliationText.read(handle, type);
+    const template = await ReconciliationText.read(handle);
     if (!template) return;
 
     // Add API-only required fields
@@ -208,7 +208,7 @@ async function newReconciliation(type, envId, handle) {
       return;
     }
 
-    const template = await ReconciliationText.read(handle, type);
+    const template = await ReconciliationText.read(handle);
     if (!template) return;
     template.version_comment = "Created with the Silverfin CLI";
     const response = await SF.createReconciliationText(
@@ -750,38 +750,39 @@ async function publishAllSharedParts(
   }
 }
 
-async function newSharedPart(type, firmId, name) {
+async function newSharedPart(type, envId, name) {
   try {
     const existingSharedPart = await SF.findSharedPartByName(
       type,
-      firmId,
+      envId,
       name
     );
+
     if (existingSharedPart) {
       consola.warn(
-        `Shared part "${name}" already exists. Skipping its creation`
+        `Shared part "${name}" already exists on ${type} ${envId}. Skipping its creation`
       );
       return;
     }
     const template = await SharedPart.read(name);
     if (!template) return;
     template.version_comment = "Created through the API";
-    const response = await SF.createSharedPart(firmId, template);
+    const response = await SF.createSharedPart(type, envId, template);
 
     // Store new firm id
     if (response && response.status == 201) {
-      SharedPart.updateTemplateId(firmId, name, response.data.id);
-      consola.success(`Shared part "${name}" created`);
+      SharedPart.updateTemplateId(type, envId, name, response.data.id);
+      consola.success(`Shared part "${name}" created on ${type} ${envId}`);
     }
   } catch (error) {
     errorUtils.errorHandler(error);
   }
 }
 
-async function newAllSharedParts(type, firmId) {
+async function newAllSharedParts(type, envId) {
   const templates = fsUtils.getAllTemplatesOfAType("sharedPart");
   for (let name of templates) {
-    await newSharedPart(type, firmId, name);
+    await newSharedPart(type, envId, name);
   }
 }
 

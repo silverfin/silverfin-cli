@@ -470,10 +470,14 @@ program
 program
   .command("create-shared-part")
   .description("Create a new shared part")
-  .requiredOption(
+  .option(
     "-f, --firm <firm-id>",
     "Specify the firm to be used",
     firmIdDefault
+  )
+  .option(
+    "-p, --partner <partner-id>",
+    "Specify the partner to be used"
   )
   .option(
     "-s, --shared-part <name>",
@@ -484,12 +488,20 @@ program
     "Try to create all the shared parts stored in the repository"
   )
   .action((options) => {
-    cliUtils.checkUniqueOption(["sharedPart", "all"], options);
-    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
+    const settings = runCommandChecks(
+      ["sharedPart", "all"],
+      options,
+      firmIdDefault)
+
     if (options.sharedPart) {
-      toolkit.newSharedPart("firm", options.firm, options.sharedPart);
+      toolkit.newSharedPart(
+        settings.type, 
+        settings.envId, 
+        options.sharedPart);
     } else if (options.all) {
-      toolkit.newAllSharedParts("firm", options.firm);
+      toolkit.newAllSharedParts(
+        settings.type, 
+        options.envId);
     }
   });
 
