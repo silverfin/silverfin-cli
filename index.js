@@ -371,34 +371,34 @@ async function publishAllExportFiles(
   }
 }
 
-async function newExportFile(type, firmId, name) {
+async function newExportFile(type, envId, name) {
   try {
-    const existingTemplate = await SF.findExportFileByName(type, firmId, name);
+    const existingTemplate = await SF.findExportFileByName(type, envId, name);
     if (existingTemplate) {
       consola.warn(
-        `Export file "${name}" already exists. Skipping its creation`
+        `Export file "${name}" already exists on ${type} ${envId}. Skipping its creation`
       );
       return;
     }
     const template = await ExportFile.read(name);
     if (!template) return;
     template.version_comment = "Created through the Silverfin CLI";
-    const response = await SF.createExportFile(firmId, template);
+    const response = await SF.createExportFile(type, envId, template);
 
     // Store new id
     if (response && response.status == 201) {
-      ExportFile.updateTemplateId(firmId, name, response.data.id);
-      consola.success(`Export file "${name}" created`);
+      ExportFile.updateTemplateId(type, envId, name, response.data.id);
+      consola.success(`Export file "${name}" created on ${type} ${envId}`);
     }
   } catch (error) {
     errorUtils.errorHandler(error);
   }
 }
 
-async function newAllExportFiles(type, firmId) {
+async function newAllExportFiles(type, envId) {
   const templates = fsUtils.getAllTemplatesOfAType("exportFile");
   for (let name of templates) {
-    await newExportFile(type, firmId, name);
+    await newExportFile(type, envId, name);
   }
 }
 
