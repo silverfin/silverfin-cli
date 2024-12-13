@@ -341,10 +341,14 @@ program
 program
   .command("create-account-template")
   .description("Create a new account template")
-  .requiredOption(
+  .option(
     "-f, --firm <firm-id>",
     "Specify the firm to be used",
     firmIdDefault
+  )
+  .option(
+    "-p, --partner <partner-id>", 
+    "Specify the partner to be used"
   )
   .option(
     "-n, --name <name>",
@@ -355,12 +359,22 @@ program
     "Try to create all account templates stored in the repository"
   )
   .action((options) => {
-    cliUtils.checkUniqueOption(["name", "all"], options);
-    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
+    const settings = runCommandChecks(
+      ["name", "all"],
+      options,
+      firmIdDefault
+    );
     if (options.name) {
-      toolkit.newAccountTemplate("firm", options.firm, options.name);
+      toolkit.newAccountTemplate(
+        settings.type,
+        settings.envId,
+        options.name
+      );
     } else if (options.all) {
-      toolkit.newAllAccountTemplates("firm", options.firm, options.name);
+      toolkit.newAllAccountTemplates(
+        settings.type,
+        settings.envId
+      );
     }
   });
 

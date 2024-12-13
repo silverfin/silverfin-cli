@@ -553,16 +553,16 @@ async function publishAllAccountTemplates(
   }
 }
 
-async function newAccountTemplate(type, firmId, name) {
+async function newAccountTemplate(type, envId, name) {
   try {
     const existingTemplate = await SF.findAccountTemplateByName(
       type,
-      firmId,
+      envId,
       name
     );
     if (existingTemplate) {
       consola.warn(
-        `Account template "${name}" already exists. Skipping its creation`
+        `Account template "${name}" already exists on ${type} ${envId}. Skipping its creation`
       );
       return;
     }
@@ -577,23 +577,23 @@ async function newAccountTemplate(type, firmId, name) {
       }
     );
 
-    const response = await SF.createAccountTemplate(firmId, template);
+    const response = await SF.createAccountTemplate(type, envId, template);
     const handle = response.data.name_nl;
 
     // Store new id
     if (response && response.status == 201) {
-      AccountTemplate.updateTemplateId(firmId, handle, response.data.id);
-      consola.success(`Account template "${handle}" created`);
+      AccountTemplate.updateTemplateId(type, envId, handle, response.data.id);
+      consola.success(`Account template "${handle}" created on ${type} ${envId}`);
     }
   } catch (error) {
     errorUtils.errorHandler(error);
   }
 }
 
-async function newAllAccountTemplates(type, firmId) {
+async function newAllAccountTemplates(type, envId) {
   const templates = fsUtils.getAllTemplatesOfAType("accountTemplate");
   for (let name of templates) {
-    await newAccountTemplate(type, firmId, name);
+    await newAccountTemplate(type, envId, name);
   }
 }
 
