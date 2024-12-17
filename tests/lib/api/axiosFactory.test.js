@@ -41,7 +41,7 @@ describe("AxiosFactory", () => {
     axiosMockAdapter.restore();
   });
 
-  describe("Create instance", () => {
+  describe("Create Instance", () => {
     it("should throw an error for invalid type", () => {
       const mockHost = "https://test-api.com";
       firmCredentials.getHost.mockReturnValue(mockHost);
@@ -68,7 +68,7 @@ describe("AxiosFactory", () => {
       refreshToken: "stored-refresh",
     };
 
-    it("should create a firm instance", () => {
+    it("should create a valid instance", () => {
       firmCredentials.getHost.mockReturnValue(mockHost);
       firmCredentials.getTokenPair.mockReturnValue(mockTokenPair);
 
@@ -83,7 +83,7 @@ describe("AxiosFactory", () => {
       );
     });
 
-    it("should thrown an error for missing tokens", () => {
+    it("should throw an error for missing tokens and terminate process", () => {
       firmCredentials.getHost.mockReturnValue(mockHost);
       firmCredentials.getTokenPair.mockReturnValue(null);
 
@@ -91,11 +91,13 @@ describe("AxiosFactory", () => {
         AxiosFactory.createInstance("firm", firmId);
       }).toThrow("Process.exit called with code 1");
 
-      expect(consola.error).toHaveBeenCalled();
+      expect(consola.error).toHaveBeenCalledWith(
+        "Missing authorization for firm id: 50000"
+      );
       expect(exitSpy).toHaveBeenCalledWith(1);
     });
 
-    it("should refresh tokens on 401 unauthorized error", async () => {
+    it("should refresh tokens on 401 Unauthorized error", async () => {
       const newTokenPair = {
         accessToken: "new-access",
         refreshToken: "new-refresh",
@@ -134,7 +136,9 @@ describe("AxiosFactory", () => {
 
       const response = await axiosInstance.get("/test-endpoint");
 
-      expect(axiosInstance.post).toHaveBeenCalledTimes(1); // Once to refresh
+      expect(axiosMockAdapter.history.get.length).toBe(2);
+      expect(axiosMockAdapter.history.post.length).toBe(1);
+
       expect(firmCredentials.storeNewTokenPair).toHaveBeenCalledWith(
         String(firmId),
         newTokenPairResponse
@@ -142,7 +146,7 @@ describe("AxiosFactory", () => {
       expect(response.data).toBe("Success");
     });
 
-    it("should attempt to refresh tokens only once", async () => {
+    it("should attempt to refresh tokens only once on 401 and terminate the process", async () => {
       firmCredentials.getHost.mockReturnValue(mockHost);
       firmCredentials.getTokenPair.mockReturnValue(mockTokenPair);
 
@@ -154,71 +158,47 @@ describe("AxiosFactory", () => {
       axiosMockAdapter.onGet("/test-endpoint").reply(401, "Unauthorized");
       axiosMockAdapter
         .onPost(`${mockHost}/f/${firmId}/oauth/token`)
-        .reply(200, {});
-      jest.spyOn(axiosInstance, "post");
+        .reply(401, "Unauthorized");
 
-      try {
-        await axiosInstance.get("/test-endpoint");
-        fail("Expected an error to be thrown");
-      } catch (error) {
-        expect(firmCredentials.storeNewTokenPair).toHaveBeenCalledTimes(1);
-        expect(axiosInstance.post).toHaveBeenCalledTimes(1);
-        expect(error.response.status).toBe(401);
-      }
+      await expect(axiosInstance.get("/test-endpoint")).rejects.toThrow(
+        "Process.exit called with code 1"
+      );
+
+      expect(axiosMockAdapter.history.get.length).toBe(1);
+      expect(axiosMockAdapter.history.post.length).toBe(1);
+
+      expect(firmCredentials.storeNewTokenPair).toHaveBeenCalledTimes(0);
+      expect(exitSpy).toHaveBeenCalledWith(1);
+      expect(consola.error).toHaveBeenCalledWith(
+        "Error refreshing credentials. Try running the authentication process again"
+      );
     });
 
-    it("should show an error message if token refresh fails", async () => {
+    it("should throw any other response errors", async () => {
       firmCredentials.getHost.mockReturnValue(mockHost);
       firmCredentials.getTokenPair.mockReturnValue(mockTokenPair);
 
       const axiosInstance = AxiosFactory.createInstance("firm", firmId);
-
-      expect(axiosInstance).toBeDefined();
-      expect(axios.create).toHaveBeenCalled();
-
-      axiosMockAdapter.onGet("/test-endpoint").reply(401, "Unauthorized");
-      axiosMockAdapter
-        .onPost(`${mockHost}/f/${firmId}/oauth/token`)
-        .reply(400, "Bad request");
-      jest.spyOn(axiosInstance, "post");
-
-      try {
-        await axiosInstance.get("/test-endpoint");
-        fail("Expected an error to be thrown");
-      } catch (error) {
-        expect(firmCredentials.storeNewTokenPair).not.toHaveBeenCalled();
-        expect(axiosInstance.post).toHaveBeenCalledTimes(1);
-        expect(consola.error).toHaveBeenCalledWith(
-          "Error 401: Failed to refresh the firm access token automatically, try to manually authorize the firm again with the authorize command"
-        );
-      }
-    });
-
-    it("should not attept to refresh tokens on non-401 unauthorized error", async () => {
-      firmCredentials.getHost.mockReturnValue(mockHost);
-      firmCredentials.getTokenPair.mockReturnValue(mockTokenPair);
-
-      const axiosInstance = AxiosFactory.createInstance("firm", firmId);
-
-      jest.spyOn(axiosInstance, "get");
-      axiosInstance.post = jest.fn();
 
       expect(axiosInstance).toBeDefined();
       expect(axios.create).toHaveBeenCalled();
 
       axiosMockAdapter.onGet("/test-endpoint").reply(404, "Not found");
+      axiosMockAdapter.onPost(`${mockHost}/f/${firmId}/oauth/token`).reply(400);
 
-      try {
-        await axiosInstance.get("/test-endpoint");
-        fail("Expected an error to be thrown");
-      } catch (error) {
-        expect(axiosInstance.get).toHaveBeenCalled();
-        expect(axiosInstance.post).not.toHaveBeenCalled();
-        expect(error.response.status).toBe(404);
-      }
+      await expect(axiosInstance.get("/test-endpoint")).rejects.toThrow();
+
+      expect(axiosMockAdapter.history.get.length).toBe(1);
+      expect(axiosMockAdapter.history.post.length).toBe(0);
+
+      expect(firmCredentials.storeNewTokenPair).toHaveBeenCalledTimes(0);
+
+      // Error is raised and not handled by AxiosFactory
+      expect(exitSpy).toHaveBeenCalledTimes(0);
+      expect(consola.error).toHaveBeenCalledTimes(0);
     });
 
-    it("should raise the error again if there is no response", async () => {
+    it("should throw the error again if there is no response", async () => {
       firmCredentials.getHost.mockReturnValue(mockHost);
       firmCredentials.getTokenPair.mockReturnValue(mockTokenPair);
 
@@ -229,12 +209,14 @@ describe("AxiosFactory", () => {
 
       axiosMockAdapter.onGet("/test-endpoint").networkError();
 
-      try {
-        await axiosInstance.get("/test-endpoint");
-        fail("Expected an error to be thrown");
-      } catch (error) {
-        expect(error.message).toBe("Network Error");
-      }
+      await expect(axiosInstance.get("/test-endpoint")).rejects.toThrow();
+
+      expect(axiosMockAdapter.history.get.length).toBe(1);
+      expect(axiosMockAdapter.history.post.length).toBe(0);
+
+      // Error is raised and not handled by AxiosFactory
+      expect(exitSpy).toHaveBeenCalledTimes(0);
+      expect(consola.error).toHaveBeenCalledTimes(0);
     });
   });
 
@@ -245,7 +227,7 @@ describe("AxiosFactory", () => {
       token: "stored-api-key",
     };
 
-    it("should create a partner instance", () => {
+    it("should create a valid instance", () => {
       firmCredentials.getHost.mockReturnValue(mockHost);
       firmCredentials.getPartnerCredentials.mockReturnValue(mockPartnerTokens);
 
@@ -255,6 +237,7 @@ describe("AxiosFactory", () => {
       expect(axiosInstance.defaults.baseURL).toBe(
         `https://test-api.com/api/partner/v1`
       );
+
       expect(axiosInstance.defaults.headers.Authorization).toBeUndefined();
     });
 
@@ -277,6 +260,20 @@ describe("AxiosFactory", () => {
       expect(response.data).toBe("Success");
     });
 
+    it("should throw an error for missing API key and terminate process", () => {
+      firmCredentials.getHost.mockReturnValue(mockHost);
+      firmCredentials.getPartnerCredentials.mockReturnValue(null);
+
+      expect(() => {
+        AxiosFactory.createInstance("partner", partnerId);
+      }).toThrow("Process.exit called with code 1");
+
+      expect(consola.error).toHaveBeenCalledWith(
+        "Missing authorization for partner id: 100"
+      );
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+
     it("should refresh API key on 401 Unauthorized error", async () => {
       const newApiKey = "new-api-key";
 
@@ -284,6 +281,12 @@ describe("AxiosFactory", () => {
       firmCredentials.getPartnerCredentials.mockReturnValueOnce(
         mockPartnerTokens
       ); // original request
+      firmCredentials.getPartnerCredentials.mockReturnValueOnce(
+        mockPartnerTokens
+      ); // refresh request
+      firmCredentials.getPartnerCredentials.mockReturnValueOnce({
+        token: newApiKey,
+      }); // new request
 
       const axiosInstance = AxiosFactory.createInstance("partner", partnerId);
 
@@ -311,7 +314,9 @@ describe("AxiosFactory", () => {
 
       const response = await axiosInstance.get("/test-endpoint");
 
-      expect(axiosInstance.post).toHaveBeenCalledTimes(1); // Once to refresh
+      expect(axiosMockAdapter.history.get.length).toBe(2);
+      expect(axiosMockAdapter.history.post.length).toBe(1);
+
       expect(firmCredentials.storePartnerApiKey).toHaveBeenCalledWith(
         partnerId,
         newApiKey
@@ -319,7 +324,7 @@ describe("AxiosFactory", () => {
       expect(response.data).toBe("Success");
     });
 
-    it("should attempt to refresh API key only once", async () => {
+    it("should attempt to refresh API key only once on 401 and terminate the process", async () => {
       firmCredentials.getHost.mockReturnValue(mockHost);
       firmCredentials.getPartnerCredentials.mockReturnValue(mockPartnerTokens);
 
@@ -333,20 +338,24 @@ describe("AxiosFactory", () => {
         .onPost(
           `${mockHost}/api/partner/v1/refresh_api_key?api_key=stored-api-key`
         )
-        .reply(200, {});
+        .reply(401, "Unauthorized");
       jest.spyOn(axiosInstance, "post");
 
-      try {
-        await axiosInstance.get("/test-endpoint");
-        fail("Expected an error to be thrown");
-      } catch (error) {
-        expect(firmCredentials.storePartnerApiKey).toHaveBeenCalledTimes(1);
-        expect(axiosInstance.post).toHaveBeenCalledTimes(1);
-        expect(error.response.status).toBe(401);
-      }
+      await expect(axiosInstance.get("/test-endpoint")).rejects.toThrow(
+        "Process.exit called with code 1"
+      );
+
+      expect(axiosMockAdapter.history.get.length).toBe(1);
+      expect(axiosMockAdapter.history.post.length).toBe(1);
+
+      expect(firmCredentials.storeNewTokenPair).toHaveBeenCalledTimes(0);
+      expect(exitSpy).toHaveBeenCalledWith(1);
+      expect(consola.error).toHaveBeenCalledWith(
+        "Error refreshing credentials. Try running the authentication process again"
+      );
     });
 
-    it("should show an error message if API key refresh fails", async () => {
+    it("should throw any other response error", async () => {
       firmCredentials.getHost.mockReturnValue(mockHost);
       firmCredentials.getPartnerCredentials.mockReturnValue(mockPartnerTokens);
 
@@ -355,27 +364,24 @@ describe("AxiosFactory", () => {
       expect(axiosInstance).toBeDefined();
       expect(axios.create).toHaveBeenCalled();
 
-      axiosMockAdapter.onGet("/test-endpoint").reply(401, "Unauthorized");
+      axiosMockAdapter.onGet("/test-endpoint").reply(404, "Not found");
       axiosMockAdapter
-        .onPost(
-          `${mockHost}/api/partner/v1/refresh_api_key?api_key=stored-api-key`
-        )
-        .reply(400, "Bad request");
-      jest.spyOn(axiosInstance, "post");
+        .onPost(`${mockHost}/f/${partnerId}/oauth/token`)
+        .reply(400);
 
-      try {
-        await axiosInstance.get("/test-endpoint");
-        fail("Expected an error to be thrown");
-      } catch (error) {
-        expect(firmCredentials.storePartnerApiKey).not.toHaveBeenCalled();
-        expect(axiosInstance.post).toHaveBeenCalledTimes(1);
-        expect(consola.error).toHaveBeenCalledWith(
-          "Error 401: Failed to refresh the partner API key automatically, try to manually authorize the partner again with the authorize-partner command"
-        );
-      }
+      await expect(axiosInstance.get("/test-endpoint")).rejects.toThrow();
+
+      expect(axiosMockAdapter.history.get.length).toBe(1);
+      expect(axiosMockAdapter.history.post.length).toBe(0);
+
+      expect(firmCredentials.storeNewTokenPair).toHaveBeenCalledTimes(0);
+
+      // Error is raised and not handled by AxiosFactory
+      expect(exitSpy).toHaveBeenCalledTimes(0);
+      expect(consola.error).toHaveBeenCalledTimes(0);
     });
 
-    it("should not attempt to refresh API key on non-401 Unauthorized error", async () => {
+    it("should throw the error again if there is no response", async () => {
       firmCredentials.getHost.mockReturnValue(mockHost);
       firmCredentials.getPartnerCredentials.mockReturnValue(mockPartnerTokens);
 
@@ -387,16 +393,16 @@ describe("AxiosFactory", () => {
       expect(axiosInstance).toBeDefined();
       expect(axios.create).toHaveBeenCalled();
 
-      axiosMockAdapter.onGet("/test-endpoint").reply(404, "Not found");
+      axiosMockAdapter.onGet("/test-endpoint").networkError();
 
-      try {
-        await axiosInstance.get("/test-endpoint");
-        fail("Expected an error to be thrown");
-      } catch (error) {
-        expect(axiosInstance.get).toHaveBeenCalled();
-        expect(axiosInstance.post).not.toHaveBeenCalled();
-        expect(error.response.status).toBe(404);
-      }
+      await expect(axiosInstance.get("/test-endpoint")).rejects.toThrow();
+
+      expect(axiosMockAdapter.history.get.length).toBe(1);
+      expect(axiosMockAdapter.history.post.length).toBe(0);
+
+      // Error is raised and not handled by AxiosFactory
+      expect(exitSpy).toHaveBeenCalledTimes(0);
+      expect(consola.error).toHaveBeenCalledTimes(0);
     });
   });
 
@@ -468,6 +474,61 @@ describe("AxiosFactory", () => {
         partner_id: partnerId,
         api_key: mockPartnerTokens.token,
       });
+    });
+  });
+
+  describe("Create auth instance for firm", () => {
+    const mockHost = "https://test-api.com";
+
+    it("should not thrown an error for missing tokens", () => {
+      firmCredentials.getHost.mockReturnValue(mockHost);
+      firmCredentials.getTokenPair.mockReturnValue(null);
+
+      const axiosInstance = AxiosFactory.createAuthInstanceForFirm(123);
+
+      expect(axiosInstance).toBeDefined();
+      expect(axios.create).toHaveBeenCalled();
+
+      expect(consola.error).not.toHaveBeenCalled();
+      expect(exitSpy).not.toHaveBeenCalled();
+    });
+
+    it("should not attempt to refresh tokens", async () => {
+      firmCredentials.getHost.mockReturnValue(mockHost);
+
+      const axiosInstance = AxiosFactory.createAuthInstanceForFirm(123);
+
+      expect(axiosInstance).toBeDefined();
+      expect(axios.create).toHaveBeenCalled();
+
+      axiosMockAdapter.onGet("/test-endpoint").reply(401, "Unauthorized");
+      jest.spyOn(axiosInstance, "post");
+
+      try {
+        await axiosInstance.get("/test-endpoint");
+        fail("Expected an error to be thrown");
+      } catch (error) {
+        expect(firmCredentials.storeNewTokenPair).not.toHaveBeenCalled();
+        expect(axiosInstance.post).not.toHaveBeenCalled();
+        expect(error.response.status).toBe(401);
+      }
+    });
+
+    it("should use basic auth for firm instance in staging", () => {
+      const mockHost = "https://test-api.staging.getsilverfin.com";
+      const firmId = 50000;
+      firmCredentials.getHost.mockReturnValue(mockHost);
+
+      const axiosInstance = AxiosFactory.createAuthInstanceForFirm(firmId);
+
+      expect(axiosInstance).toBeDefined();
+      expect(axiosInstance.defaults.baseURL).toBe(
+        `https://test-api.staging.getsilverfin.com/api/v4/f/50000`
+      );
+
+      expect(axiosInstance.defaults.headers.Authorization).toBe(
+        "Basic test_basic_auth"
+      );
     });
   });
 });
