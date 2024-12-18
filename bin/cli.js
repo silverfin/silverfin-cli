@@ -238,10 +238,14 @@ program
 program
   .command("create-export-file")
   .description("Create a new export file template")
-  .requiredOption(
+  .option(
     "-f, --firm <firm-id>",
     "Specify the firm to be used",
     firmIdDefault
+  )
+  .option(
+    "-p, --partner <partner-id>", 
+    "Specify the partner to be used"
   )
   .option(
     "-n, --name <name>",
@@ -252,12 +256,22 @@ program
     "Try to create all export files stored in the repository"
   )
   .action((options) => {
-    cliUtils.checkUniqueOption(["name", "all"], options);
-    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
+    const settings = runCommandChecks(
+      ["name", "all"],
+      options,
+      firmIdDefault
+    );
     if (options.name) {
-      toolkit.newExportFile("firm", options.firm, options.name);
+      toolkit.newExportFile(
+        settings.type,
+        settings.envId,
+        options.name
+      );
     } else if (options.all) {
-      toolkit.newAllExportFiles("firm", options.firm);
+      toolkit.newAllExportFiles(
+        settings.type,
+        settings.envId
+      );
     }
   });
 
