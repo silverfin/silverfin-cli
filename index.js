@@ -187,11 +187,6 @@ async function publishAllReconciliations(
   envId,
   message = "updated through the Silverfin CLI"
 ) {
-  if (type == "partner") {
-    consola.error(`Not possible to update all reconciliations at once in a partner environment`);
-    return;
-  }
-
   let templates = fsUtils.getAllTemplatesOfAType("reconciliationText");
   for (let handle of templates) {
     if (!handle) continue;
@@ -382,11 +377,6 @@ async function publishAllExportFiles(
   envId,
   message = "updated through the Silverfin CLI"
 ) {
-  if (type == "partner") {
-    consola.error(`Not possible to update all export files at once in a partner environment`);
-    return;
-  }
-
   let templates = fsUtils.getAllTemplatesOfAType("exportFile");
   for (let name of templates) {
     if (!name) continue;
@@ -567,11 +557,6 @@ async function publishAllAccountTemplates(
   envId,
   message = "updated through the Silverfin CLI"
 ) {
-  if (type == "partner") {
-    consola.error(`Not possible to update all account templates at once in a partner environment`);
-    return;
-  }
-
   let templates = fsUtils.getAllTemplatesOfAType("accountTemplate");
   for (let name of templates) {
     if (!name) continue;
@@ -757,11 +742,6 @@ async function publishAllSharedParts(
   envId,
   message = "updated through the Silverfin CLI"
 ) {
-  if (type == "partner") {
-    consola.error(`Not possible to update all shared parts at once in a partner environment`);
-    return;
-  }
-
   let templates = fsUtils.getAllTemplatesOfAType("sharedPart");
   for (let name of templates) {
     if (!name) continue;
