@@ -89,6 +89,7 @@ program
   )
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
+    cliUtils.checkPartnerSupport(options);
     const settings = runCommandChecks(
       ["handle", "all"],
       options,
@@ -194,6 +195,7 @@ program
   )
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
+    cliUtils.checkPartnerSupport(options);
     const settings = runCommandChecks(
       ["name", "all"],
       options,
@@ -302,6 +304,7 @@ program
   )
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
+    cliUtils.checkPartnerSupport(options);
     const settings = runCommandChecks(
       ["name", "all"],
       options,
@@ -410,6 +413,7 @@ program
   )
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
+    cliUtils.checkPartnerSupport(options);
     const settings = runCommandChecks(
       ["sharedPart", "all"],
       options,
