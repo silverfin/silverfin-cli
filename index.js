@@ -238,6 +238,12 @@ async function newReconciliation(type, envId, handle) {
 }
 
 async function newAllReconciliations(type, envId) {
+
+  if (type == "partner") {
+    consola.error(`Not possible to create all reconciliations at once in a partner environment`)
+    return;
+  }
+
   const templates = fsUtils.getAllTemplatesOfAType("reconciliationText");
   for (let handle of templates) {
     await newReconciliation(type, envId, handle);
@@ -396,6 +402,12 @@ async function newExportFile(type, envId, name) {
 }
 
 async function newAllExportFiles(type, envId) {
+
+  if (type == "partner") {
+    consola.error(`Not possible to create all export files at once in a partner environment`)
+    return;
+  }
+
   const templates = fsUtils.getAllTemplatesOfAType("exportFile");
   for (let name of templates) {
     await newExportFile(type, envId, name);
@@ -592,6 +604,12 @@ async function newAccountTemplate(type, envId, name) {
 }
 
 async function newAllAccountTemplates(type, envId) {
+
+  if (type == "partner") {
+    consola.error(`Not possible to create all account templates at once in a partner environment`)
+    return;
+  }
+
   const templates = fsUtils.getAllTemplatesOfAType("accountTemplate");
   for (let name of templates) {
     await newAccountTemplate(type, envId, name);
@@ -777,6 +795,12 @@ async function newSharedPart(type, envId, name) {
 }
 
 async function newAllSharedParts(type, envId) {
+
+  if (type == "partner") {
+    consola.error(`Not possible to create all shared parts at once in a partner environment`)
+    return;
+  }
+
   const templates = fsUtils.getAllTemplatesOfAType("sharedPart");
   for (let name of templates) {
     await newSharedPart(type, envId, name);
