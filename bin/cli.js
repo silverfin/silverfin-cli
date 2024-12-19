@@ -117,10 +117,14 @@ program
 program
   .command("create-reconciliation")
   .description("Create a new reconciliation text")
-  .requiredOption(
+  .option(
     "-f, --firm <firm-id>",
     "Specify the firm to be used",
     firmIdDefault
+  )
+  .option(
+    "-p, --partner <partner-id>",
+    "Specify the partner to be used"
   )
   .option(
     "-h, --handle <handle>",
@@ -131,12 +135,23 @@ program
     "Try to create all the reconciliation texts stored in the repository"
   )
   .action((options) => {
-    cliUtils.checkUniqueOption(["handle", "all"], options);
-    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
+    const settings = runCommandChecks(
+      ["handle", "all"],
+      options,
+      firmIdDefault
+    )
+
     if (options.handle) {
-      toolkit.newReconciliation("firm", options.firm, options.handle);
+      toolkit.newReconciliation(
+        settings.type, 
+        settings.envId,
+        options.handle
+      );
     } else if (options.all) {
-      toolkit.newAllReconciliations("firm", options.firm);
+      toolkit.newAllReconciliations(
+        settings.type,
+        settings.envId,
+      );
     }
   });
 
@@ -218,10 +233,14 @@ program
 program
   .command("create-export-file")
   .description("Create a new export file template")
-  .requiredOption(
+  .option(
     "-f, --firm <firm-id>",
     "Specify the firm to be used",
     firmIdDefault
+  )
+  .option(
+    "-p, --partner <partner-id>", 
+    "Specify the partner to be used"
   )
   .option(
     "-n, --name <name>",
@@ -232,12 +251,22 @@ program
     "Try to create all export files stored in the repository"
   )
   .action((options) => {
-    cliUtils.checkUniqueOption(["name", "all"], options);
-    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
+    const settings = runCommandChecks(
+      ["name", "all"],
+      options,
+      firmIdDefault
+    );
     if (options.name) {
-      toolkit.newExportFile("firm", options.firm, options.name);
+      toolkit.newExportFile(
+        settings.type,
+        settings.envId,
+        options.name
+      );
     } else if (options.all) {
-      toolkit.newAllExportFiles("firm", options.firm, options.name);
+      toolkit.newAllExportFiles(
+        settings.type,
+        settings.envId
+      );
     }
   });
 
@@ -327,10 +356,14 @@ program
 program
   .command("create-account-template")
   .description("Create a new account template")
-  .requiredOption(
+  .option(
     "-f, --firm <firm-id>",
     "Specify the firm to be used",
     firmIdDefault
+  )
+  .option(
+    "-p, --partner <partner-id>",
+    "Specify the partner to be used"
   )
   .option(
     "-n, --name <name>",
@@ -341,12 +374,22 @@ program
     "Try to create all account templates stored in the repository"
   )
   .action((options) => {
-    cliUtils.checkUniqueOption(["name", "all"], options);
-    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
+    const settings = runCommandChecks(
+      ["name", "all"],
+      options,
+      firmIdDefault)
+
     if (options.name) {
-      toolkit.newAccountTemplate("firm", options.firm, options.name);
+      toolkit.newAccountTemplate(
+        settings.type, 
+        settings.envId, 
+        options.name
+      );
     } else if (options.all) {
-      toolkit.newAllAccountTemplates("firm", options.firm, options.name);
+      toolkit.newAllAccountTemplates(
+        settings.type, 
+        settings.envId, 
+      );
     }
   });
 
@@ -432,10 +475,14 @@ program
 program
   .command("create-shared-part")
   .description("Create a new shared part")
-  .requiredOption(
+  .option(
     "-f, --firm <firm-id>",
     "Specify the firm to be used",
     firmIdDefault
+  )
+  .option(
+    "-p, --partner <partner-id>",
+    "Specify the partner to be used"
   )
   .option(
     "-s, --shared-part <name>",
@@ -446,12 +493,20 @@ program
     "Try to create all the shared parts stored in the repository"
   )
   .action((options) => {
-    cliUtils.checkUniqueOption(["sharedPart", "all"], options);
-    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
+    const settings = runCommandChecks(
+      ["sharedPart", "all"],
+      options,
+      firmIdDefault)
+
     if (options.sharedPart) {
-      toolkit.newSharedPart("firm", options.firm, options.sharedPart);
+      toolkit.newSharedPart(
+        settings.type, 
+        settings.envId, 
+        options.sharedPart);
     } else if (options.all) {
-      toolkit.newAllSharedParts("firm", options.firm);
+      toolkit.newAllSharedParts(
+        settings.type, 
+        options.envId);
     }
   });
 
