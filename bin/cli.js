@@ -135,6 +135,7 @@ program
     "Try to create all the reconciliation texts stored in the repository"
   )
   .action((options) => {
+    cliUtils.checkPartnerSupport(options);
     const settings = runCommandChecks(
       ["handle", "all"],
       options,
@@ -379,6 +380,7 @@ program
     "Try to create all account templates stored in the repository"
   )
   .action((options) => {
+    cliUtils.checkPartnerSupport(options);
     const settings = runCommandChecks(
       ["name", "all"],
       options,
@@ -502,6 +504,7 @@ program
     "Try to create all the shared parts stored in the repository"
   )
   .action((options) => {
+    cliUtils.checkPartnerSupport(options);
     const settings = runCommandChecks(
       ["sharedPart", "all"],
       options,
