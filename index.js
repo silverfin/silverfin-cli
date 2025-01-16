@@ -13,7 +13,7 @@ async function fetchReconciliationById(type, envId, id) {
   try {
     const template = await SF.readReconciliationTextById(type, envId, id);
     if (!template || !template.data) {
-      consola.error(`Reconciliation with id ${id} wasn't found`);
+      consola.error(`Reconciliation with id ${id} wasn't found in ${type} ${envId}`);
       process.exit(1);
     }
 
@@ -46,10 +46,7 @@ async function fetchReconciliationByHandle(type, envId, handle) {
     if (configPresent) {
       const templateConfig = fsUtils.readConfig("reconciliationText", handle);
 
-      id =
-        type == "firm"
-          ? templateConfig?.id?.[envId]
-          : templateConfig?.partner_id?.[envId];
+      id = fsUtils.getTemplateId(type, envId, templateConfig);
     }
 
     if (!id) {
@@ -90,7 +87,7 @@ async function fetchAllReconciliations(type, envId, page = 1) {
       const saved = await ReconciliationText.save(type, envId, template);
 
       if (saved)
-        consola.success(`Reconciliation "${template.handle}" imported`);
+        consola.success(`Reconciliation "${template.handle}" imported from ${type} ${envId}`);
     } catch (error) {
       consola.error(error);
     }
@@ -103,7 +100,7 @@ async function fetchExistingReconciliations(type, envId) {
   const templates = fsUtils.getAllTemplatesOfAType("reconciliationText");
 
   if (!templates || templates.length == 0) {
-    consola.warn("No reconciliation templates with a valid config found");
+    consola.warn(`No reconciliation templates with a valid config found in ${type} ${envId}`);
     return;
   }
 
@@ -118,11 +115,7 @@ async function fetchExistingReconciliations(type, envId) {
       }
 
       const templateConfig = fsUtils.readConfig("reconciliationText", handle);
-
-      let templateId =
-        type == "firm"
-          ? templateConfig?.id?.[envId]
-          : templateConfig?.partner_id?.[envId];
+      let templateId = fsUtils.getTemplateId(type, envId, templateConfig);
 
       if (!templateId) {
         errorUtils.missingReconciliationId(handle);
@@ -150,11 +143,7 @@ async function publishReconciliationByHandle(
     }
 
     const templateConfig = fsUtils.readConfig("reconciliationText", handle);
-
-    let templateId =
-      type == "firm"
-        ? templateConfig?.id?.[envId]
-        : templateConfig?.partner_id?.[envId];
+    let templateId = fsUtils.getTemplateId(type, envId, templateConfig);
 
     if (!templateId) {
       errorUtils.missingReconciliationId(handle);
@@ -247,13 +236,15 @@ async function newAllReconciliations(type, firmId) {
 async function fetchExportFileByName(type, envId, name) {
   try {
     const template = await SF.findExportFileByName(type, envId, name);
+    
     if (!template) {
-      consola.error(`Export file "${name}" wasn't found`);
+      consola.error(`Export file "${name}" wasn't found in ${type} ${envId}`);
       process.exit(1);
     }
-    const saved = await ExportFile.save(type, envId, template);
+
+    const saved = ExportFile.save(type, envId, template);
     if (saved) {
-      consola.success(`Export file "${name}" imported`);
+      consola.success(`Export file "${name}" imported from ${type} ${envId}`);
     }
   } catch (error) {
     consola.error(error);
@@ -266,12 +257,22 @@ async function fetchExportFileById(type, envId, id) {
     const template = await SF.readExportFileById(type, envId, id);
 
     if (!template) {
-      consola.error(`Export file with id ${id} wasn't found`);
+      consola.error(`Export file with id ${id} wasn't found in ${type} ${envId}`);
       process.exit(1);
     }
 
-    ExportFile.save(type, envId, template);
-    consola.success(`Export file "${template.name}" imported`);
+    const saved = ExportFile.save(type, envId, template);
+    if (saved) {
+      consola.success(
+        `Export file "${template.name}" imported from ${type} ${envId}`
+      );
+    }
+
+    return {
+      type,
+      envId,
+      template,
+    }
   } catch (error) {
     consola.error(error);
     process.exit(1);
@@ -280,25 +281,41 @@ async function fetchExportFileById(type, envId, id) {
 
 async function fetchAllExportFiles(type, envId, page = 1) {
   const templates = await SF.readExportFiles(type, envId, page);
+
   if (templates.length == 0) {
     if (page == 1) {
-      consola.error(`No export files found in firm ${firmId}`);
+      consola.error(`No export files found in ${type} ${envId}`);
     }
     return;
   }
+
   templates.forEach(async (template) => {
-    fetchExportFileById(type, envId, template.id);
+    const saved = ExportFile.save(type, envId, template);
+
+    if (saved) {
+      consola.success(`Export file "${template.name}" imported from ${type} ${envId}`);
+    }
   });
   fetchAllExportFiles(type, envId, page + 1);
 }
 
-async function fetchExistingExportFiles(firmId) {
+async function fetchExistingExportFiles(type, envId) {
   const templates = fsUtils.getAllTemplatesOfAType("exportFile");
-  if (!templates) return;
+  if (!templates) {
+    consola.warn(`No export files found in ${type} ${envId}`);
+    return;
+  }
+
   templates.forEach(async (name) => {
     const templateConfig = fsUtils.readConfig("exportFile", name);
-    if (!templateConfig || !templateConfig.id[firmId]) return;
-    await fetchExportFileById(firmId, templateConfig.id[firmId]);
+    let templateId = fsUtils.getTemplateId(type, envId, templateConfig);
+    
+    if (!templateId) {
+      errorUtils.missingExportFileId(name);
+      return false;
+    }
+
+    await fetchExportFileById(type, envId, templateId);
   });
 }
 
@@ -317,11 +334,7 @@ async function publishExportFileByName(
     }
 
     const templateConfig = fsUtils.readConfig("exportFile", name);
-
-    let templateId =
-      type == "firm"
-        ? templateConfig?.id?.[envId]
-        : templateConfig?.partner_id?.[envId];
+    let templateId = fsUtils.getTemplateId(type, envId, templateConfig);
 
     if (!templateConfig || !templateId) {
       errorUtils.missingExportFileId(name);
@@ -383,6 +396,7 @@ async function newExportFile(type, firmId, name) {
     const template = await ExportFile.read(name);
     if (!template) return;
     template.version_comment = "Created through the Silverfin CLI";
+
     const response = await SF.createExportFile(firmId, template);
 
     // Store new id
@@ -407,13 +421,13 @@ async function fetchAccountTemplateByName(type, envId, name) {
     const template = await SF.findAccountTemplateByName(type, envId, name);
 
     if (!template) {
-      consola.error(`Account template "${name}" wasn't found`);
+      consola.error(`Account template "${name}" wasn't found in ${type} ${envId}`);
       process.exit(1);
     }
 
     const saved = AccountTemplate.save(type, envId, template);
     if (saved) {
-      consola.success(`Account template "${template?.name_nl}" imported`);
+      consola.success(`Account template "${template?.name_nl}" imported from ${type} ${envId}`);
     }
   } catch (error) {
     consola.error(error);
@@ -426,13 +440,13 @@ async function fetchAccountTemplateById(type, envId, id) {
     const template = await SF.readAccountTemplateById(type, envId, id);
 
     if (!template) {
-      consola.error(`Account template ${id} wasn't found`);
+      consola.error(`Account template ${id} wasn't found in ${type} ${envId}`);
       process.exit(1);
     }
 
     const saved = AccountTemplate.save(type, envId, template);
     if (saved) {
-      consola.success(`Account template "${template?.name_nl}" imported`);
+      consola.success(`Account template "${template?.name_nl}" imported from ${type} ${envId}`);
     }
   } catch (error) {
     consola.error(error);
@@ -445,7 +459,7 @@ async function fetchAllAccountTemplates(type, envId, page = 1) {
 
   if (templates.length == 0) {
     if (page == 1) {
-      consola.warn("No account templates found");
+      consola.warn(`No account templates found in ${type} ${envId}`);
     }
     return;
   }
@@ -454,20 +468,21 @@ async function fetchAllAccountTemplates(type, envId, page = 1) {
     const saved = AccountTemplate.save(type, envId, template);
 
     if (saved)
-      consola.success(`Account template "${template?.name_nl}" imported`);
+      consola.success(`Account template "${template?.name_nl}" imported from ${type} ${envId}`);
   });
   fetchAllAccountTemplates(type, envId, page + 1);
 }
 
 async function fetchExistingAccountTemplates(type, envId) {
   const templates = fsUtils.getAllTemplatesOfAType("accountTemplate");
-  if (!templates) return;
+  if (!templates) {
+    consola.warn(`No account templates found in ${type} ${envId}`);
+    return;
+  }
+
   templates.forEach(async (name) => {
     const templateConfig = fsUtils.readConfig("accountTemplate", name);
-    let templateId =
-      type == "firm"
-        ? templateConfig?.id?.[envId]
-        : templateConfig?.partner_id?.[envId];
+    let templateId = fsUtils.getTemplateId(type, envId, templateConfig);
 
     if (!templateId) {
       errorUtils.missingAccountTemplateId(name);
@@ -493,11 +508,7 @@ async function publishAccountTemplateByName(
     }
 
     const templateConfig = fsUtils.readConfig("accountTemplate", name);
-
-    let templateId =
-      type == "firm"
-        ? templateConfig?.id?.[envId]
-        : templateConfig?.partner_id?.[envId];
+    let templateId = fsUtils.getTemplateId(type, envId, templateConfig);
 
     if (!templateConfig || !templateId) {
       errorUtils.missingAccountTemplateId(name);
@@ -506,7 +517,7 @@ async function publishAccountTemplateByName(
 
     consola.debug(`Updating account template ${name}...`);
 
-    const template = AccountTemplate.read(name);
+    const template = await AccountTemplate.read(name);
     if (!template) return;
 
     // Add API-only required fields
@@ -601,12 +612,12 @@ async function fetchSharedPartById(type, envId, sharedPartId) {
   try {
     const template = await SF.readSharedPartById(type, envId, sharedPartId);
     if (!template || !template.data) {
-      consola.error(`Shared part ${sharedPartId} wasn't found.`);
+      consola.error(`Shared part ${sharedPartId} wasn't found in ${type} ${envId}`);
       process.exit(1);
     }
 
     await SharedPart.save(type, envId, template.data);
-    consola.success(`Shared part "${template.data.name}" imported`);
+    consola.success(`Shared part "${template.data.name}" imported from ${type} ${envId}`);
 
     return template.data;
   } catch (error) {
@@ -618,7 +629,7 @@ async function fetchSharedPartById(type, envId, sharedPartId) {
 async function fetchSharedPartByName(type, envId, name) {
   const sharedPartByName = await SF.findSharedPartByName(type, envId, name);
   if (!sharedPartByName) {
-    consola.error(`Shared part "${name}" wasn't found.`);
+    consola.error(`Shared part "${name}" wasn't found in ${type} ${envId}`);
     process.exit(1);
   }
 
@@ -663,11 +674,7 @@ async function fetchExistingSharedParts(type, envId) {
       }
 
       const templateConfig = fsUtils.readConfig("sharedPart", name);
-
-      let templateId =
-        type == "firm"
-          ? templateConfig?.id?.[envId]
-          : templateConfig?.partner_id?.[envId];
+      let templateId = fsUtils.getTemplateId(type, envId, templateConfig);
 
       if (!templateId) {
         errorUtils.missingSharedPartId(name);
@@ -693,11 +700,7 @@ async function publishSharedPartByName(
       return false;
     }
     const templateConfig = fsUtils.readConfig("sharedPart", name);
-
-    let templateId =
-      type == "firm"
-        ? templateConfig?.id?.[envId]
-        : templateConfig?.partner_id?.[envId];
+    let templateId = fsUtils.getTemplateId(type, envId, templateConfig);
 
     if (!templateConfig || !templateId) {
       errorUtils.missingSharedPartId(name);
@@ -782,8 +785,8 @@ async function newAllSharedParts(type, firmId) {
 }
 
 /** This function adds a shared part to a template. It will make a POST request to the API. If the ID of one of the templates is missing, it will try to fetch it first by making a GET request. In case of success, it will store the details in the corresponding config files.
- *
- * @param {Number} firmId
+ * @param {String} type - Options: `firm` or `partner`
+ * @param {Number} envId
  * @param {string} sharedPartName
  * @param {string} templateHandle
  * @param {string} templateType has to be either `reconciliationText`, `exportFile`or `accountTemplate`
@@ -797,24 +800,13 @@ async function addSharedPart(
   templateType
 ) {
   try {
-    // Add a check for export files that are not supported
-    if (type == "partner" && templateType == "exportFile") {
-      consola.warn(
-        "Adding shared parts to export files on partner is not supported. Skipping."
-      );
-      return false;
-    }
-
     let templateConfig = await fsUtils.readConfig(templateType, templateHandle);
     let sharedPartConfig = await fsUtils.readConfig(
       "sharedPart",
       sharedPartName
     );
 
-    let templateId =
-      type == "firm"
-        ? templateConfig?.id?.[envId]
-        : templateConfig?.partner_id?.[envId];
+    let templateId = fsUtils.getTemplateId(type, envId, templateConfig);
 
     let sharedPartId =
       type == "firm"
@@ -831,10 +823,7 @@ async function addSharedPart(
       );
       if (!updated) return false;
       templateConfig = await fsUtils.readConfig(templateType, templateHandle);
-      templateId =
-        type == "firm"
-          ? templateConfig?.id?.[envId]
-          : templateConfig?.partner_id?.[envId];
+      templateId = fsUtils.getTemplateId(type, envId, templateConfig);
     }
 
     // Missing Shared Part ID. Try to identify it based on the name
@@ -949,9 +938,14 @@ async function addSharedPart(
  * @param {boolean} force - If true, it will add the shared part to all templates, even if it's already present
  */
 async function addAllSharedParts(type, envId, force = false) {
+  const envConfigKey = type === "partner" ? "partner_id" : "id";
   const sharedPartsArray = fsUtils.getAllTemplatesOfAType("sharedPart");
-  for (let sharedPartName of sharedPartsArray) {
-    let sharedPartConfig = fsUtils.readConfig("sharedPart", sharedPartName);
+
+  for await (let sharedPartName of sharedPartsArray) {
+    let sharedPartConfig = await fsUtils.readConfig(
+      "sharedPart",
+      sharedPartName
+    );
 
     if (!sharedPartConfig.used_in) {
       consola.warn(
@@ -960,27 +954,74 @@ async function addAllSharedParts(type, envId, force = false) {
       continue;
     }
 
-    for (let template of sharedPartConfig.used_in) {
+    if (!sharedPartConfig?.[envConfigKey][envId]) {
+      consola.warn(
+        `Shared part ${sharedPartName} has no id associated to ${type} ${envId}. Skipping.`
+      );
+      continue;
+    }
+
+    // Fetch shared part from the platform
+    const sharedPartId = sharedPartConfig[envConfigKey][envId];
+    const sharedPartData = await SF.readSharedPartById(
+      type,
+      envId,
+      sharedPartId
+    );
+    if (!sharedPartData) {
+      consola.warn(
+        `Shared part ${sharedPartName} not found in ${type} ${envId}. Skipping.`
+      );
+      continue;
+    }
+    const existingLinks = sharedPartData.data.used_in;
+
+    for await (let template of sharedPartConfig.used_in) {
+      template = SharedPart.checkTemplateType(template);
       if (!template.handle && !template.name) {
-        consola.warn(`Template has no handle or name. Skipping.`);
-        continue;
-      }
-
-      const folder = fsUtils.FOLDERS[template.type];
-
-      const handle = template.handle || template.name;
-      if (!fs.existsSync(`./${folder}/${handle}`)) {
         consola.warn(
-          `Template ${template.type} ${template.handle} not found in the repository. Skipping.`
+          `Template stored in used_in has no handle or name. Skipping.`
         );
         continue;
       }
 
-      await addSharedPart(
+      const configPresent = fsUtils.configExists(
+        template.type,
+        template.handle
+      );
+      if (!configPresent) {
+        consola.warn(
+          `Template ${template.type} ${template.handle} not found in local repository. Skipping.`
+        );
+        continue;
+      }
+
+      // When the template is already linked to the shared part, skip unless force is true
+      if (!force) {
+        let alreadyAdded = await existingLinks.find((existing) => {
+          existing = SharedPart.checkTemplateType(existing);
+          // we check both id and type to avoid (rare) false positives
+          return (
+            existing.id === template[envConfigKey][envId] &&
+            existing.type === template.type
+          );
+        });
+        if (alreadyAdded) {
+          consola.info(
+            `Template ${template.type} ${template.handle} already has this shared part. Skipping.`
+          );
+          continue;
+        }
+      }
+
+      // add arbitrary delay to avoid rate limiting
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      addSharedPart(
         type,
         envId,
         sharedPartConfig.name,
-        handle,
+        template.handle,
         template.type
       );
     }
@@ -997,11 +1038,7 @@ async function removeSharedPart(
   try {
     const templateConfig = fsUtils.readConfig(templateType, templateHandle);
     const sharedPartConfig = fsUtils.readConfig("sharedPart", sharedPartHandle);
-
-    const templateId =
-      type == "firm"
-        ? templateConfig?.id?.[envId]
-        : templateConfig?.partner_id?.[envId];
+    let templateId = fsUtils.getTemplateId(type, envId, templateConfig);
 
     if (!templateConfig || !templateId) {
       consola.warn(

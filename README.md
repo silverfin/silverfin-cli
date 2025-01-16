@@ -1,5 +1,7 @@
 # Silverfin CLI
 
+![tests-workflow](https://github.com/silverfin/silverfin-cli/actions/workflows/tests.yml/badge.svg)
+
 A command-line tool for Silverfin template development.
 
 ## Why a CLI ?
@@ -53,10 +55,24 @@ export SF_API_CLIENT_ID=...
 export SF_API_SECRET=...
 ```
 
-In case you need to use a different host, you can also set it up as an environmental variable. By default it would be `https://live.getsilverfin.com`.
+### Host
+
+In case you need to use a different host, you can set it up by using the command `silverfin config --set-host [url]`. By default it would be `https://live.getsilverfin.com`.
+
+It is also possible to set it up as an environmental variable, but this has been deprecated and will be removed in future versions.
 
 ```bash
 export SF_HOST=...
+```
+
+### Staging environment
+
+If you need to use the CLI with a staging environment, you can set it up by using the command `silverfin config --set-host [url]` and setting the proper host.
+
+Staging environments implement Basic Authentitation on top of the existing OAuth2.0 authentication, so to make use of it you will need to set up the following environmental variables:
+
+```bash
+export SF_BASIC_AUTH=...
 ```
 
 ## Important considerations and assumptions that we adder to

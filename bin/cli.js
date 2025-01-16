@@ -89,10 +89,12 @@ program
   )
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
+    cliUtils.checkPartnerSupport(options);
     const settings = runCommandChecks(
       ["handle", "all"],
       options,
-      firmIdDefault
+      firmIdDefault,
+      true // Message required
     );
 
     if (options.handle) {
@@ -104,7 +106,7 @@ program
       );
     } else if (options.all) {
       toolkit.publishAllReconciliations(
-        "firm",
+        settings.type,
         settings.envId,
         options.message
       );
@@ -143,6 +145,7 @@ program
   .command("import-export-file")
   .description("Import export file templates")
   .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
+  .option("-p, --partner <partner-id>", "Specify the partner to be used")
   .option("-n, --name <name>", "Import a specific export file by name")
   .option("-i, --id <id>", "Import a specific export file by id")
   .option("-a, --all", "Import all existing export files")
@@ -156,7 +159,6 @@ program
       ["name", "id", "all", "existing"],
       options,
       firmIdDefault,
-      false
     );
 
     if (options.name) {
@@ -166,11 +168,15 @@ program
         options.name
       );
     } else if (options.id) {
-      toolkit.fetchExportFileById(settings.type, settings.envId, options.id);
+      toolkit.fetchExportFileById(
+        settings.type, 
+        settings.envId, 
+        options.id
+      );
     } else if (options.all) {
       toolkit.fetchAllExportFiles(settings.type, settings.envId);
-    } else if (options.all) {
-      toolkit.fetchExistingExportFiles(options.firm);
+    } else if (options.existing) {
+      toolkit.fetchExistingExportFiles(settings.type, settings.envId);
     }
   });
 
@@ -179,6 +185,7 @@ program
   .command("update-export-file")
   .description("Update an existing export file template")
   .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
+  .option("-p, --partner <partner-id>", "Specify the partner to be used")
   .option("-n, --name <name>", "Specify the export file to be used (mandatory)")
   .option("-a, --all", "Update all export files")
   .option(
@@ -188,11 +195,12 @@ program
   )
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
+    cliUtils.checkPartnerSupport(options);
     const settings = runCommandChecks(
       ["name", "all"],
       options,
       firmIdDefault,
-      false
+      true // Message required
     );
 
     if (options.name) {
@@ -234,7 +242,7 @@ program
     if (options.name) {
       toolkit.newExportFile("firm", options.firm, options.name);
     } else if (options.all) {
-      toolkit.newAllExportFiles("firm", options.firm, options.name);
+      toolkit.newAllExportFiles("firm", options.firm);
     }
   });
 
@@ -296,7 +304,13 @@ program
   )
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
-    const settings = runCommandChecks(["name", "all"], options, firmIdDefault);
+    cliUtils.checkPartnerSupport(options);
+    const settings = runCommandChecks(
+      ["name", "all"],
+      options,
+      firmIdDefault,
+      true // Message required
+    );
 
     if (options.name) {
       toolkit.publishAccountTemplateByName(
@@ -307,7 +321,7 @@ program
       );
     } else if (options.all) {
       toolkit.publishAllAccountTemplates(
-        "firm",
+        settings.type,
         settings.envId,
         options.message
       );
@@ -391,7 +405,7 @@ program
     "-s, --shared-part <name>",
     "Specify the shared part to be used (mandatory)"
   )
-  .option("-a, --all", "Import all shared parts")
+  .option("-a, --all", "Update all shared parts")
   .option(
     "-m, --message <message>",
     "Add a message to Silverfin's changelog (optional)",
@@ -399,10 +413,12 @@ program
   )
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
+    cliUtils.checkPartnerSupport(options);
     const settings = runCommandChecks(
       ["sharedPart", "all"],
       options,
-      firmIdDefault
+      firmIdDefault,
+      true // Message required
     );
 
     if (options.sharedPart) {
@@ -413,7 +429,11 @@ program
         options.message
       );
     } else if (options.all) {
-      toolkit.publishAllSharedParts("firm", settings.envId, options.message);
+      toolkit.publishAllSharedParts(
+        settings.type, 
+        settings.envId, 
+        options.message
+      );
     }
   });
 
@@ -477,12 +497,10 @@ program
   )
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
-    const partnerSupported = options.exportFile ? false : true;
     const settings = runCommandChecks(
       ["sharedPart", "all"],
       options,
       firmIdDefault,
-      partnerSupported
     );
 
     if (options.sharedPart) {
@@ -521,7 +539,11 @@ program
         "accountTemplate"
       );
     } else if (options.all) {
-      toolkit.addAllSharedParts(settings.type, settings.envId, options.force);
+      toolkit.addAllSharedParts(
+        settings.type,
+        settings.envId,
+        options.force
+      );
     }
   });
 
@@ -549,12 +571,10 @@ program
   )
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
-    const partnerSupported = options.exportFile ? false : true;
     const settings = runCommandChecks(
       ["handle", "exportFile", "accountTemplate"],
       options,
       firmIdDefault,
-      partnerSupported
     );
 
     if (options.handle) {
@@ -696,7 +716,7 @@ program
   .command("authorize")
   .description("Authorize the CLI by entering your Silverfin API credentials")
   .action(() => {
-    SF.authorizeApp(firmIdDefault);
+    SF.authorizeFirm(firmIdDefault);
   });
 
 // Authorize PARTNER
@@ -764,9 +784,18 @@ program
   )
   .addOption(
     new Option(
-      "--refresh-partner-token [partner_id]",
+      "--refresh-partner-token <partnerId>",
       "Get a new partner api key using the stored api key"
     )
+  )
+  .addOption(
+    new Option(
+      "--set-host <host>",
+      "Set a custom host for the Silverfin API (e.g. https://live.getsilverfin.com)"
+    )
+  )
+  .addOption(
+    new Option("--get-host", "Get the current host for the Silverfin API")
   )
   .action(async (options) => {
     cliUtils.checkUniqueOption(
@@ -777,6 +806,8 @@ program
         "updateName",
         "refreshToken",
         "refreshPartnerToken",
+        "setHost",
+        "getHost",
       ],
       options
     );
@@ -819,10 +850,7 @@ program
     }
     if (options.refreshToken) {
       cliUtils.checkDefaultFirm(options.refreshToken, firmIdDefault);
-      const refreshedTokens = await SF.refreshTokens(
-        "firm",
-        options.refreshToken
-      );
+      const refreshedTokens = await SF.refreshFirmTokens(options.refreshToken);
 
       if (refreshedTokens) {
         consola.success(
@@ -835,11 +863,19 @@ program
         options.refreshPartnerToken
       );
 
-      if (refreshedTokens && refreshedTokens.partner_id) {
+      if (refreshedTokens) {
         consola.success(
-          `Partner API key refreshed for partner ID: ${refreshedTokens.partner_id}`
+          `Partner API key refreshed for partner ID: ${options.refreshPartnerToken}`
         );
       }
+    }
+    if (options.setHost) {
+      firmCredentials.setHost(options.setHost);
+      consola.success(`Host set to: ${options.setHost}`);
+    }
+    if (options.getHost) {
+      const host = firmCredentials.getHost();
+      consola.info(`Current host: ${host}`);
     }
   });
 
@@ -878,6 +914,7 @@ program
   .command("get-export-file-id")
   .description("Fetch the ID of an export file from Silverfin")
   .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
+  .option("-p, --partner <partner-id>", "Specify the partner to be used")
   .option("-n, --name <name>", "Fetch the export file ID by name")
   .option("-a, --all", "Fetch the ID for every export file")
   .option("--yes", "Skip the prompt confirmation (optional)")
@@ -886,7 +923,6 @@ program
       ["name", "all"],
       options,
       firmIdDefault,
-      false
     );
 
     if (options.name) {
@@ -897,7 +933,11 @@ program
         options.name
       );
     } else if (options.all) {
-      toolkit.getAllTemplatesId(settings.type, settings.envId, "exportFile");
+      toolkit.getAllTemplatesId(
+        settings.type, 
+        settings.envId, 
+        "exportFile"
+      );
     }
   });
 
@@ -1017,5 +1057,6 @@ if (pkg.repository && pkg.repository.url) {
 (async function () {
   // Check if there is a new version available
   await cliUpdates.checkVersions();
+  cliUtils.logCurrentHost();
   await program.parseAsync();
 })();
