@@ -139,7 +139,9 @@ program
     const settings = runCommandChecks(
       ["handle", "all"],
       options,
-      firmIdDefault
+      firmIdDefault,
+      false, // Message required
+      true // Confirmation check skipped
     )
 
     if (options.handle) {
@@ -260,7 +262,9 @@ program
     const settings = runCommandChecks(
       ["name", "all"],
       options,
-      firmIdDefault
+      firmIdDefault,
+      false, // Message required
+      true // Confirmation check skipped
     );
     if (options.name) {
       toolkit.newExportFile(
@@ -384,7 +388,10 @@ program
     const settings = runCommandChecks(
       ["name", "all"],
       options,
-      firmIdDefault)
+      firmIdDefault,
+      false, // Message required
+      true // Confirmation check skipped
+    )
 
     if (options.name) {
       toolkit.newAccountTemplate(
@@ -508,7 +515,10 @@ program
     const settings = runCommandChecks(
       ["sharedPart", "all"],
       options,
-      firmIdDefault)
+      firmIdDefault,
+      false, // Message required
+      true // Confirmation check skipped
+    )
 
     if (options.sharedPart) {
       toolkit.newSharedPart(
