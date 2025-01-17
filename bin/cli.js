@@ -259,6 +259,7 @@ program
     "Try to create all export files stored in the repository"
   )
   .action((options) => {
+    cliUtils.checkPartnerSupport(options);
     const settings = runCommandChecks(
       ["name", "all"],
       options,
