@@ -194,42 +194,42 @@ async function publishAllReconciliations(
   }
 }
 
-async function newReconciliation(type, firmId, handle) {
+async function newReconciliation(type, envId, handle) {
   try {
     const existingTemplate = await SF.findReconciliationTextByHandle(
       type,
-      firmId,
+      envId,
       handle
     );
     if (existingTemplate) {
       consola.warn(
-        `Reconciliation "${handle}" already exists. Skipping its creation`
+        `Reconciliation "${handle}" already exists on ${type} ${envId}. Skipping its creation`
       );
       return;
     }
+
     const template = await ReconciliationText.read(handle);
     if (!template) return;
     template.version_comment = "Created with the Silverfin CLI";
     const response = await SF.createReconciliationText(
-      "firm",
-      firmId,
+      type,
+      envId,
       template
     );
-
     // Store new id
     if (response && response.status == 201) {
-      ReconciliationText.updateTemplateId(firmId, handle, response.data.id);
-      consola.success(`Reconciliation "${handle}" created`);
+      ReconciliationText.updateTemplateId(type, envId, handle, response.data.id);
+      consola.success(`Reconciliation "${handle}" created on ${type} ${envId}`);
     }
   } catch (error) {
     errorUtils.errorHandler(error);
   }
 }
 
-async function newAllReconciliations(type, firmId) {
+async function newAllReconciliations(type, envId) {
   const templates = fsUtils.getAllTemplatesOfAType("reconciliationText");
   for (let handle of templates) {
-    await newReconciliation(type, firmId, handle);
+    await newReconciliation(type, envId, handle);
   }
 }
 
@@ -384,35 +384,34 @@ async function publishAllExportFiles(
   }
 }
 
-async function newExportFile(type, firmId, name) {
+async function newExportFile(type, envId, name) {
   try {
-    const existingTemplate = await SF.findExportFileByName(type, firmId, name);
+    const existingTemplate = await SF.findExportFileByName(type, envId, name);
     if (existingTemplate) {
       consola.warn(
-        `Export file "${name}" already exists. Skipping its creation`
+        `Export file "${name}" already exists on ${type} ${envId}. Skipping its creation`
       );
       return;
     }
     const template = await ExportFile.read(name);
     if (!template) return;
     template.version_comment = "Created through the Silverfin CLI";
-
-    const response = await SF.createExportFile(firmId, template);
+    const response = await SF.createExportFile(type, envId, template);
 
     // Store new id
     if (response && response.status == 201) {
-      ExportFile.updateTemplateId(firmId, name, response.data.id);
-      consola.success(`Export file "${name}" created`);
+      ExportFile.updateTemplateId(type, envId, name, response.data.id);
+      consola.success(`Export file "${name}" created on ${type} ${envId}`);
     }
   } catch (error) {
     errorUtils.errorHandler(error);
   }
 }
 
-async function newAllExportFiles(type, firmId) {
+async function newAllExportFiles(type, envId) {
   const templates = fsUtils.getAllTemplatesOfAType("exportFile");
   for (let name of templates) {
-    await newExportFile(type, firmId, name);
+    await newExportFile(type, envId, name);
   }
 }
 
@@ -564,16 +563,17 @@ async function publishAllAccountTemplates(
   }
 }
 
-async function newAccountTemplate(type, firmId, name) {
+async function newAccountTemplate(type, envId, name) {
   try {
     const existingTemplate = await SF.findAccountTemplateByName(
       type,
-      firmId,
+      envId,
       name
     );
+
     if (existingTemplate) {
       consola.warn(
-        `Account template "${name}" already exists. Skipping its creation`
+        `Account template "${name}" already exists on ${type} ${envId}. Skipping its creation`
       );
       return;
     }
@@ -588,23 +588,23 @@ async function newAccountTemplate(type, firmId, name) {
       }
     );
 
-    const response = await SF.createAccountTemplate(firmId, template);
+    const response = await SF.createAccountTemplate(type, envId, template);
     const handle = response.data.name_nl;
 
     // Store new id
     if (response && response.status == 201) {
-      AccountTemplate.updateTemplateId(firmId, handle, response.data.id);
-      consola.success(`Account template "${handle}" created`);
+      AccountTemplate.updateTemplateId(type, envId, handle, response.data.id);
+      consola.success(`Account template "${handle}" created on on ${type} ${envId}.`);
     }
   } catch (error) {
     errorUtils.errorHandler(error);
   }
 }
 
-async function newAllAccountTemplates(type, firmId) {
+async function newAllAccountTemplates(type, envId) {
   const templates = fsUtils.getAllTemplatesOfAType("accountTemplate");
   for (let name of templates) {
-    await newAccountTemplate(type, firmId, name);
+    await newAccountTemplate(type, envId, name);
   }
 }
 
@@ -749,38 +749,39 @@ async function publishAllSharedParts(
   }
 }
 
-async function newSharedPart(type, firmId, name) {
+async function newSharedPart(type, envId, name) {
   try {
     const existingSharedPart = await SF.findSharedPartByName(
       type,
-      firmId,
+      envId,
       name
     );
+
     if (existingSharedPart) {
       consola.warn(
-        `Shared part "${name}" already exists. Skipping its creation`
+        `Shared part "${name}" already exists on ${type} ${envId}. Skipping its creation`
       );
       return;
     }
     const template = await SharedPart.read(name);
     if (!template) return;
     template.version_comment = "Created through the API";
-    const response = await SF.createSharedPart(firmId, template);
+    const response = await SF.createSharedPart(type, envId, template);
 
     // Store new firm id
     if (response && response.status == 201) {
-      SharedPart.updateTemplateId(firmId, name, response.data.id);
-      consola.success(`Shared part "${name}" created`);
+      SharedPart.updateTemplateId(type, envId, name, response.data.id);
+      consola.success(`Shared part "${name}" created on ${type} ${envId}`);
     }
   } catch (error) {
     errorUtils.errorHandler(error);
   }
 }
 
-async function newAllSharedParts(type, firmId) {
+async function newAllSharedParts(type, envId) {
   const templates = fsUtils.getAllTemplatesOfAType("sharedPart");
   for (let name of templates) {
-    await newSharedPart(type, firmId, name);
+    await newSharedPart(type, envId, name);
   }
 }
 
