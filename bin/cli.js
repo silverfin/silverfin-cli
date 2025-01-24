@@ -527,9 +527,7 @@ program
         settings.envId, 
         options.sharedPart);
     } else if (options.all) {
-      toolkit.newAllSharedParts(
-        settings.type, 
-        options.envId);
+      toolkit.newAllSharedParts(settings.type, settings.envId);
     }
   });
 
