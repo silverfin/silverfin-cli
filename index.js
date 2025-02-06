@@ -211,7 +211,7 @@ async function fetchExportFileByName(type, envId, name) {
 
     const saved = ExportFile.save(type, envId, template);
     if (saved) {
-      consola.success(`Export file "${name}" imported from ${type} ${envId}`);
+      consola.success(`Export file "${template?.name_nl}" imported from ${type} ${envId}`);
     }
   } catch (error) {
     consola.error(error);
@@ -258,7 +258,7 @@ async function fetchAllExportFiles(type, envId, page = 1) {
     const saved = ExportFile.save(type, envId, template);
 
     if (saved) {
-      consola.success(`Export file "${template.name}" imported from ${type} ${envId}`);
+      consola.success(`Export file "${template?.name_nl}" imported from ${type} ${envId}`);
     }
   });
   fetchAllExportFiles(type, envId, page + 1);
@@ -315,8 +315,8 @@ async function publishExportFileByName(type, envId, name, message = "updated thr
 
     const response = await SF.updateExportFile(type, envId, templateId, template);
 
-    if (response && response.data && response.data.name) {
-      consola.success(`Export file updated: ${response.data.name}`);
+    if (response && response.data && response.data.name_nl) {
+      consola.success(`Export file updated: ${response.data.name_nl}`);
       return true;
     } else {
       consola.error(`Export file update failed: ${name}`);
@@ -346,11 +346,11 @@ async function newExportFile(type, envId, name) {
     if (!template) return;
     template.version_comment = "Created through the Silverfin CLI";
     const response = await SF.createExportFile(type, envId, template);
-
+    const handle = response.data.name_nl;
     // Store new id
     if (response && response.status == 201) {
-      ExportFile.updateTemplateId(type, envId, name, response.data.id);
-      consola.success(`Export file "${name}" created on ${type} ${envId}`);
+      ExportFile.updateTemplateId(type, envId, handle, response.data.id);
+      consola.success(`Export file "${handle}" created on ${type} ${envId}`);
     }
   } catch (error) {
     errorUtils.errorHandler(error);
