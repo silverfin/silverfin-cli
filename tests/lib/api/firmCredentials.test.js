@@ -33,12 +33,7 @@ describe("FirmCredentials", () => {
 
       firmCredentials.setHost(testHost);
 
-      expect(fs.writeFileSync).toHaveBeenCalledWith(
-        expect.any(String),
-        JSON.stringify({ defaultFirmIDs: {}, host: testHost }, null, 2),
-        "utf8",
-        expect.any(Function)
-      );
+      expect(fs.writeFileSync).toHaveBeenCalledWith(expect.any(String), JSON.stringify({ defaultFirmIDs: {}, host: testHost }, null, 2), "utf8", expect.any(Function));
 
       expect(writtenData.host).toBe(testHost);
       expect(firmCredentials.getHost()).toBe(testHost);
