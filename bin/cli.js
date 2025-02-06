@@ -34,16 +34,10 @@ program
   .description("Import reconciliation templates")
   .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
   .option("-p, --partner <partner-id>", "Specify the partner to be used")
-  .option(
-    "-h, --handle <handle>",
-    "Import a specific firm reconciliation by handle"
-  )
+  .option("-h, --handle <handle>","Import a specific firm reconciliation by handle")
   .option("-i, --id <id>", "Import a specific reconciliation by id")
   .option("-a, --all", "Import all reconciliations")
-  .option(
-    "-e, --existing",
-    "Import all reconciliations (already stored in the repository)"
-  )
+  .option("-e, --existing","Import all reconciliations (already stored in the repository)")
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action(async (options) => {
     const settings = runCommandChecks(
@@ -77,16 +71,9 @@ program
   .description("Update an existing reconciliation template")
   .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
   .option("-p, --partner <partner-id>", "Specify the partner to be used")
-  .option(
-    "-h, --handle <handle>",
-    "Specify the reconcilation to be used (mandatory)"
-  )
+  .option("-h, --handle <handle>","Specify the reconcilation to be used (mandatory)")
   .option("-a, --all", "Update all reconciliations")
-  .option(
-    "-m, --message <message>",
-    "Add a message to Silverfin's changelog (optional)",
-    undefined
-  )
+  .option("-m, --message <message>","Add a message to Silverfin's changelog (optional)",undefined)
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     cliUtils.checkPartnerSupport(options);
@@ -117,23 +104,10 @@ program
 program
   .command("create-reconciliation")
   .description("Create a new reconciliation text")
-  .option(
-    "-f, --firm <firm-id>",
-    "Specify the firm to be used",
-    firmIdDefault
-  )
-  .option(
-    "-p, --partner <partner-id>",
-    "Specify the partner to be used"
-  )
-  .option(
-    "-h, --handle <handle>",
-    "Specify the handle of the reconciliation text to be created"
-  )
-  .option(
-    "-a, --all",
-    "Try to create all the reconciliation texts stored in the repository"
-  )
+  .option("-f, --firm <firm-id>","Specify the firm to be used",firmIdDefault)
+  .option("-p, --partner <partner-id>","Specify the partner to be used")
+  .option("-h, --handle <handle>","Specify the handle of the reconciliation text to be created")
+  .option("-a, --all","Try to create all the reconciliation texts stored in the repository")
   .action((options) => {
     cliUtils.checkPartnerSupport(options);
     const settings = runCommandChecks(
@@ -167,10 +141,7 @@ program
   .option("-n, --name <name>", "Import a specific export file by name")
   .option("-i, --id <id>", "Import a specific export file by id")
   .option("-a, --all", "Import all existing export files")
-  .option(
-    "-e, --existing",
-    "Import all export files (already stored in the repository)"
-  )
+  .option("-e, --existing","Import all export files (already stored in the repository)")
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     const settings = runCommandChecks(
@@ -206,11 +177,7 @@ program
   .option("-p, --partner <partner-id>", "Specify the partner to be used")
   .option("-n, --name <name>", "Specify the export file to be used (mandatory)")
   .option("-a, --all", "Update all export files")
-  .option(
-    "-m, --message <message>",
-    "Add a message to Silverfin's changelog (optional)",
-    undefined
-  )
+  .option("-m, --message <message>","Add a message to Silverfin's changelog (optional)",undefined)
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     cliUtils.checkPartnerSupport(options);
@@ -241,23 +208,10 @@ program
 program
   .command("create-export-file")
   .description("Create a new export file template")
-  .option(
-    "-f, --firm <firm-id>",
-    "Specify the firm to be used",
-    firmIdDefault
-  )
-  .option(
-    "-p, --partner <partner-id>", 
-    "Specify the partner to be used"
-  )
-  .option(
-    "-n, --name <name>",
-    "Specify the name of the export file to be created"
-  )
-  .option(
-    "-a, --all",
-    "Try to create all export files stored in the repository"
-  )
+  .option("-f, --firm <firm-id>","Specify the firm to be used",firmIdDefault)
+  .option("-p, --partner <partner-id>", "Specify the partner to be used")
+  .option("-n, --name <name>","Specify the name of the export file to be created")
+  .option("-a, --all","Try to create all export files stored in the repository")
   .action((options) => {
     cliUtils.checkPartnerSupport(options);
     const settings = runCommandChecks(
@@ -290,10 +244,7 @@ program
   .option("-n, --name <name>", "Import a specific account template by name")
   .option("-i, --id <id>", "Import a specific account template by id")
   .option("-a, --all", "Import all existing account templates")
-  .option(
-    "-e, --existing",
-    "Import all account templates (already stored in the repository)"
-  )
+  .option("-e, --existing","Import all account templates (already stored in the repository)")
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     const settings = runCommandChecks(
@@ -327,16 +278,9 @@ program
   .description("Update an existing account template")
   .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
   .option("-p, --partner <partner-id>", "Specify the partner to be used")
-  .option(
-    "-n, --name <name>",
-    "Specify the account template to be used (mandatory)"
-  )
+  .option("-n, --name <name>","Specify the account template to be used (mandatory)")
   .option("-a, --all", "Update all account templates")
-  .option(
-    "-m, --message <message>",
-    "Add a message to Silverfin's changelog (optional)",
-    undefined
-  )
+  .option("-m, --message <message>","Add a message to Silverfin's changelog (optional)",undefined)
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     cliUtils.checkPartnerSupport(options);
@@ -367,23 +311,10 @@ program
 program
   .command("create-account-template")
   .description("Create a new account template")
-  .option(
-    "-f, --firm <firm-id>",
-    "Specify the firm to be used",
-    firmIdDefault
-  )
-  .option(
-    "-p, --partner <partner-id>",
-    "Specify the partner to be used"
-  )
-  .option(
-    "-n, --name <name>",
-    "Specify the name of the account template to be created"
-  )
-  .option(
-    "-a, --all",
-    "Try to create all account templates stored in the repository"
-  )
+  .option("-f, --firm <firm-id>","Specify the firm to be used",firmIdDefault)
+  .option("-p, --partner <partner-id>","Specify the partner to be used")
+  .option("-n, --name <name>","Specify the name of the account template to be created")
+  .option("-a, --all","Try to create all account templates stored in the repository")
   .action((options) => {
     cliUtils.checkPartnerSupport(options);
     const settings = runCommandChecks(
@@ -417,10 +348,7 @@ program
   .option("-s, --shared-part <name>", "Import a specific shared part")
   .option("-i, --id <id>", "Import a specific shared part by id")
   .option("-a, --all", "Import all shared parts")
-  .option(
-    "-e, --existing",
-    "Import all shared parts (already stored in the repository)"
-  )
+  .option("-e, --existing","Import all shared parts (already stored in the repository)")
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action(async (options) => {
     const settings = runCommandChecks(
@@ -454,16 +382,9 @@ program
   .description("Update an existing shared part")
   .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
   .option("-p, --partner <partner-id>", "Specify the partner to be used")
-  .option(
-    "-s, --shared-part <name>",
-    "Specify the shared part to be used (mandatory)"
-  )
+  .option("-s, --shared-part <name>","Specify the shared part to be used (mandatory)")
   .option("-a, --all", "Update all shared parts")
-  .option(
-    "-m, --message <message>",
-    "Add a message to Silverfin's changelog (optional)",
-    undefined
-  )
+  .option("-m, --message <message>","Add a message to Silverfin's changelog (optional)",undefined)
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     cliUtils.checkPartnerSupport(options);
@@ -494,23 +415,10 @@ program
 program
   .command("create-shared-part")
   .description("Create a new shared part")
-  .option(
-    "-f, --firm <firm-id>",
-    "Specify the firm to be used",
-    firmIdDefault
-  )
-  .option(
-    "-p, --partner <partner-id>",
-    "Specify the partner to be used"
-  )
-  .option(
-    "-s, --shared-part <name>",
-    "Specify the name of the shared part to be created"
-  )
-  .option(
-    "-a, --all",
-    "Try to create all the shared parts stored in the repository"
-  )
+  .option("-f, --firm <firm-id>","Specify the firm to be used",firmIdDefault)
+  .option("-p, --partner <partner-id>","Specify the partner to be used")
+  .option("-s, --shared-part <name>","Specify the name of the shared part to be created")
+  .option("-a, --all","Try to create all the shared parts stored in the repository")
   .action((options) => {
     cliUtils.checkPartnerSupport(options);
     const settings = runCommandChecks(
@@ -537,31 +445,12 @@ program
   .description("Add an existing shared part to an existing template")
   .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
   .option("-p, --partner <partner-id>", "Specify the partner to be used")
-  .option(
-    "-s, --shared-part <name>",
-    `Specify the shared part to be added (used together with "--handle" or "--export-file")`
-  )
-  .option(
-    "-h, --handle <handle>",
-    `Specify the reconciliation that needs to be updated (used together with "--shared-part")`
-  )
-  .option(
-    "-e, --export-file <name>",
-    `Specify the export file that needs to be updated (used together with "--shared-part")`
-  )
-  .option(
-    "-at, --account-template <name>",
-    `Specify the account template that needs to be updated (used together with "--shared-part")`
-  )
-  .option(
-    "-a, --all",
-    "Add all shared parts to all templates (based on the config file of shared parts and the handles assigned there to each template)"
-  )
-  .option(
-    "-f, --force",
-    `Force adding shared parts to all templates, even if they already have it. It can only be used together with "--all" (optional)`,
-    false
-  )
+  .option("-s, --shared-part <name>",`Specify the shared part to be added (used together with "--handle" or "--export-file")`)
+  .option("-h, --handle <handle>",`Specify the reconciliation that needs to be updated (used together with "--shared-part")`)
+  .option("-e, --export-file <name>",`Specify the export file that needs to be updated (used together with "--shared-part")`)
+  .option("-at, --account-template <name>",`Specify the account template that needs to be updated (used together with "--shared-part")`)
+  .option("-a, --all","Add all shared parts to all templates (based on the config file of shared parts and the handles assigned there to each template)")
+  .option("-f, --force",`Force adding shared parts to all templates, even if they already have it. It can only be used together with "--all" (optional)`,false)
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     const settings = runCommandChecks(
@@ -620,22 +509,10 @@ program
   .description("Remove an existing shared part from an existing template")
   .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
   .option("-p, --partner <partner-id>", "Specify the partner to be used")
-  .requiredOption(
-    "-s, --shared-part <name>",
-    `Specify the shared part to be removed (mandatory, used together with "--handle" or "--export-file")`
-  )
-  .option(
-    "-h, --handle <handle>",
-    `Specify the reconciliation that needs to be updated (used together with "--shared-part")`
-  )
-  .option(
-    "-e, --export-file <name>",
-    `Specify the export file that needs to be updated (used together with "--shared-part")`
-  )
-  .option(
-    "-at, --account-template <name>",
-    `Specify the account template that needs to be updated (used together with "--shared-part")`
-  )
+  .requiredOption("-s, --shared-part <name>",`Specify the shared part to be removed (mandatory, used together with "--handle" or "--export-file")`)
+  .option("-h, --handle <handle>",`Specify the reconciliation that needs to be updated (used together with "--shared-part")`)
+  .option("-e, --export-file <name>",`Specify the export file that needs to be updated (used together with "--shared-part")`)
+  .option("-at, --account-template <name>",`Specify the account template that needs to be updated (used together with "--shared-part")`)
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     const settings = runCommandChecks(
@@ -686,31 +563,11 @@ program
     "-h, --handle <handle>",
     "Specify the reconciliation to be used (mandatory)"
   )
-  .option(
-    "-t, --test <test-name>",
-    "Specify the name of the test to be run (optional)",
-    ""
-  )
-  .option(
-    "--html-input",
-    "Get a static html of the input-view of the template generated with the Liquid Test data (optional)",
-    false
-  )
-  .option(
-    "--html-preview",
-    "Get a static html of the export-view of the template generated with the Liquid Test data (optional)",
-    false
-  )
-  .option(
-    "--preview-only",
-    "Skip the checking of the results of the Liquid Test in case you only want to generate a preview template (optional)",
-    false
-  )
-  .option(
-    "--status",
-    "Only return the status of the test runs as PASSED/FAILED (optional)",
-    false
-  )
+  .option("-t, --test <test-name>","Specify the name of the test to be run (optional)","")
+  .option("--html-input","Get a static html of the input-view of the template generated with the Liquid Test data (optional)",false)
+  .option("--html-preview","Get a static html of the export-view of the template generated with the Liquid Test data (optional)",false)
+  .option("--preview-only","Skip the checking of the results of the Liquid Test in case you only want to generate a preview template (optional)",false)
+  .option("--status","Only return the status of the test runs as PASSED/FAILED (optional)",false)
   .action((options) => {
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     if (options.status) {
@@ -745,14 +602,8 @@ program
     "Create Liquid Test (YAML file) from an existing reconciliation in a company file"
   )
   .requiredOption("-u, --url <url>", "Specify the url to be used (mandatory)")
-  .option(
-    "--unreconciled",
-    "By default, the reconciled status will be set as true. Add this option to set it as false (optional)"
-  )
-  .option(
-    "-t, --test <test-name>",
-    "Establish the name of the test. It should have no white-spaces (e.g. test_name)(optional)"
-  )
+  .option("--unreconciled","By default, the reconciled status will be set as true. Add this option to set it as false (optional)")
+  .option("-t, --test <test-name>","Establish the name of the test. It should have no white-spaces (e.g. test_name)(optional)")
   .action((options) => {
     reconciledStatus = options.unreconciled ? false : true;
     let testName = options.test ? options.test : "test_name";
@@ -770,21 +621,10 @@ program
 // Authorize PARTNER
 program
   .command("authorize-partner")
-  .description(
-    "Authorize a Silverfin partner environment by entering the API key and partner information"
-  )
-  .requiredOption(
-    "-i, --partner-id <partner-id>",
-    "Specify the partner environment id to be added"
-  )
-  .requiredOption(
-    "-k, --api-key <api-key>",
-    "Specify the api key of the partner environment to be added"
-  )
-  .option(
-    "-n, --partner-name <partner-name>",
-    "Specify the partner environment name to be added"
-  )
+  .description("Authorize a Silverfin partner environment by entering the API key and partner information")
+  .requiredOption("-i, --partner-id <partner-id>","Specify the partner environment id to be added")
+  .requiredOption("-k, --api-key <api-key>","Specify the api key of the partner environment to be added")
+  .option("-n, --partner-name <partner-name>","Specify the partner environment name to be added")
   .action((options) => {
     const stored = firmCredentials.storePartnerApiKey(
       options.partnerId,
@@ -801,9 +641,7 @@ program
 program
   .command("stats")
   .description("Generate an overview with some statistics")
-  .requiredOption(
-    "-s, --since <date>, Specify the date which is going to be used to filter the data from (format: YYYY-MM-DD) (mandatory)"
-  )
+  .requiredOption("-s, --since <date>, Specify the date which is going to be used to filter the data from (format: YYYY-MM-DD) (mandatory)")
   .action((options) => {
     stats.generateOverview(options.since);
   });
@@ -812,10 +650,7 @@ program
 program
   .command("config")
   .description("Configuration options")
-  .option(
-    "-s, --set-firm <firmId>",
-    "Store a firm id to use it as default (setting a firm id will overwrite any existing data)"
-  )
+  .option("-s, --set-firm <firmId>","Store a firm id to use it as default (setting a firm id will overwrite any existing data)")
   .option("-g, --get-firm", "Check if there is any firm id already stored")
   .option("-l, --list-all", "List all the firm IDs stored")
   .addOption(
@@ -1047,29 +882,11 @@ program
 program
   .command("development-mode")
   .description("Development mode - Watch for changes in files")
-  .requiredOption(
-    "-f, --firm <firm-id>",
-    "Specify the firm to be used",
-    firmIdDefault
-  )
-  .option(
-    "-h, --handle <handle>",
-    "Watch for changes in liquid and yaml files related to the reconcilation mentioned. Run a new Liquid Test on each save"
-  )
-  .option(
-    "-u, --update-templates",
-    "Watch for changes in any liquid file. Publish the new code of the template into the Platform on each save"
-  )
-  .option(
-    "-t, --test <test-name>",
-    `Specify the name of the test to be run (optional). It has to be used together with "--handle"`,
-    ""
-  )
-  .option(
-    "--html",
-    `Get a html file of the template's input-view generated with the Liquid Test information (optional). It has to be used together with "--handle"`,
-    false
-  )
+  .requiredOption("-f, --firm <firm-id>","Specify the firm to be used",firmIdDefault)
+  .option("-h, --handle <handle>","Watch for changes in liquid and yaml files related to the reconcilation mentioned. Run a new Liquid Test on each save")
+  .option("-u, --update-templates","Watch for changes in any liquid file. Publish the new code of the template into the Platform on each save")
+  .option("-t, --test <test-name>",`Specify the name of the test to be run (optional). It has to be used together with "--handle"`,"")
+  .option("--html",`Get a html file of the template's input-view generated with the Liquid Test information (optional). It has to be used together with "--handle"`,false)
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
