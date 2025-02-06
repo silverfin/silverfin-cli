@@ -138,7 +138,7 @@ program
   .description("Import export file templates")
   .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
   .option("-p, --partner <partner-id>", "Specify the partner to be used")
-  .option("-n, --name <name>", "Import a specific export file by name")
+  .option('-n, --name "<name>"', "Import a specific export file by name | Make sure to always enclose the name in double quotes")
   .option("-i, --id <id>", "Import a specific export file by id")
   .option("-a, --all", "Import all existing export files")
   .option("-e, --existing","Import all export files (already stored in the repository)")
@@ -175,7 +175,7 @@ program
   .description("Update an existing export file template")
   .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
   .option("-p, --partner <partner-id>", "Specify the partner to be used")
-  .option("-n, --name <name>", "Specify the export file to be used (mandatory)")
+  .option('-n, --name "<name>"', "Specify the export file to be used (mandatory) | Make sure to always enclose the name in double quotes")
   .option("-a, --all", "Update all export files")
   .option("-m, --message <message>","Add a message to Silverfin's changelog (optional)",undefined)
   .option("--yes", "Skip the prompt confirmation (optional)")
@@ -210,7 +210,7 @@ program
   .description("Create a new export file template")
   .option("-f, --firm <firm-id>","Specify the firm to be used",firmIdDefault)
   .option("-p, --partner <partner-id>", "Specify the partner to be used")
-  .option("-n, --name <name>","Specify the name of the export file to be created")
+  .option('-n, --name "<name>"', "Specify the name of the export file to be created | Make sure to always enclose the name in double quotes")
   .option("-a, --all","Try to create all export files stored in the repository")
   .action((options) => {
     cliUtils.checkPartnerSupport(options);
@@ -241,7 +241,7 @@ program
   .description("Import account templates")
   .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
   .option("-p, --partner <partner-id>", "Specify the partner to be used")
-  .option("-n, --name <name>", "Import a specific account template by name")
+  .option('-n, --name "<name>"', "Import a specific account template by name | Make sure to always enclose the name in double quotes")
   .option("-i, --id <id>", "Import a specific account template by id")
   .option("-a, --all", "Import all existing account templates")
   .option("-e, --existing","Import all account templates (already stored in the repository)")
@@ -278,7 +278,7 @@ program
   .description("Update an existing account template")
   .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
   .option("-p, --partner <partner-id>", "Specify the partner to be used")
-  .option("-n, --name <name>","Specify the account template to be used (mandatory)")
+  .option('-n, --name "<name>"', "Specify the account template to be used (mandatory) | Make sure to always enclose the name in double quotes")
   .option("-a, --all", "Update all account templates")
   .option("-m, --message <message>","Add a message to Silverfin's changelog (optional)",undefined)
   .option("--yes", "Skip the prompt confirmation (optional)")
@@ -313,7 +313,7 @@ program
   .description("Create a new account template")
   .option("-f, --firm <firm-id>","Specify the firm to be used",firmIdDefault)
   .option("-p, --partner <partner-id>","Specify the partner to be used")
-  .option("-n, --name <name>","Specify the name of the account template to be created")
+  .option('-n, --name "<name>"', "Specify the name of the account template to be created | Make sure to always enclose the name in double quotes")
   .option("-a, --all","Try to create all account templates stored in the repository")
   .action((options) => {
     cliUtils.checkPartnerSupport(options);
@@ -798,7 +798,7 @@ program
   .description("Fetch the ID of an export file from Silverfin")
   .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
   .option("-p, --partner <partner-id>", "Specify the partner to be used")
-  .option("-n, --name <name>", "Fetch the export file ID by name")
+  .option('-n, --name "<name>"', "Fetch the export file ID by name | Make sure to always enclose the name in double quotes")
   .option("-a, --all", "Fetch the ID for every export file")
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
@@ -829,7 +829,7 @@ program
   .description("Fetch the ID of an account template from Silverfin")
   .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
   .option("-p, --partner <partner-id>", "Specify the partner to be used")
-  .option("-n, --name <name>", "Fetch the account template ID by name")
+  .option('-n, --name "<name>"', "Fetch the account template ID by name | Make sure to always enclose the name in double quotes")
   .option("-a, --all", "Fetch the ID for every account template")
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
