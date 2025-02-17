@@ -75,12 +75,8 @@ describe("AxiosFactory", () => {
       const instance = AxiosFactory.createInstance("firm", firmId);
 
       expect(instance).toBeDefined();
-      expect(instance.defaults.baseURL).toBe(
-        `https://test-api.com/api/v4/f/50000`
-      );
-      expect(instance.defaults.headers.Authorization).toBe(
-        "Bearer stored-access"
-      );
+      expect(instance.defaults.baseURL).toBe(`https://test-api.com/api/v4/f/50000`);
+      expect(instance.defaults.headers.Authorization).toBe("Bearer stored-access");
     });
 
     it("should throw an error for missing tokens and terminate process", () => {
@@ -91,9 +87,7 @@ describe("AxiosFactory", () => {
         AxiosFactory.createInstance("firm", firmId);
       }).toThrow("Process.exit called with code 1");
 
-      expect(consola.error).toHaveBeenCalledWith(
-        "Missing authorization for firm id: 50000"
-      );
+      expect(consola.error).toHaveBeenCalledWith("Missing authorization for firm id: 50000");
       expect(exitSpy).toHaveBeenCalledWith(1);
     });
 
@@ -129,9 +123,7 @@ describe("AxiosFactory", () => {
         }
       });
 
-      axiosMockAdapter
-        .onPost(`${mockHost}/f/${firmId}/oauth/token`)
-        .reply(200, newTokenPairResponse);
+      axiosMockAdapter.onPost(`${mockHost}/f/${firmId}/oauth/token`).reply(200, newTokenPairResponse);
       jest.spyOn(axiosInstance, "post");
 
       const response = await axiosInstance.get("/test-endpoint");
@@ -139,10 +131,7 @@ describe("AxiosFactory", () => {
       expect(axiosMockAdapter.history.get.length).toBe(2);
       expect(axiosMockAdapter.history.post.length).toBe(1);
 
-      expect(firmCredentials.storeNewTokenPair).toHaveBeenCalledWith(
-        String(firmId),
-        newTokenPairResponse
-      );
+      expect(firmCredentials.storeNewTokenPair).toHaveBeenCalledWith(String(firmId), newTokenPairResponse);
       expect(response.data).toBe("Success");
     });
 
@@ -156,22 +145,16 @@ describe("AxiosFactory", () => {
       expect(axios.create).toHaveBeenCalled();
 
       axiosMockAdapter.onGet("/test-endpoint").reply(401, "Unauthorized");
-      axiosMockAdapter
-        .onPost(`${mockHost}/f/${firmId}/oauth/token`)
-        .reply(401, "Unauthorized");
+      axiosMockAdapter.onPost(`${mockHost}/f/${firmId}/oauth/token`).reply(401, "Unauthorized");
 
-      await expect(axiosInstance.get("/test-endpoint")).rejects.toThrow(
-        "Process.exit called with code 1"
-      );
+      await expect(axiosInstance.get("/test-endpoint")).rejects.toThrow("Process.exit called with code 1");
 
       expect(axiosMockAdapter.history.get.length).toBe(1);
       expect(axiosMockAdapter.history.post.length).toBe(1);
 
       expect(firmCredentials.storeNewTokenPair).toHaveBeenCalledTimes(0);
       expect(exitSpy).toHaveBeenCalledWith(1);
-      expect(consola.error).toHaveBeenCalledWith(
-        "Error refreshing credentials. Try running the authentication process again"
-      );
+      expect(consola.error).toHaveBeenCalledWith("Error refreshing credentials. Try running the authentication process again");
     });
 
     it("should throw any other response errors", async () => {
@@ -234,9 +217,7 @@ describe("AxiosFactory", () => {
       const axiosInstance = AxiosFactory.createInstance("partner", partnerId);
 
       expect(axiosInstance).toBeDefined();
-      expect(axiosInstance.defaults.baseURL).toBe(
-        `https://test-api.com/api/partner/v1`
-      );
+      expect(axiosInstance.defaults.baseURL).toBe(`https://test-api.com/api/partner/v1`);
 
       expect(axiosInstance.defaults.headers.Authorization).toBeUndefined();
     });
@@ -268,9 +249,7 @@ describe("AxiosFactory", () => {
         AxiosFactory.createInstance("partner", partnerId);
       }).toThrow("Process.exit called with code 1");
 
-      expect(consola.error).toHaveBeenCalledWith(
-        "Missing authorization for partner id: 100"
-      );
+      expect(consola.error).toHaveBeenCalledWith("Missing authorization for partner id: 100");
       expect(exitSpy).toHaveBeenCalledWith(1);
     });
 
@@ -278,12 +257,8 @@ describe("AxiosFactory", () => {
       const newApiKey = "new-api-key";
 
       firmCredentials.getHost.mockReturnValue(mockHost);
-      firmCredentials.getPartnerCredentials.mockReturnValueOnce(
-        mockPartnerTokens
-      ); // original request
-      firmCredentials.getPartnerCredentials.mockReturnValueOnce(
-        mockPartnerTokens
-      ); // refresh request
+      firmCredentials.getPartnerCredentials.mockReturnValueOnce(mockPartnerTokens); // original request
+      firmCredentials.getPartnerCredentials.mockReturnValueOnce(mockPartnerTokens); // refresh request
       firmCredentials.getPartnerCredentials.mockReturnValueOnce({
         token: newApiKey,
       }); // new request
@@ -305,11 +280,7 @@ describe("AxiosFactory", () => {
         }
       });
 
-      axiosMockAdapter
-        .onPost(
-          `${mockHost}/api/partner/v1/refresh_api_key?api_key=stored-api-key`
-        )
-        .reply(200, { api_key: newApiKey });
+      axiosMockAdapter.onPost(`${mockHost}/api/partner/v1/refresh_api_key?api_key=stored-api-key`).reply(200, { api_key: newApiKey });
       jest.spyOn(axiosInstance, "post");
 
       const response = await axiosInstance.get("/test-endpoint");
@@ -317,10 +288,7 @@ describe("AxiosFactory", () => {
       expect(axiosMockAdapter.history.get.length).toBe(2);
       expect(axiosMockAdapter.history.post.length).toBe(1);
 
-      expect(firmCredentials.storePartnerApiKey).toHaveBeenCalledWith(
-        partnerId,
-        newApiKey
-      );
+      expect(firmCredentials.storePartnerApiKey).toHaveBeenCalledWith(partnerId, newApiKey);
       expect(response.data).toBe("Success");
     });
 
@@ -334,25 +302,17 @@ describe("AxiosFactory", () => {
       expect(axios.create).toHaveBeenCalled();
 
       axiosMockAdapter.onGet("/test-endpoint").reply(401, "Unauthorized");
-      axiosMockAdapter
-        .onPost(
-          `${mockHost}/api/partner/v1/refresh_api_key?api_key=stored-api-key`
-        )
-        .reply(401, "Unauthorized");
+      axiosMockAdapter.onPost(`${mockHost}/api/partner/v1/refresh_api_key?api_key=stored-api-key`).reply(401, "Unauthorized");
       jest.spyOn(axiosInstance, "post");
 
-      await expect(axiosInstance.get("/test-endpoint")).rejects.toThrow(
-        "Process.exit called with code 1"
-      );
+      await expect(axiosInstance.get("/test-endpoint")).rejects.toThrow("Process.exit called with code 1");
 
       expect(axiosMockAdapter.history.get.length).toBe(1);
       expect(axiosMockAdapter.history.post.length).toBe(1);
 
       expect(firmCredentials.storeNewTokenPair).toHaveBeenCalledTimes(0);
       expect(exitSpy).toHaveBeenCalledWith(1);
-      expect(consola.error).toHaveBeenCalledWith(
-        "Error refreshing credentials. Try running the authentication process again"
-      );
+      expect(consola.error).toHaveBeenCalledWith("Error refreshing credentials. Try running the authentication process again");
     });
 
     it("should throw any other response error", async () => {
@@ -365,9 +325,7 @@ describe("AxiosFactory", () => {
       expect(axios.create).toHaveBeenCalled();
 
       axiosMockAdapter.onGet("/test-endpoint").reply(404, "Not found");
-      axiosMockAdapter
-        .onPost(`${mockHost}/f/${partnerId}/oauth/token`)
-        .reply(400);
+      axiosMockAdapter.onPost(`${mockHost}/f/${partnerId}/oauth/token`).reply(400);
 
       await expect(axiosInstance.get("/test-endpoint")).rejects.toThrow();
 
@@ -439,13 +397,9 @@ describe("AxiosFactory", () => {
       const axiosInstance = AxiosFactory.createInstance("firm", firmId);
 
       expect(axiosInstance).toBeDefined();
-      expect(axiosInstance.defaults.baseURL).toBe(
-        `https://test-api.staging.getsilverfin.com/api/v4/f/50000`
-      );
+      expect(axiosInstance.defaults.baseURL).toBe(`https://test-api.staging.getsilverfin.com/api/v4/f/50000`);
 
-      expect(axiosInstance.defaults.headers.Authorization).toBe(
-        "Basic test_basic_auth"
-      );
+      expect(axiosInstance.defaults.headers.Authorization).toBe("Basic test_basic_auth");
       expect(axiosInstance.defaults.params).toEqual({
         access_token: "stored-access",
       });
@@ -463,13 +417,9 @@ describe("AxiosFactory", () => {
       const axiosInstance = AxiosFactory.createInstance("partner", partnerId);
 
       expect(axiosInstance).toBeDefined();
-      expect(axiosInstance.defaults.baseURL).toBe(
-        `https://test-api.staging.getsilverfin.com/api/partner/v1`
-      );
+      expect(axiosInstance.defaults.baseURL).toBe(`https://test-api.staging.getsilverfin.com/api/partner/v1`);
 
-      expect(axiosInstance.defaults.headers.Authorization).toBe(
-        "Basic test_basic_auth"
-      );
+      expect(axiosInstance.defaults.headers.Authorization).toBe("Basic test_basic_auth");
       expect(axiosInstance.defaults.params).toEqual({
         partner_id: partnerId,
         api_key: mockPartnerTokens.token,
@@ -522,13 +472,9 @@ describe("AxiosFactory", () => {
       const axiosInstance = AxiosFactory.createAuthInstanceForFirm(firmId);
 
       expect(axiosInstance).toBeDefined();
-      expect(axiosInstance.defaults.baseURL).toBe(
-        `https://test-api.staging.getsilverfin.com/api/v4/f/50000`
-      );
+      expect(axiosInstance.defaults.baseURL).toBe(`https://test-api.staging.getsilverfin.com/api/v4/f/50000`);
 
-      expect(axiosInstance.defaults.headers.Authorization).toBe(
-        "Basic test_basic_auth"
-      );
+      expect(axiosInstance.defaults.headers.Authorization).toBe("Basic test_basic_auth");
     });
   });
 });

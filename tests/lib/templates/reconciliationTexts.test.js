@@ -3,9 +3,7 @@ const fsPromises = require("fs").promises;
 const path = require("path");
 const fsUtils = require("../../../lib/utils/fsUtils");
 const templateUtils = require("../../../lib/utils/templateUtils");
-const {
-  ReconciliationText,
-} = require("../../../lib/templates/reconciliationText");
+const { ReconciliationText } = require("../../../lib/templates/reconciliationText");
 
 jest.mock("../../../lib/utils/templateUtils");
 jest.mock("consola");
@@ -75,28 +73,12 @@ describe("ReconciliationText", () => {
     };
 
     const tempDir = path.join(process.cwd(), "tmp");
-    const expectedFolderPath = path.join(
-      tempDir,
-      "reconciliation_texts",
-      handle
-    );
+    const expectedFolderPath = path.join(tempDir, "reconciliation_texts", handle);
     const configPath = path.join(expectedFolderPath, "config.json");
     const mainLiquidPath = path.join(expectedFolderPath, "main.liquid");
-    const testLiquidPath = path.join(
-      expectedFolderPath,
-      "tests",
-      `${handle}_liquid_test.yml`
-    );
-    const part1LiquidPath = path.join(
-      expectedFolderPath,
-      "text_parts",
-      "part_1.liquid"
-    );
-    const oldPartLiquidPath = path.join(
-      expectedFolderPath,
-      "text_parts",
-      "old_part.liquid"
-    );
+    const testLiquidPath = path.join(expectedFolderPath, "tests", `${handle}_liquid_test.yml`);
+    const part1LiquidPath = path.join(expectedFolderPath, "text_parts", "part_1.liquid");
+    const oldPartLiquidPath = path.join(expectedFolderPath, "text_parts", "old_part.liquid");
 
     beforeEach(() => {
       if (!fs.existsSync(tempDir)) {
@@ -115,9 +97,7 @@ describe("ReconciliationText", () => {
     it("should return false if the template handle is missing", async () => {
       const result = await ReconciliationText.save("firm", 100, { id: 808080 });
       expect(result).toBe(false);
-      expect(require("consola").warn).toHaveBeenCalledWith(
-        'Template with id "808080" has no handle, add a handle before importing it from Silverfin. Skipped'
-      );
+      expect(require("consola").warn).toHaveBeenCalledWith('Template with id "808080" has no handle, add a handle before importing it from Silverfin. Skipped');
     });
 
     it("should return false if the liquid code is missing", async () => {
@@ -131,10 +111,7 @@ describe("ReconciliationText", () => {
       templateUtils.checkValidName.mockReturnValue(false);
       const result = await ReconciliationText.save("firm", 100, template);
       expect(result).toBe(false);
-      expect(templateUtils.checkValidName).toHaveBeenCalledWith(
-        "example_handle",
-        "reconciliationText"
-      );
+      expect(templateUtils.checkValidName).toHaveBeenCalledWith("example_handle", "reconciliationText");
     });
 
     it("should create the necessary files and store template's relevant details", async () => {
@@ -148,30 +125,19 @@ describe("ReconciliationText", () => {
       expect(fs.existsSync(expectedFolderPath)).toBe(true);
       // Check main liquid file
       expect(fs.existsSync(mainLiquidPath)).toBe(true);
-      const mainLiquidContent = await fsPromises.readFile(
-        mainLiquidPath,
-        "utf-8"
-      );
+      const mainLiquidContent = await fsPromises.readFile(mainLiquidPath, "utf-8");
       expect(mainLiquidContent).toBe(template.text);
       // Check text parts liquid files
       expect(fs.existsSync(part1LiquidPath)).toBe(true);
-      const part1LiquidContent = await fsPromises.readFile(
-        part1LiquidPath,
-        "utf-8"
-      );
+      const part1LiquidContent = await fsPromises.readFile(part1LiquidPath, "utf-8");
       expect(part1LiquidContent).toBe("Part 1 content");
       // Check liquid test file
       expect(fs.existsSync(testLiquidPath)).toBe(true);
-      const testLiquidContent = await fsPromises.readFile(
-        testLiquidPath,
-        "utf-8"
-      );
+      const testLiquidContent = await fsPromises.readFile(testLiquidPath, "utf-8");
       expect(testLiquidContent).toBe(template.tests);
       // Check config file
       expect(fs.existsSync(configPath)).toBe(true);
-      const configSaved = JSON.parse(
-        await fsPromises.readFile(configPath, "utf-8")
-      );
+      const configSaved = JSON.parse(await fsPromises.readFile(configPath, "utf-8"));
       expect(configSaved).toEqual(configToWrite);
     });
 
@@ -181,16 +147,12 @@ describe("ReconciliationText", () => {
       templateUtils.filterParts.mockReturnValue(textParts);
 
       fs.mkdirSync(path.join(tempDir, "reconciliation_texts"));
-      fs.mkdirSync(
-        path.join(tempDir, "reconciliation_texts", "example_handle")
-      );
+      fs.mkdirSync(path.join(tempDir, "reconciliation_texts", "example_handle"));
       fs.writeFileSync(configPath, JSON.stringify(existingConfig));
 
       // Check existing config file before save
       expect(fs.existsSync(configPath)).toBe(true);
-      let configSaved = JSON.parse(
-        await fsPromises.readFile(configPath, "utf-8")
-      );
+      let configSaved = JSON.parse(await fsPromises.readFile(configPath, "utf-8"));
       expect(configSaved).toEqual(existingConfig);
 
       await ReconciliationText.save("firm", 100, template);
@@ -208,17 +170,8 @@ describe("ReconciliationText", () => {
       templateUtils.filterParts.mockReturnValue(textParts);
 
       fs.mkdirSync(path.join(tempDir, "reconciliation_texts"));
-      fs.mkdirSync(
-        path.join(tempDir, "reconciliation_texts", "example_handle")
-      );
-      fs.mkdirSync(
-        path.join(
-          tempDir,
-          "reconciliation_texts",
-          "example_handle",
-          "text_parts"
-        )
-      );
+      fs.mkdirSync(path.join(tempDir, "reconciliation_texts", "example_handle"));
+      fs.mkdirSync(path.join(tempDir, "reconciliation_texts", "example_handle", "text_parts"));
       fs.writeFileSync(configPath, JSON.stringify(existingConfig));
       fs.writeFileSync(mainLiquidPath, "Main part: existing content");
       fs.writeFileSync(part1LiquidPath, "Part 1: existing content");
@@ -226,16 +179,10 @@ describe("ReconciliationText", () => {
       await ReconciliationText.save("firm", 100, template);
 
       // Check main liquid file
-      const mainLiquidContent = await fsPromises.readFile(
-        mainLiquidPath,
-        "utf-8"
-      );
+      const mainLiquidContent = await fsPromises.readFile(mainLiquidPath, "utf-8");
       expect(mainLiquidContent).toBe(template.text);
       // Check text parts liquid files
-      const part1LiquidContent = await fsPromises.readFile(
-        part1LiquidPath,
-        "utf-8"
-      );
+      const part1LiquidContent = await fsPromises.readFile(part1LiquidPath, "utf-8");
       expect(part1LiquidContent).toBe(textParts.part_1);
     });
 
@@ -247,22 +194,15 @@ describe("ReconciliationText", () => {
       const existingLiquidTest = "Existing Liquid Test";
 
       fs.mkdirSync(path.join(tempDir, "reconciliation_texts"));
-      fs.mkdirSync(
-        path.join(tempDir, "reconciliation_texts", "example_handle")
-      );
-      fs.mkdirSync(
-        path.join(tempDir, "reconciliation_texts", "example_handle", "tests")
-      );
+      fs.mkdirSync(path.join(tempDir, "reconciliation_texts", "example_handle"));
+      fs.mkdirSync(path.join(tempDir, "reconciliation_texts", "example_handle", "tests"));
       fs.writeFileSync(configPath, JSON.stringify(existingConfig));
       fs.writeFileSync(testLiquidPath, existingLiquidTest);
 
       await ReconciliationText.save("firm", 100, template);
 
       // Check liquid test file
-      const testLiquidContent = await fsPromises.readFile(
-        testLiquidPath,
-        "utf-8"
-      );
+      const testLiquidContent = await fsPromises.readFile(testLiquidPath, "utf-8");
       expect(testLiquidContent).toBe(existingLiquidTest);
     });
 
@@ -275,27 +215,15 @@ describe("ReconciliationText", () => {
       const existingPartContent = "Old part: existing Part Content";
 
       fs.mkdirSync(path.join(tempDir, "reconciliation_texts"));
-      fs.mkdirSync(
-        path.join(tempDir, "reconciliation_texts", "example_handle")
-      );
-      fs.mkdirSync(
-        path.join(
-          tempDir,
-          "reconciliation_texts",
-          "example_handle",
-          "text_parts"
-        )
-      );
+      fs.mkdirSync(path.join(tempDir, "reconciliation_texts", "example_handle"));
+      fs.mkdirSync(path.join(tempDir, "reconciliation_texts", "example_handle", "text_parts"));
       fs.writeFileSync(configPath, JSON.stringify(existingConfig));
       fs.writeFileSync(oldPartLiquidPath, existingPartContent);
 
       await ReconciliationText.save("firm", 100, template);
 
       // Check Old Part liquid file
-      const oldPartLiquidContent = await fsPromises.readFile(
-        oldPartLiquidPath,
-        "utf-8"
-      );
+      const oldPartLiquidContent = await fsPromises.readFile(oldPartLiquidPath, "utf-8");
       expect(oldPartLiquidContent).toBe(existingPartContent);
     });
   });
@@ -306,16 +234,8 @@ describe("ReconciliationText", () => {
     const templateDir = path.join(tempDir, "reconciliation_texts", handle);
     const configPath = path.join(templateDir, "config.json");
     const mainLiquidPath = path.join(templateDir, "main.liquid");
-    const testLiquidPath = path.join(
-      templateDir,
-      "tests",
-      `${handle}_liquid_test.yml`
-    );
-    const part1LiquidPath = path.join(
-      templateDir,
-      "text_parts",
-      "part_1.liquid"
-    );
+    const testLiquidPath = path.join(templateDir, "tests", `${handle}_liquid_test.yml`);
+    const part1LiquidPath = path.join(templateDir, "text_parts", "part_1.liquid");
 
     const configContent = {
       id: { 100: 808080 },
@@ -360,10 +280,7 @@ describe("ReconciliationText", () => {
       templateUtils.checkValidName.mockReturnValue(false);
       const result = ReconciliationText.read("invalid_handle");
       expect(result).toBe(false);
-      expect(templateUtils.checkValidName).toHaveBeenCalledWith(
-        "invalid_handle",
-        "reconciliationText"
-      );
+      expect(templateUtils.checkValidName).toHaveBeenCalledWith("invalid_handle", "reconciliationText");
     });
 
     it("should read and process the template correctly", () => {
@@ -443,10 +360,7 @@ describe("ReconciliationText", () => {
         text_parts: { empty_part: "text_parts/empty_part.liquid" },
       };
       fs.writeFileSync(configPath, JSON.stringify(emptyPartConfig));
-      fs.writeFileSync(
-        path.join(templateDir, "text_parts", "empty_part.liquid"),
-        ""
-      );
+      fs.writeFileSync(path.join(templateDir, "text_parts", "empty_part.liquid"), "");
 
       const result = ReconciliationText.read(handle);
 
@@ -457,7 +371,7 @@ describe("ReconciliationText", () => {
       const invalidCombinationConfig = {
         ...configContent,
         externally_managed: false,
-        downloadable_as_docx: true
+        downloadable_as_docx: true,
       };
       fs.writeFileSync(configPath, JSON.stringify(invalidCombinationConfig));
 
@@ -473,7 +387,7 @@ describe("ReconciliationText", () => {
       const validCombinationConfig = {
         ...configContent,
         externally_managed: true,
-        downloadable_as_docx: true
+        downloadable_as_docx: true,
       };
       fs.writeFileSync(configPath, JSON.stringify(validCombinationConfig));
 
@@ -481,6 +395,5 @@ describe("ReconciliationText", () => {
 
       expect(result.downloadable_as_docx).toBe(true);
     });
-
   });
 });

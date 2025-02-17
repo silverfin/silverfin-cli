@@ -92,35 +92,18 @@ describe("SilverfinAuthorizer", () => {
     it("should successfully store new tokens when they dont exist", async () => {
       await SilverfinAuthorizer.authorizeFirm(mockStoredFirmId);
 
-      expect(mockPrompt).toHaveBeenNthCalledWith(
-        1,
-        "Enter the firm ID (leave blank to use 5000): ",
-        { value: "5000" }
-      );
-      expect(mockPrompt).toHaveBeenNthCalledWith(
-        2,
-        "Enter your API authorization code: ",
-        { echo: "*" }
-      );
+      expect(mockPrompt).toHaveBeenNthCalledWith(1, "Enter the firm ID (leave blank to use 5000): ", { value: "5000" });
+      expect(mockPrompt).toHaveBeenNthCalledWith(2, "Enter your API authorization code: ", { echo: "*" });
 
-      expect(open).toHaveBeenCalledWith(
-        expect.stringContaining("api.test.com/f/123/oauth/authorize")
-      );
+      expect(open).toHaveBeenCalledWith(expect.stringContaining("api.test.com/f/123/oauth/authorize"));
 
-      expect(AxiosFactory.createAuthInstanceForFirm).toHaveBeenCalledWith(
-        mockFirmId
-      );
+      expect(AxiosFactory.createAuthInstanceForFirm).toHaveBeenCalledWith(mockFirmId);
 
-      expect(mockAxiosInstance.post).toHaveBeenCalledWith(
-        expect.stringContaining("api.test.com/f/123/oauth/token")
-      );
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith(expect.stringContaining("api.test.com/f/123/oauth/token"));
 
       expect(mockAxiosInstance.get).toHaveBeenCalledWith("/user/firm");
 
-      expect(firmCredentials.storeNewTokenPair).toHaveBeenCalledWith(
-        mockFirmId,
-        mockTokenResponse.data
-      );
+      expect(firmCredentials.storeNewTokenPair).toHaveBeenCalledWith(mockFirmId, mockTokenResponse.data);
 
       expect(consola.error).not.toHaveBeenCalled();
     });
@@ -128,20 +111,13 @@ describe("SilverfinAuthorizer", () => {
     it("should succesfully store new tokens when they exist", async () => {
       await SilverfinAuthorizer.authorizeFirm(mockFirmId);
 
-      expect(open).toHaveBeenCalledWith(
-        expect.stringContaining("api.test.com/f/123/oauth/authorize")
-      );
+      expect(open).toHaveBeenCalledWith(expect.stringContaining("api.test.com/f/123/oauth/authorize"));
 
-      expect(mockAxiosInstance.post).toHaveBeenCalledWith(
-        expect.stringContaining("api.test.com/f/123/oauth/token")
-      );
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith(expect.stringContaining("api.test.com/f/123/oauth/token"));
 
       expect(mockAxiosInstance.get).toHaveBeenCalledWith("/user/firm");
 
-      expect(firmCredentials.storeNewTokenPair).toHaveBeenCalledWith(
-        mockFirmId,
-        mockTokenResponse.data
-      );
+      expect(firmCredentials.storeNewTokenPair).toHaveBeenCalledWith(mockFirmId, mockTokenResponse.data);
 
       expect(consola.error).not.toHaveBeenCalled();
     });
@@ -163,9 +139,7 @@ describe("SilverfinAuthorizer", () => {
 
       expect(firmCredentials.storeNewTokenPair).not.toHaveBeenCalled();
 
-      expect(consola.error).toHaveBeenCalledWith(
-        "Firm ID is missing. Please provide a valid one."
-      );
+      expect(consola.error).toHaveBeenCalledWith("Firm ID is missing. Please provide a valid one.");
       expect(exitSpy).toHaveBeenCalledWith(1);
     });
 
@@ -186,9 +160,7 @@ describe("SilverfinAuthorizer", () => {
         await SilverfinAuthorizer.authorizeFirm(mockFirmId);
       }).rejects.toThrow("Process.exit called with code 1");
 
-      expect(consola.error).toHaveBeenCalledWith(
-        "Response Status: 400 (Bad Request)"
-      );
+      expect(consola.error).toHaveBeenCalledWith("Response Status: 400 (Bad Request)");
       expect(consola.error).toHaveBeenCalledWith(
         'Error description: "The provided authorization grant is invalid, expired, revoked, does not match the redirection URI used in the authorization request, or was issued to another client."'
       );
@@ -198,18 +170,13 @@ describe("SilverfinAuthorizer", () => {
 
     it("should not raise errors when getting the firm name fails", async () => {
       mockAxiosInstance.get.mockReset();
-      mockAxiosInstance.get.mockRejectedValueOnce(
-        new Error("Failed to get firm name")
-      );
+      mockAxiosInstance.get.mockRejectedValueOnce(new Error("Failed to get firm name"));
 
       await SilverfinAuthorizer.authorizeFirm(mockFirmId);
 
       expect(consola.error).not.toHaveBeenCalled();
 
-      expect(firmCredentials.storeNewTokenPair).toHaveBeenCalledWith(
-        mockFirmId,
-        mockTokenResponse.data
-      );
+      expect(firmCredentials.storeNewTokenPair).toHaveBeenCalledWith(mockFirmId, mockTokenResponse.data);
     });
   });
 
@@ -223,24 +190,18 @@ describe("SilverfinAuthorizer", () => {
 
       await SilverfinAuthorizer.refreshFirm(mockFirmId);
 
-      expect(mockAxiosInstance.post).toHaveBeenCalledWith(
-        "https://api.test.com/f/123/oauth/token",
-        {
-          client_id: "test_client_id",
-          client_secret: "test_secret",
-          redirect_uri: "urn%3Aietf%3Awg%3Aoauth%3A2.0%3Aoob",
-          grant_type: "refresh_token",
-          refresh_token: "stored-refresh",
-          access_token: "stored-access",
-        }
-      );
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith("https://api.test.com/f/123/oauth/token", {
+        client_id: "test_client_id",
+        client_secret: "test_secret",
+        redirect_uri: "urn%3Aietf%3Awg%3Aoauth%3A2.0%3Aoob",
+        grant_type: "refresh_token",
+        refresh_token: "stored-refresh",
+        access_token: "stored-access",
+      });
 
       expect(consola.error).not.toHaveBeenCalled();
 
-      expect(firmCredentials.storeNewTokenPair).toHaveBeenCalledWith(
-        mockFirmId,
-        mockTokenResponse.data
-      );
+      expect(firmCredentials.storeNewTokenPair).toHaveBeenCalledWith(mockFirmId, mockTokenResponse.data);
     });
 
     it("should raise an error when there are no previous tokens", async () => {
@@ -253,9 +214,7 @@ describe("SilverfinAuthorizer", () => {
       expect(mockAxiosInstance.post).not.toHaveBeenCalled();
       expect(mockAxiosInstance.get).not.toHaveBeenCalled();
 
-      expect(consola.error).toHaveBeenCalledWith(
-        "Firm 123 is not authorized. Please authorize the firm first"
-      );
+      expect(consola.error).toHaveBeenCalledWith("Firm 123 is not authorized. Please authorize the firm first");
 
       expect(firmCredentials.storeNewTokenPair).not.toHaveBeenCalled();
     });
@@ -293,9 +252,7 @@ describe("SilverfinAuthorizer", () => {
 
   describe("refreshPartner", () => {
     it("should store the new API key", async () => {
-      firmCredentials.getPartnerCredentials.mockReturnValue(
-        mockPartnerStoredToken
-      );
+      firmCredentials.getPartnerCredentials.mockReturnValue(mockPartnerStoredToken);
       const mockTokenResponse = {
         data: {
           api_key: "new-api-key",
@@ -306,17 +263,11 @@ describe("SilverfinAuthorizer", () => {
 
       await SilverfinAuthorizer.refreshPartner(mockPartnerId);
 
-      expect(mockAxiosInstance.post).toHaveBeenCalledWith(
-        "https://api.test.com/api/partner/v1/refresh_api_key?api_key=stored-token"
-      );
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith("https://api.test.com/api/partner/v1/refresh_api_key?api_key=stored-token");
 
       expect(consola.error).not.toHaveBeenCalled();
 
-      expect(firmCredentials.storePartnerApiKey).toHaveBeenCalledWith(
-        mockPartnerId,
-        mockTokenResponse.data.api_key,
-        mockPartnerStoredToken.name
-      );
+      expect(firmCredentials.storePartnerApiKey).toHaveBeenCalledWith(mockPartnerId, mockTokenResponse.data.api_key, mockPartnerStoredToken.name);
     });
 
     it("should raise an error when there are no previous tokens", async () => {
@@ -329,17 +280,13 @@ describe("SilverfinAuthorizer", () => {
       expect(mockAxiosInstance.post).not.toHaveBeenCalled();
       expect(mockAxiosInstance.get).not.toHaveBeenCalled();
 
-      expect(consola.error).toHaveBeenCalledWith(
-        "Partner partner_123 is not authorized. Please authorize the partner first"
-      );
+      expect(consola.error).toHaveBeenCalledWith("Partner partner_123 is not authorized. Please authorize the partner first");
 
       expect(firmCredentials.storePartnerApiKey).not.toHaveBeenCalled();
     });
 
     it("should handle response errors", async () => {
-      firmCredentials.getPartnerCredentials.mockReturnValue(
-        mockPartnerStoredToken
-      );
+      firmCredentials.getPartnerCredentials.mockReturnValue(mockPartnerStoredToken);
       mockAxiosInstance.post.mockReset();
       mockAxiosInstance.post.mockRejectedValueOnce({
         response: {
@@ -352,9 +299,7 @@ describe("SilverfinAuthorizer", () => {
         await SilverfinAuthorizer.refreshPartner(mockPartnerId);
       }).rejects.toThrow("Process.exit called with code 1");
 
-      expect(consola.error).toHaveBeenCalledWith(
-        "Response Status: 401 (Unauthorized). An error occurred trying to refresh the partner API key"
-      );
+      expect(consola.error).toHaveBeenCalledWith("Response Status: 401 (Unauthorized). An error occurred trying to refresh the partner API key");
 
       expect(firmCredentials.storePartnerApiKey).not.toHaveBeenCalled();
     });
