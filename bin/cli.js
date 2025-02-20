@@ -61,7 +61,7 @@ program
   .option("-p, --partner <partner-id>", "Specify the partner to be used")
   .option("-h, --handle <handle>", "Specify the reconcilation to be used (mandatory)")
   .option("-a, --all", "Update all reconciliations")
-  .option("-m, --message <message>", "Add a message to Silverfin's changelog (optional)", undefined)
+  .option('-m, --message "<message>"', "Add a message to Silverfin's changelog (optional) | Make sure to always enclose the message in double quotes", undefined)
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     cliUtils.checkPartnerSupport(options);
@@ -137,7 +137,7 @@ program
   .option("-p, --partner <partner-id>", "Specify the partner to be used")
   .option('-n, --name "<name>"', "Specify the export file to be used (mandatory) | Make sure to always enclose the name in double quotes")
   .option("-a, --all", "Update all export files")
-  .option("-m, --message <message>", "Add a message to Silverfin's changelog (optional)", undefined)
+  .option('-m, --message "<message>"', "Add a message to Silverfin's changelog (optional) | Make sure to always enclose the message in double quotes", undefined)
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     cliUtils.checkPartnerSupport(options);
@@ -212,7 +212,7 @@ program
   .option("-p, --partner <partner-id>", "Specify the partner to be used")
   .option('-n, --name "<name>"', "Specify the account template to be used (mandatory) | Make sure to always enclose the name in double quotes")
   .option("-a, --all", "Update all account templates")
-  .option("-m, --message <message>", "Add a message to Silverfin's changelog (optional)", undefined)
+  .option('-m, --message "<message>"', "Add a message to Silverfin's changelog (optional) | Make sure to always enclose the message in double quotes", undefined)
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     cliUtils.checkPartnerSupport(options);
@@ -288,7 +288,7 @@ program
   .option("-p, --partner <partner-id>", "Specify the partner to be used")
   .option("-s, --shared-part <name>", "Specify the shared part to be used (mandatory)")
   .option("-a, --all", "Update all shared parts")
-  .option("-m, --message <message>", "Add a message to Silverfin's changelog (optional)", undefined)
+  .option('-m, --message "<message>"', "Add a message to Silverfin's changelog (optional) | Make sure to always enclose the message in double quotes", undefined)
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     cliUtils.checkPartnerSupport(options);
