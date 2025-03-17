@@ -209,7 +209,7 @@ async function fetchExportFileByName(type, envId, name) {
       process.exit(1);
     }
 
-    const saved = ExportFile.save(type, envId, template);
+    const saved = await ExportFile.save(type, envId, template);
     if (saved) {
       consola.success(`Export file "${name}" imported from ${type} ${envId}`);
     }
@@ -228,7 +228,7 @@ async function fetchExportFileById(type, envId, id) {
       process.exit(1);
     }
 
-    const saved = ExportFile.save(type, envId, template);
+    const saved = await ExportFile.save(type, envId, template);
     if (saved) {
       consola.success(`Export file "${template.name}" imported from ${type} ${envId}`);
     }
@@ -255,7 +255,7 @@ async function fetchAllExportFiles(type, envId, page = 1) {
   }
 
   templates.forEach(async (template) => {
-    const saved = ExportFile.save(type, envId, template);
+    const saved = await ExportFile.save(type, envId, template);
 
     if (saved) {
       consola.success(`Export file "${template.name}" imported from ${type} ${envId}`);
