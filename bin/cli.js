@@ -392,7 +392,7 @@ program
   .description("Run Liquid Tests for a reconciliation template from a YAML file")
   .requiredOption("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
   .option("-h, --handle <handle>", "Specify the reconciliation to be used (mandatory)")
-  .option("-at, --account-template <name>", "Specify the reconciliation to be used (mandatory)")
+  .option("-at, --account-template <name>", "Specify the account template to be used (mandatory)")
   .option("-t, --test <test-name>", "Specify the name of the test to be run (optional)", "")
   .option("--html-input", "Get a static html of the input-view of the template generated with the Liquid Test data (optional)", false)
   .option("--html-preview", "Get a static html of the export-view of the template generated with the Liquid Test data (optional)", false)
@@ -401,18 +401,12 @@ program
 
   .action((options) => {
     if (!options.handle && !options.accountTemplate) {
-      consola.error(
-        "You need to specify either a handle or an account template"
-      );
+      consola.error("You need to specify either a handle or an account template");
       process.exit(1);
     }
 
-    const templateType = options.handle
-      ? "reconciliationText"
-      : "accountTemplate";
-    const templateName = options.handle
-      ? options.handle
-      : options.accountTemplate;
+    const templateType = options.handle ? "reconciliationText" : "accountTemplate";
+    const templateName = options.handle ? options.handle : options.accountTemplate;
 
     if (options.status) {
       liquidTestRunner.runTestsStatusOnly(options.firm, templateType, templateName, options.test);
