@@ -612,19 +612,25 @@ program
   .description("Development mode - Watch for changes in files")
   .requiredOption("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
   .option("-h, --handle <handle>", "Watch for changes in liquid and yaml files related to the reconcilation mentioned. Run a new Liquid Test on each save")
+  .option("-at, --account-template <name>", "Watch for changes in liquid and yaml files related to the account template mentioned. Run a new Liquid Test on each save")
   .option("-u, --update-templates", "Watch for changes in any liquid file. Publish the new code of the template into the Platform on each save")
   .option("-t, --test <test-name>", `Specify the name of the test to be run (optional). It has to be used together with "--handle"`, "")
   .option("--html", `Get a html file of the template's input-view generated with the Liquid Test information (optional). It has to be used together with "--handle"`, false)
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
-    cliUtils.checkUniqueOption(["handle", "updateTemplates"], options);
+    cliUtils.checkUniqueOption(["handle", "updateTemplates", "accountTemplate"], options);
 
     if (options.updateTemplates && !options.yes) {
       cliUtils.promptConfirmation();
     }
+
+    if (options.accountTemplate) {
+      devMode.watchLiquidTest(options.firm, options.accountTemplate, options.test, options.html, "accountTemplate");
+    }
+
     if (options.handle) {
-      devMode.watchLiquidTest(options.firm, options.handle, options.test, options.html);
+      devMode.watchLiquidTest(options.firm, options.handle, options.test, options.html, "reconciliationText");
     }
     if (options.updateTemplates) {
       devMode.watchLiquidFiles(options.firm);
