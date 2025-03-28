@@ -3,6 +3,9 @@ node_modules
 .env
 config.json
 
+# System files
+.DS_Store
+
 # Template directories
 reconciliation_texts
 shared_parts

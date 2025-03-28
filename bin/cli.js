@@ -391,23 +391,31 @@ program
   .command("run-test")
   .description("Run Liquid Tests for a reconciliation template from a YAML file")
   .requiredOption("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
-  .requiredOption("-h, --handle <handle>", "Specify the reconciliation to be used (mandatory)")
+  .option("-h, --handle <handle>", "Specify the reconciliation to be used (mandatory)")
+  .option("-at, --account-template <name>", "Specify the account template to be used (mandatory)")
   .option("-t, --test <test-name>", "Specify the name of the test to be run (optional)", "")
   .option("--html-input", "Get a static html of the input-view of the template generated with the Liquid Test data (optional)", false)
   .option("--html-preview", "Get a static html of the export-view of the template generated with the Liquid Test data (optional)", false)
   .option("--preview-only", "Skip the checking of the results of the Liquid Test in case you only want to generate a preview template (optional)", false)
   .option("--status", "Only return the status of the test runs as PASSED/FAILED (optional)", false)
+
   .action((options) => {
-    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
+    if (!options.handle && !options.accountTemplate) {
+      consola.error("You need to specify either a reconciliation handle or an account template");
+      process.exit(1);
+    }
+
+    const templateType = options.handle ? "reconciliationText" : "accountTemplate";
+    const templateName = options.handle ? options.handle : options.accountTemplate;
+
     if (options.status) {
-      liquidTestRunner.runTestsStatusOnly(options.firm, options.handle, options.test);
+      liquidTestRunner.runTestsStatusOnly(options.firm, templateType, templateName, options.test);
     } else {
       if (options.previewOnly && !options.htmlInput && !options.htmlPreview) {
         consola.info(`When using "--preview-only" you need to specify at least one of the following options: "--html-input", "--html-preview"`);
         process.exit(1);
       }
-
-      liquidTestRunner.runTestsWithOutput(options.firm, options.handle, options.test, options.previewOnly, options.htmlInput, options.htmlPreview);
+      liquidTestRunner.runTestsWithOutput(options.firm, templateType, templateName, options.test, options.previewOnly, options.htmlInput, options.htmlPreview);
     }
   });
 
@@ -604,19 +612,25 @@ program
   .description("Development mode - Watch for changes in files")
   .requiredOption("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
   .option("-h, --handle <handle>", "Watch for changes in liquid and yaml files related to the reconcilation mentioned. Run a new Liquid Test on each save")
+  .option("-at, --account-template <name>", "Watch for changes in liquid and yaml files related to the account template mentioned. Run a new Liquid Test on each save")
   .option("-u, --update-templates", "Watch for changes in any liquid file. Publish the new code of the template into the Platform on each save")
   .option("-t, --test <test-name>", `Specify the name of the test to be run (optional). It has to be used together with "--handle"`, "")
   .option("--html", `Get a html file of the template's input-view generated with the Liquid Test information (optional). It has to be used together with "--handle"`, false)
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
-    cliUtils.checkUniqueOption(["handle", "updateTemplates"], options);
+    cliUtils.checkUniqueOption(["handle", "updateTemplates", "accountTemplate"], options);
 
     if (options.updateTemplates && !options.yes) {
       cliUtils.promptConfirmation();
     }
+
+    if (options.accountTemplate) {
+      devMode.watchLiquidTest(options.firm, options.accountTemplate, options.test, options.html, "accountTemplate");
+    }
+
     if (options.handle) {
-      devMode.watchLiquidTest(options.firm, options.handle, options.test, options.html);
+      devMode.watchLiquidTest(options.firm, options.handle, options.test, options.html, "reconciliationText");
     }
     if (options.updateTemplates) {
       devMode.watchLiquidFiles(options.firm);
