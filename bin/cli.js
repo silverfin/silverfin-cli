@@ -401,7 +401,7 @@ program
 
   .action((options) => {
     if (!options.handle && !options.accountTemplate) {
-      consola.error("You need to specify either a handle or an account template");
+      consola.error("You need to specify either a reconciliation handle or an account template");
       process.exit(1);
     }
 
