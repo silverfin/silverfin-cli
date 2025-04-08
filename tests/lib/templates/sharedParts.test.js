@@ -77,4 +77,54 @@ describe("SharedPart", () => {
       expect(configSaved).toEqual(configToWrite);
     });
   });
+
+  describe("read", () => {
+    const name = "example_shared_part_name";
+    const tempDir = path.join(process.cwd(), "tmp");
+    const expectedFolderPath = path.join(tempDir, "shared_parts", name);
+    const mainLiquidPath = path.join(expectedFolderPath, `${name}.liquid`);
+    const configPath = path.join(expectedFolderPath, "config.json");
+
+    const configContent = {
+      id: { 100: 808080 },
+      partner_id: {},
+      name: "example_shared_part_name",
+      text: "example_shared_part_name.liquid",
+      used_in: [],
+      externally_managed: true,
+    };
+
+    beforeEach(() => {
+      if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir, { recursive: true });
+      }
+      process.chdir(tempDir);
+
+      // Create necessary directories and files
+      fs.mkdirSync(expectedFolderPath, { recursive: true });
+      fs.mkdirSync(path.join(expectedFolderPath, "shared_parts"), { recursive: true });
+      fs.writeFileSync(configPath, JSON.stringify(configContent));
+      fs.writeFileSync(mainLiquidPath, "Main liquid content");
+
+      // Mock valid handle check
+      templateUtils.checkValidName.mockReturnValue(true);
+    });
+
+    afterEach(() => {
+      if (fs.existsSync(tempDir)) {
+        fs.rmdirSync(tempDir, { recursive: true });
+      }
+      jest.resetAllMocks();
+    });
+
+    it("should create the liquid file if it doesn't exist", async () => {
+      await fsPromises.unlink(mainLiquidPath);
+
+      SharedPart.read(name);
+
+      expect(fs.existsSync(mainLiquidPath)).toBe(true);
+      const content = await fsPromises.readFile(mainLiquidPath, "utf-8");
+      expect(content).toBe("{% comment %} MAIN PART {% endcomment %}");
+    });
+  });
 });
