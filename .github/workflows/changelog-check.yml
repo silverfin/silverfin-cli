@@ -1,0 +1,63 @@
+name: Changelog Check
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'package.json'
+      - 'package-lock.json'
+
+jobs:
+  check-changelog:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Step 1: Check if the version was bumped
+      # This step compares the version in the PR's package.json with the version in main
+      # It only proceeds with changelog checks if the version was actually changed
+      - name: Check if version was bumped
+        id: check-version
+        run: |
+          # Get the version from package.json in the PR
+          PR_VERSION=$(jq -r '.version' package.json)
+          
+          # Get the version from package.json in main
+          git fetch origin main
+          MAIN_VERSION=$(git show origin/main:package.json | jq -r '.version')
+          
+          echo "PR version: $PR_VERSION"
+          echo "Main version: $MAIN_VERSION"
+          
+          if [[ "$PR_VERSION" == "$MAIN_VERSION" ]]; then
+            echo "version_bumped=false" >> $GITHUB_OUTPUT
+          else
+            echo "version_bumped=true" >> $GITHUB_OUTPUT
+          fi
+
+      # Step 2: Check the changelog
+      # This step only runs if the version was bumped
+      # It performs checks on the CHANGELOG.md file
+      - name: Check changelog
+        if: steps.check-version.outputs.version_bumped == 'true'
+        run: |
+          # Get the version from package.json
+          VERSION=$(jq -r '.version' package.json)
+          
+          # Check 1: Verify the new version is listed in CHANGELOG.md
+          if ! grep -q "## \[$VERSION\]" CHANGELOG.md; then
+            echo "::error::Version $VERSION is not found in CHANGELOG.md. Please add an entry for this version."
+            exit 1
+          fi
+          
+          # Check 2: Verify there is some content after the version header
+          # This extracts the content between the version header and the next version header
+          VERSION_SECTION=$(awk -v RS="## \\[$VERSION\\]" 'NR==2' CHANGELOG.md)
+          if [ -z "$VERSION_SECTION" ] || [ "$VERSION_SECTION" = "" ]; then
+            echo "::error::No description found for version $VERSION in CHANGELOG.md. Please add a description of the changes."
+            exit 1
+          fi 
