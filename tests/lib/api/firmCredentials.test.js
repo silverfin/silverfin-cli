@@ -73,8 +73,7 @@ describe("FirmCredentials", () => {
           null,
           2
         ),
-        "utf8",
-        expect.any(Function)
+        "utf8"
       );
     });
 
@@ -126,6 +125,102 @@ describe("FirmCredentials", () => {
     });
   });
 
+  describe("loadCredentials", () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it("loads credentials from file successfully", () => {
+      const initialCredentials = {
+        firm123: { accessToken: "initial-token", refreshToken: "initial-refresh" },
+        defaultFirmIDs: {},
+        host: "https://initial.getsilverfin.com",
+      };
+
+      const newCredentials = {
+        firm456: { accessToken: "new-token", refreshToken: "new-refresh" },
+        defaultFirmIDs: { testDir: 456 },
+        host: "https://new.getsilverfin.com",
+      };
+
+      let testFirmCredentials;
+      jest.isolateModules(() => {
+        fs.existsSync.mockReturnValue(true);
+        fs.readFileSync.mockReturnValueOnce(JSON.stringify(initialCredentials));
+
+        const module = require("../../../lib/api/firmCredentials");
+        testFirmCredentials = module.firmCredentials;
+
+        expect(testFirmCredentials.data).toEqual(initialCredentials);
+      });
+
+      fs.readFileSync.mockReturnValueOnce(JSON.stringify(newCredentials));
+
+      testFirmCredentials.loadCredentials();
+
+      expect(testFirmCredentials.data).toEqual(newCredentials);
+    });
+  });
+
+  describe("saveCredentials", () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    const initialCredentials = {
+      firm123: { accessToken: "test-token", refreshToken: "test-refresh" },
+      defaultFirmIDs: {},
+      host: "https://test.getsilverfin.com",
+    };
+
+    const newCredentials = {
+      firm456: { accessToken: "new-token", refreshToken: "new-refresh" },
+      defaultFirmIDs: { testDir: 456 },
+      host: "https://new.getsilverfin.com",
+    };
+
+    it("writes credentials to file successfully", () => {
+      let testFirmCredentials;
+      jest.isolateModules(() => {
+        fs.existsSync.mockReturnValue(true);
+        fs.readFileSync.mockReturnValueOnce(JSON.stringify(initialCredentials));
+
+        const module = require("../../../lib/api/firmCredentials");
+        testFirmCredentials = module.firmCredentials;
+
+        expect(testFirmCredentials.data).toEqual(initialCredentials);
+
+        testFirmCredentials.data = newCredentials;
+        testFirmCredentials.saveCredentials();
+
+        expect(fs.writeFileSync).toHaveBeenCalledWith("/test/home/.silverfin/config.json", JSON.stringify(newCredentials, null, 2), "utf8");
+      });
+    });
+
+    it("handles file system error when saving credentials", () => {
+      let testFirmCredentials;
+      jest.isolateModules(() => {
+        fs.existsSync.mockReturnValue(true);
+        fs.readFileSync.mockReturnValueOnce(JSON.stringify({}));
+
+        const module = require("../../../lib/api/firmCredentials");
+        testFirmCredentials = module.firmCredentials;
+
+        fs.writeFileSync.mockImplementationOnce(() => {
+          throw new Error("Write file error");
+        });
+
+        testFirmCredentials.saveCredentials();
+
+        expect(consola.error).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message: expect.stringContaining("Error while writing credentials file"),
+          })
+        );
+      });
+    });
+  });
+
   describe("setHost and getHost", () => {
     let mockConfig;
 
@@ -154,7 +249,7 @@ describe("FirmCredentials", () => {
 
       firmCredentials.setHost(testHost);
 
-      expect(fs.writeFileSync).toHaveBeenCalledWith(expect.any(String), JSON.stringify({ defaultFirmIDs: {}, host: testHost }, null, 2), "utf8", expect.any(Function));
+      expect(fs.writeFileSync).toHaveBeenCalledWith(expect.any(String), JSON.stringify({ defaultFirmIDs: {}, host: testHost }, null, 2), "utf8");
 
       expect(writtenData.host).toBe(testHost);
       expect(firmCredentials.getHost()).toBe(testHost);
