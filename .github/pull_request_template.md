@@ -13,6 +13,10 @@ Steps:
 3. ...
 
 
+## Author Checklist
+
+- [ ] Skip bumping the CLI version
+
 ## Reviewer Checklist
 
 - [ ] PR has a clear title and description

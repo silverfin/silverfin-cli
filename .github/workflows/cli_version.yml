@@ -1,0 +1,68 @@
+name: CLI version check
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  check-cli-version:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Check if version bump should be skipped
+        id: check-skip
+        shell: bash
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+
+        run: |
+          echo "PR body content:"
+          echo "$PR_BODY"
+          echo "-----------------"
+
+          if [[ "$PR_BODY" == *"- [x] Skip bumping the CLI version"* ]]; then
+            echo "skip_version_check=true" >> $GITHUB_OUTPUT
+            echo "Skipping CLI version check as requested in PR description"
+          else
+            echo "skip_version_check=false" >> $GITHUB_OUTPUT
+            echo "CLI version check will be performed"
+          fi
+
+      - name: Checkout current branch
+        if: steps.check-skip.outputs.skip_version_check != 'true'
+        uses: actions/checkout@v4
+        with:
+          path: current-branch
+
+      - name: Checkout main branch
+        if: steps.check-skip.outputs.skip_version_check != 'true'
+        uses: actions/checkout@v4
+        with:
+          path: main-branch
+          ref: main
+
+      - name: Compare versions
+        if: steps.check-skip.outputs.skip_version_check != 'true'
+        run: |
+          current_version=$(jq -r '.version' current-branch/package.json)
+          current_lock_version=$(jq -r '.version' current-branch/package-lock.json)
+          main_version=$(jq -r '.version' main-branch/package.json)
+
+          echo "Main version: $main_version"
+          echo "Current version: $current_version"
+          echo "Current lock version: $current_lock_version"
+
+          if [[ "$current_version" == "$main_version" || $(echo -e "$main_version\n$current_version" | sort -V | head -n1) != "$main_version" ]]; then
+            echo "Error: Current branch version ($current_version) must be greater than main branch version ($main_version)"
+            exit 1
+          fi
+
+          if [[ "$current_version" != "$current_lock_version" ]]; then
+            echo "Error: Version mismatch between package.json ($current_version) and package-lock.json ($current_lock_version)"
+            exit 1
+          fi
