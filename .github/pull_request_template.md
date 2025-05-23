@@ -1,17 +1,20 @@
+Fixes # (link to the corresponding issue if applicable)
+
 ## Description
 
 Include a summary of the changes made
 
-Fixes # (link to the corresponding issue if applicable)
+## Testing Instructions
 
-## Type of change
+Steps:
 
-- [ ] Bug fix
-- [ ] New feature
-- [ ] Breaking change
+1. ...
+2. ...
+3. ...
 
-## Checklist
 
-- [ ] README updated (if needed)
-- [ ] Version updated (if needed)
-- [ ] Documentation updated (if needed)
+## Reviewer Checklist
+
+- [ ] PR has a clear title and description
+- [ ] Manually tested the changes that the PR introduces
+- [ ] Changes introduced are covered by tests of acceptable quality
