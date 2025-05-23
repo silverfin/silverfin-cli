@@ -15,6 +15,7 @@ const SF = require("../lib/api/sfApi");
 const path = require("path");
 const { consola } = require("consola");
 const { runCommandChecks } = require("../lib/cli/utils");
+const { CwdValidator } = require("../lib/cli/cwdValidator");
 
 let firmIdDefault = cliUtils.loadDefaultFirmId();
 cliUtils.handleUncaughtErrors();
@@ -649,8 +650,8 @@ if (pkg.repository && pkg.repository.url) {
 
 // Initiate CLI
 (async function () {
-  // Check if there is a new version available
   await cliUpdates.checkVersions();
+  CwdValidator.run();
   cliUtils.logCurrentHost();
   await program.parseAsync();
 })();
