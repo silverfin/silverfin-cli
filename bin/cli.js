@@ -16,7 +16,7 @@ const path = require("path");
 const { consola } = require("consola");
 const { runCommandChecks } = require("../lib/cli/utils");
 
-let firmIdDefault = cliUtils.loadDefaultFirmId();
+const firmIdDefault = cliUtils.loadDefaultFirmId();
 cliUtils.handleUncaughtErrors();
 
 // Name & Version
@@ -427,9 +427,9 @@ program
   .option("--unreconciled", "By default, the reconciled status will be set as true. Add this option to set it as false (optional)")
   .option("-t, --test <test-name>", "Establish the name of the test. It should have no white-spaces (e.g. test_name)(optional)")
   .action((options) => {
-    reconciledStatus = options.unreconciled ? false : true;
-    let testName = options.test ? options.test : "test_name";
-    liquidTestGenerator.testGenerator(options.url, testName);
+    const reconciledStatus = options.unreconciled ? false : true;
+    const testName = options.test ? options.test : "test_name";
+    liquidTestGenerator.testGenerator(options.url, testName, reconciledStatus);
   });
 
 // Authorize APP

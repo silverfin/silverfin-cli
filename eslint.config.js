@@ -20,6 +20,7 @@ module.exports = [
         },
       ],
       "prefer-const": "error",
+      "prefer-object-has-own": "error",
     },
   },
 ];

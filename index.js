@@ -1,6 +1,5 @@
 const SF = require("./lib/api/sfApi");
 const fsUtils = require("./lib/utils/fsUtils");
-const fs = require("fs");
 const errorUtils = require("./lib/utils/errorUtils");
 const { ReconciliationText } = require("./lib/templates/reconciliationText");
 const { SharedPart } = require("./lib/templates/sharedPart");
@@ -76,7 +75,7 @@ async function fetchAllReconciliations(type, envId, page = 1) {
     return;
   }
 
-  for (let template of templates) {
+  for (const template of templates) {
     try {
       const saved = await ReconciliationText.save(type, envId, template);
 
@@ -97,7 +96,7 @@ async function fetchExistingReconciliations(type, envId) {
     return;
   }
 
-  for (let handle of templates) {
+  for (const handle of templates) {
     try {
       const configPresent = fsUtils.configExists("reconciliationText", handle);
 
@@ -106,7 +105,7 @@ async function fetchExistingReconciliations(type, envId) {
       }
 
       const templateConfig = fsUtils.readConfig("reconciliationText", handle);
-      let templateId = fsUtils.getTemplateId(type, envId, templateConfig);
+      const templateId = fsUtils.getTemplateId(type, envId, templateConfig);
 
       if (!templateId) {
         errorUtils.missingReconciliationId(handle);
@@ -129,7 +128,7 @@ async function publishReconciliationByHandle(type, envId, handle, message = "Upd
     }
 
     const templateConfig = fsUtils.readConfig("reconciliationText", handle);
-    let templateId = fsUtils.getTemplateId(type, envId, templateConfig);
+    const templateId = fsUtils.getTemplateId(type, envId, templateConfig);
 
     if (!templateId) {
       errorUtils.missingReconciliationId(handle);
@@ -164,8 +163,8 @@ async function publishReconciliationByHandle(type, envId, handle, message = "Upd
 }
 
 async function publishAllReconciliations(type, envId, message = "updated through the Silverfin CLI") {
-  let templates = fsUtils.getAllTemplatesOfAType("reconciliationText");
-  for (let handle of templates) {
+  const templates = fsUtils.getAllTemplatesOfAType("reconciliationText");
+  for (const handle of templates) {
     if (!handle) continue;
     await publishReconciliationByHandle(type, envId, handle, message);
   }
@@ -195,7 +194,7 @@ async function newReconciliation(type, envId, handle) {
 
 async function newAllReconciliations(type, envId) {
   const templates = fsUtils.getAllTemplatesOfAType("reconciliationText");
-  for (let handle of templates) {
+  for (const handle of templates) {
     await newReconciliation(type, envId, handle);
   }
 }
@@ -273,7 +272,7 @@ async function fetchExistingExportFiles(type, envId) {
 
   templates.forEach(async (name) => {
     const templateConfig = fsUtils.readConfig("exportFile", name);
-    let templateId = fsUtils.getTemplateId(type, envId, templateConfig);
+    const templateId = fsUtils.getTemplateId(type, envId, templateConfig);
 
     if (!templateId) {
       errorUtils.missingExportFileId(name);
@@ -294,7 +293,7 @@ async function publishExportFileByName(type, envId, name, message = "updated thr
     }
 
     const templateConfig = fsUtils.readConfig("exportFile", name);
-    let templateId = fsUtils.getTemplateId(type, envId, templateConfig);
+    const templateId = fsUtils.getTemplateId(type, envId, templateConfig);
 
     if (!templateConfig || !templateId) {
       errorUtils.missingExportFileId(name);
@@ -328,8 +327,8 @@ async function publishExportFileByName(type, envId, name, message = "updated thr
 }
 
 async function publishAllExportFiles(type, envId, message = "updated through the Silverfin CLI") {
-  let templates = fsUtils.getAllTemplatesOfAType("exportFile");
-  for (let name of templates) {
+  const templates = fsUtils.getAllTemplatesOfAType("exportFile");
+  for (const name of templates) {
     if (!name) continue;
     await publishExportFileByName(type, envId, name, message);
   }
@@ -359,7 +358,7 @@ async function newExportFile(type, envId, name) {
 
 async function newAllExportFiles(type, envId) {
   const templates = fsUtils.getAllTemplatesOfAType("exportFile");
-  for (let name of templates) {
+  for (const name of templates) {
     await newExportFile(type, envId, name);
   }
 }
@@ -429,7 +428,7 @@ async function fetchExistingAccountTemplates(type, envId) {
 
   templates.forEach(async (name) => {
     const templateConfig = fsUtils.readConfig("accountTemplate", name);
-    let templateId = fsUtils.getTemplateId(type, envId, templateConfig);
+    const templateId = fsUtils.getTemplateId(type, envId, templateConfig);
 
     if (!templateId) {
       errorUtils.missingAccountTemplateId(name);
@@ -450,7 +449,7 @@ async function publishAccountTemplateByName(type, envId, name, message = "update
     }
 
     const templateConfig = fsUtils.readConfig("accountTemplate", name);
-    let templateId = fsUtils.getTemplateId(type, envId, templateConfig);
+    const templateId = fsUtils.getTemplateId(type, envId, templateConfig);
 
     if (!templateConfig || !templateId) {
       errorUtils.missingAccountTemplateId(name);
@@ -490,8 +489,8 @@ async function publishAccountTemplateByName(type, envId, name, message = "update
 }
 
 async function publishAllAccountTemplates(type, envId, message = "updated through the Silverfin CLI") {
-  let templates = fsUtils.getAllTemplatesOfAType("accountTemplate");
-  for (let name of templates) {
+  const templates = fsUtils.getAllTemplatesOfAType("accountTemplate");
+  for (const name of templates) {
     if (!name) continue;
     await publishAccountTemplateByName(type, envId, name, message);
   }
@@ -511,7 +510,7 @@ async function newAccountTemplate(type, envId, name) {
 
     // Only keep the mapping_list_ranges that belong to this firm or partner for the request
     template.mapping_list_ranges = template.mapping_list_ranges.filter((range) => {
-      return range.type === "firm" && range.env_id === firmId;
+      return range.type === "firm" && range.env_id === envId;
     });
 
     const response = await SF.createAccountTemplate(type, envId, template);
@@ -529,7 +528,7 @@ async function newAccountTemplate(type, envId, name) {
 
 async function newAllAccountTemplates(type, envId) {
   const templates = fsUtils.getAllTemplatesOfAType("accountTemplate");
-  for (let name of templates) {
+  for (const name of templates) {
     await newAccountTemplate(type, envId, name);
   }
 }
@@ -574,7 +573,7 @@ async function fetchAllSharedParts(type, envId, page = 1) {
     return;
   }
 
-  for (let sharedPart of sharedParts) {
+  for (const sharedPart of sharedParts) {
     try {
       await fetchSharedPartById(type, envId, sharedPart.id);
     } catch (error) {
@@ -589,7 +588,7 @@ async function fetchExistingSharedParts(type, envId) {
   const templates = fsUtils.getAllTemplatesOfAType("sharedPart");
   if (!templates) return;
 
-  for (let name of templates) {
+  for (const name of templates) {
     try {
       const configPresent = fsUtils.configExists("sharedPart", name);
 
@@ -600,7 +599,7 @@ async function fetchExistingSharedParts(type, envId) {
       }
 
       const templateConfig = fsUtils.readConfig("sharedPart", name);
-      let templateId = fsUtils.getTemplateId(type, envId, templateConfig);
+      const templateId = fsUtils.getTemplateId(type, envId, templateConfig);
 
       if (!templateId) {
         errorUtils.missingSharedPartId(name);
@@ -621,7 +620,7 @@ async function publishSharedPartByName(type, envId, name, message = "Updated thr
       return false;
     }
     const templateConfig = fsUtils.readConfig("sharedPart", name);
-    let templateId = fsUtils.getTemplateId(type, envId, templateConfig);
+    const templateId = fsUtils.getTemplateId(type, envId, templateConfig);
 
     if (!templateConfig || !templateId) {
       errorUtils.missingSharedPartId(name);
@@ -654,8 +653,8 @@ async function publishSharedPartByName(type, envId, name, message = "Updated thr
 }
 
 async function publishAllSharedParts(type, envId, message = "updated through the Silverfin CLI") {
-  let templates = fsUtils.getAllTemplatesOfAType("sharedPart");
-  for (let name of templates) {
+  const templates = fsUtils.getAllTemplatesOfAType("sharedPart");
+  for (const name of templates) {
     if (!name) continue;
     await publishSharedPartByName(type, envId, name, message);
   }
@@ -686,7 +685,7 @@ async function newSharedPart(type, envId, name) {
 
 async function newAllSharedParts(type, envId) {
   const templates = fsUtils.getAllTemplatesOfAType("sharedPart");
-  for (let name of templates) {
+  for (const name of templates) {
     await newSharedPart(type, envId, name);
   }
 }
@@ -738,7 +737,7 @@ async function addSharedPart(type, envId, sharedPartName, templateHandle, templa
         break;
     }
 
-    let response = await addSharedPartOnPlatform(type, envId, sharedPartId, templateId);
+    const response = await addSharedPartOnPlatform(type, envId, sharedPartId, templateId);
 
     // Success or failure
     if (!response || !response.status || !response.status === 201) {
@@ -810,8 +809,8 @@ async function addAllSharedParts(type, envId, force = false) {
   const envConfigKey = type === "partner" ? "partner_id" : "id";
   const sharedPartsArray = fsUtils.getAllTemplatesOfAType("sharedPart");
 
-  for await (let sharedPartName of sharedPartsArray) {
-    let sharedPartConfig = await fsUtils.readConfig("sharedPart", sharedPartName);
+  for await (const sharedPartName of sharedPartsArray) {
+    const sharedPartConfig = await fsUtils.readConfig("sharedPart", sharedPartName);
 
     if (!sharedPartConfig.used_in) {
       consola.warn(`Shared part ${sharedPartName} has no used_in array. Skipping.`);
@@ -847,7 +846,7 @@ async function addAllSharedParts(type, envId, force = false) {
 
       // When the template is already linked to the shared part, skip unless force is true
       if (!force) {
-        let alreadyAdded = await existingLinks.find((existing) => {
+        const alreadyAdded = await existingLinks.find((existing) => {
           existing = SharedPart.checkTemplateType(existing);
           // we check both id and type to avoid (rare) false positives
           return existing.id === template[envConfigKey][envId] && existing.type === template.type;
@@ -870,7 +869,7 @@ async function removeSharedPart(type, envId, sharedPartHandle, templateHandle, t
   try {
     const templateConfig = fsUtils.readConfig(templateType, templateHandle);
     const sharedPartConfig = fsUtils.readConfig("sharedPart", sharedPartHandle);
-    let templateId = fsUtils.getTemplateId(type, envId, templateConfig);
+    const templateId = fsUtils.getTemplateId(type, envId, templateConfig);
 
     if (!templateConfig || !templateId) {
       consola.warn(`Template id not found for ${templateHandle} (${templateType}). Skipping.`);
@@ -898,7 +897,7 @@ async function removeSharedPart(type, envId, sharedPartHandle, templateHandle, t
         removeSharedPart = SF.removeSharedPartFromAccountTemplate;
         break;
     }
-    let response = await removeSharedPart(type, envId, sharedPartId, templateId);
+    const response = await removeSharedPart(type, envId, sharedPartId, templateId);
 
     if (response && response?.status === 200) {
       consola.debug(`Remove shared part with id ${sharedPartId} removed from ${templateType} with id ${templateId} on the platform.`);
@@ -993,10 +992,10 @@ async function getTemplateId(type, envId, templateType, handle) {
  */
 async function getAllTemplatesId(type, envId, templateType) {
   try {
-    let templates = fsUtils.getAllTemplatesOfAType(templateType);
-    for (let templateName of templates) {
-      let configTemplate = fsUtils.readConfig(templateType, templateName);
-      let handle = configTemplate.handle || configTemplate.name || configTemplate.name_nl;
+    const templates = fsUtils.getAllTemplatesOfAType(templateType);
+    for (const templateName of templates) {
+      const configTemplate = fsUtils.readConfig(templateType, templateName);
+      const handle = configTemplate.handle || configTemplate.name || configTemplate.name_nl;
       if (!handle) {
         continue;
       }

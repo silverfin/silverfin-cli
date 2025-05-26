@@ -454,14 +454,13 @@ describe("AxiosFactory", () => {
       axiosMockAdapter.onGet("/test-endpoint").reply(401, "Unauthorized");
       jest.spyOn(axiosInstance, "post");
 
-      try {
-        await axiosInstance.get("/test-endpoint");
-        fail("Expected an error to be thrown");
-      } catch (error) {
-        expect(firmCredentials.storeNewTokenPair).not.toHaveBeenCalled();
-        expect(axiosInstance.post).not.toHaveBeenCalled();
-        expect(error.response.status).toBe(401);
-      }
+      await expect(axiosInstance.get("/test-endpoint")).rejects.toMatchObject({
+        response: {
+          status: 401,
+        },
+      });
+      expect(firmCredentials.storeNewTokenPair).not.toHaveBeenCalled();
+      expect(axiosInstance.post).not.toHaveBeenCalled();
     });
 
     it("should use basic auth for firm instance in staging", () => {
