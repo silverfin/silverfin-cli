@@ -1,4 +1,4 @@
-name: Tests
+name: Testing and Linting
 
 on:
   push:
@@ -30,3 +30,6 @@ jobs:
 
       - name: Run tests
         run: npm test
+
+      - name: Run linter
+        run: npm run lint
