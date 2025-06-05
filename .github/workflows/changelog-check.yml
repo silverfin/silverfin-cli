@@ -30,9 +30,6 @@ jobs:
           git fetch origin main
           MAIN_VERSION=$(git show origin/main:package.json | jq -r '.version')
           
-          echo "PR version: $PR_VERSION"
-          echo "Main version: $MAIN_VERSION"
-          
           if [[ "$PR_VERSION" == "$MAIN_VERSION" ]]; then
             echo "version_bumped=false" >> $GITHUB_OUTPUT
           else
@@ -55,8 +52,15 @@ jobs:
           fi
           
           # Check 2: Verify there is some content after the version header
-          # This uses sed to extract content between the version header and the next version header
-          VERSION_SECTION=$(sed -n "/## \[$VERSION\]/,/## \[/p" CHANGELOG.md | sed '$d' | sed '1d')
+          VERSION_SECTION=$(awk -v version="$VERSION" '
+            BEGIN { found=0; content="" }
+            $0 ~ "^## \\[" version "\\]" { found=1; next }
+            found && $0 ~ "^## \\[" { exit }
+            found { content = content $0 "\n" }
+            END { print content }
+          ' CHANGELOG.md)
+          
+          # Check if there's any non-empty content
           if [ -z "$VERSION_SECTION" ] || [ "$VERSION_SECTION" = "" ]; then
             echo "::error::No description found for version $VERSION in CHANGELOG.md. Please add a description of the changes."
             exit 1
