@@ -55,8 +55,8 @@ jobs:
           fi
           
           # Check 2: Verify there is some content after the version header
-          # This extracts the content between the version header and the next version header
-          VERSION_SECTION=$(awk -v RS="## \\[$VERSION\\]" 'NR==2' CHANGELOG.md)
+          # This uses sed to extract content between the version header and the next version header
+          VERSION_SECTION=$(sed -n "/## \[$VERSION\]/,/## \[/p" CHANGELOG.md | sed '$d' | sed '1d')
           if [ -z "$VERSION_SECTION" ] || [ "$VERSION_SECTION" = "" ]; then
             echo "::error::No description found for version $VERSION in CHANGELOG.md. Please add a description of the changes."
             exit 1
