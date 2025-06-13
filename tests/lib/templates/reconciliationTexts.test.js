@@ -76,6 +76,7 @@ describe("ReconciliationText", () => {
     const configPath = path.join(expectedFolderPath, "config.json");
     const mainLiquidPath = path.join(expectedFolderPath, "main.liquid");
     const testLiquidPath = path.join(expectedFolderPath, "tests", `${handle}_liquid_test.yml`);
+    const readmePath = path.join(expectedFolderPath, "tests", "README.md");
     const part1LiquidPath = path.join(expectedFolderPath, "text_parts", "part_1.liquid");
     const oldPartLiquidPath = path.join(expectedFolderPath, "text_parts", "old_part.liquid");
 
@@ -134,6 +135,8 @@ describe("ReconciliationText", () => {
       expect(fs.existsSync(testLiquidPath)).toBe(true);
       const testLiquidContent = await fsPromises.readFile(testLiquidPath, "utf-8");
       expect(testLiquidContent).toBe(template.tests);
+      const readmeContent = await fsPromises.readFile(readmePath, "utf-8");
+      expect(readmeContent).toContain("Use this Readme file to add extra information about the Liquid Tests ");
       // Check config file
       expect(fs.existsSync(configPath)).toBe(true);
       const configSaved = JSON.parse(await fsPromises.readFile(configPath, "utf-8"));
@@ -191,18 +194,22 @@ describe("ReconciliationText", () => {
       templateUtils.filterParts.mockReturnValue(textParts);
 
       const existingLiquidTest = "Existing Liquid Test";
+      const existingReadmeContent = "Existing Readme content";
 
       fs.mkdirSync(path.join(tempDir, "reconciliation_texts"));
       fs.mkdirSync(path.join(tempDir, "reconciliation_texts", "example_handle"));
       fs.mkdirSync(path.join(tempDir, "reconciliation_texts", "example_handle", "tests"));
       fs.writeFileSync(configPath, JSON.stringify(existingConfig));
       fs.writeFileSync(testLiquidPath, existingLiquidTest);
+      fs.writeFileSync(readmePath, existingReadmeContent);
 
       await ReconciliationText.save("firm", 100, template);
 
       // Check liquid test file
       const testLiquidContent = await fsPromises.readFile(testLiquidPath, "utf-8");
       expect(testLiquidContent).toBe(existingLiquidTest);
+      const readmeContent = await fsPromises.readFile(readmePath, "utf-8");
+      expect(readmeContent).toBe(existingReadmeContent);
     });
 
     // NOTE: Do we need to modify this behavior?
