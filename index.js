@@ -834,7 +834,7 @@ async function addAllSharedParts(type, envId, force = false) {
     for await (let template of sharedPartConfig.used_in) {
       template = SharedPart.checkTemplateType(template);
       if (!template.handle && !template.name) {
-        consola.warn(`Template stored in used_in has no handle or name. Skipping.`);
+        consola.warn(`Shared part: ${sharedPartName}. Template stored in used_in has no handle or name. Skipping.`);
         continue;
       }
 
@@ -961,7 +961,7 @@ async function getTemplateId(type, envId, templateType, handle) {
   }
 
   if (!templateText) {
-    consola.warn(`Template ${handle} wasn't found (${type})`);
+    consola.warn(`Template ${templateType} ${handle} wasn't found (${type} ${envId})`);
     return false;
   }
   const config = fsUtils.readConfig(templateType, handle);
