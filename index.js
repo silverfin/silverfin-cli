@@ -696,7 +696,7 @@ async function newAllSharedParts(type, envId) {
  * @param {string} sharedPartName
  * @param {string} templateHandle
  * @param {string} templateType has to be either `reconciliationText`, `exportFile`or `accountTemplate`
- * @returns {boolean} - Returns true if the shared part was added successfully
+ * @returns {Promise<Object|boolean>} Returns the updated shared part config if successful, or false if it failed.
  */
 async function addSharedPart(type, envId, sharedPartName, templateHandle, templateType) {
   try {
@@ -804,12 +804,13 @@ async function addSharedPart(type, envId, sharedPartName, templateHandle, templa
  * @param {String} type - Options: `firm` or `partner`
  * @param {Number} envId
  * @param {boolean} force - If true, it will add the shared part to all templates, even if it's already present
+ * @returns {Promise<void>} Returns nothing. It will log the results to the console.
  */
 async function addAllSharedParts(type, envId, force = false) {
   const envConfigKey = type === "partner" ? "partner_id" : "id";
   const sharedPartsArray = fsUtils.getAllTemplatesOfAType("sharedPart");
 
-  for await (const sharedPartName of sharedPartsArray) {
+  for (const sharedPartName of sharedPartsArray) {
     const sharedPartConfig = await fsUtils.readConfig("sharedPart", sharedPartName);
 
     if (!sharedPartConfig.used_in) {
@@ -831,7 +832,7 @@ async function addAllSharedParts(type, envId, force = false) {
     }
     const existingLinks = sharedPartData.data.used_in;
 
-    for await (let template of sharedPartConfig.used_in) {
+    for (let template of sharedPartConfig.used_in) {
       template = SharedPart.checkTemplateType(template);
       if (!template.handle && !template.name) {
         consola.warn(`Shared part: ${sharedPartName}. Template stored in used_in has no handle or name. Skipping.`);
@@ -857,10 +858,7 @@ async function addAllSharedParts(type, envId, force = false) {
         }
       }
 
-      // add arbitrary delay to avoid rate limiting
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      addSharedPart(type, envId, sharedPartConfig.name, template.handle, template.type);
+      await addSharedPart(type, envId, sharedPartConfig.name, template.handle, template.type);
     }
   }
 }
