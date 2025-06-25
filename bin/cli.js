@@ -6,7 +6,7 @@ const liquidTestRunner = require("../lib/liquidTestRunner");
 const stats = require("../lib/cli/stats");
 const { Command, Option } = require("commander");
 const pkg = require("../package.json");
-const cliUpdates = require("../lib/cli/cliUpdates");
+const { CliUpdater } = require("../lib/cli/cliUpdater");
 const cliUtils = require("../lib/cli/utils");
 const program = new Command();
 const devMode = require("../lib/cli/devMode");
@@ -15,6 +15,7 @@ const SF = require("../lib/api/sfApi");
 const path = require("path");
 const { consola } = require("consola");
 const { runCommandChecks } = require("../lib/cli/utils");
+const { CwdValidator } = require("../lib/cli/cwdValidator");
 
 const firmIdDefault = cliUtils.loadDefaultFirmId();
 cliUtils.handleUncaughtErrors();
@@ -643,14 +644,14 @@ if (pkg.repository && pkg.repository.url) {
     .command("update")
     .description("Update the CLI to the latest version")
     .action(() => {
-      cliUpdates.performUpdate();
+      CliUpdater.performUpdate();
     });
 }
 
 // Initiate CLI
 (async function () {
-  // Check if there is a new version available
-  await cliUpdates.checkVersions();
+  await CliUpdater.checkVersions();
+  CwdValidator.run();
   cliUtils.logCurrentHost();
   await program.parseAsync();
 })();
