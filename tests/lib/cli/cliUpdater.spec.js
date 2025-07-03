@@ -60,7 +60,7 @@ describe("CliUpdater", () => {
       await CliUpdater.checkVersions();
 
       expect(consola.log).not.toHaveBeenCalled();
-      expect(consola.debug).not.toHaveBeenCalled();
+      expect(consola.debug).toHaveBeenCalledWith(expect.stringMatching(/Failed to get the latest version/i));
     });
   });
 

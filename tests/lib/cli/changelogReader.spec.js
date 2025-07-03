@@ -21,7 +21,7 @@ describe("ChangelogReader", () => {
       const result = await ChangelogReader.fetchChanges("1.0.0", "1.1.0");
 
       expect(result).toBeUndefined();
-      expect(consola.debug).toHaveBeenCalledWith("Changelog file not found (404). The CHANGELOG.md file may have been moved or deleted from the repository.");
+      expect(consola.debug).toHaveBeenCalledWith("Changelog file not found. The CHANGELOG.md file may have been moved or deleted from the repository.");
       expect(axios.get).toHaveBeenCalledWith("https://raw.githubusercontent.com/silverfin/silverfin-cli/main/CHANGELOG.md");
     });
 
@@ -43,7 +43,7 @@ describe("ChangelogReader", () => {
       const result = await ChangelogReader.fetchChanges("1.0.0", "1.1.0");
 
       expect(result).toBeUndefined();
-      expect(consola.debug).toHaveBeenCalledWith("Failed to fetch changelog from GitHub. Server returned status 500");
+      expect(consola.debug).toHaveBeenCalledWith("Changelog file not found. The CHANGELOG.md file may have been moved or deleted from the repository.");
     });
 
     it("should return changelog content when changelog file exists and has new versions", async () => {
@@ -141,7 +141,7 @@ All notable changes to this project will be documented in this file.
       const result = await ChangelogReader.fetchChanges("1.0.0", "2.0.0");
 
       expect(result).toBe("");
-      expect(consola.warn).toHaveBeenCalledWith(
+      expect(consola.debug).toHaveBeenCalledWith(
         "Version 2.0.0 not found in the changelog. This might indicate that the changelog hasn't been updated yet for this version, or the version format is incorrect (should be ## [version] (date))."
       );
     });
@@ -169,7 +169,7 @@ All notable changes to this project will be documented in this file.
 
       // Should return empty string when update version format is incorrect
       expect(result).toBe("");
-      expect(consola.warn).toHaveBeenCalledWith(
+      expect(consola.debug).toHaveBeenCalledWith(
         "Version 1.2.0 not found in the changelog. This might indicate that the changelog hasn't been updated yet for this version, or the version format is incorrect (should be ## [version] (date))."
       );
     });
