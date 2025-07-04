@@ -21,7 +21,7 @@ describe("ChangelogReader", () => {
       const result = await ChangelogReader.fetchChanges("1.0.0", "1.1.0");
 
       expect(result).toBeUndefined();
-      expect(consola.debug).toHaveBeenCalledWith("Changelog file not found. The CHANGELOG.md file may have been moved or deleted from the repository.");
+      expect(consola.debug).toHaveBeenCalledWith("(Status: 404) Failed to fetch changelog from GitHub.");
       expect(axios.get).toHaveBeenCalledWith("https://raw.githubusercontent.com/silverfin/silverfin-cli/main/CHANGELOG.md");
     });
 
@@ -43,7 +43,7 @@ describe("ChangelogReader", () => {
       const result = await ChangelogReader.fetchChanges("1.0.0", "1.1.0");
 
       expect(result).toBeUndefined();
-      expect(consola.debug).toHaveBeenCalledWith("Changelog file not found. The CHANGELOG.md file may have been moved or deleted from the repository.");
+      expect(consola.debug).toHaveBeenCalledWith("(Status: 500) Failed to fetch changelog from GitHub.");
     });
 
     it("should return changelog content when changelog file exists and has new versions", async () => {
