@@ -48,6 +48,7 @@ jobs:
 
       - name: Compare versions
         if: steps.check-skip.outputs.skip_version_check != 'true'
+        id: version-check
         run: |
           current_version=$(jq -r '.version' current-branch/package.json)
           current_lock_version=$(jq -r '.version' current-branch/package-lock.json)
@@ -59,10 +60,27 @@ jobs:
 
           if [[ "$current_version" == "$main_version" || $(echo -e "$main_version\n$current_version" | sort -V | head -n1) != "$main_version" ]]; then
             echo "Error: Current branch version ($current_version) must be greater than main branch version ($main_version)"
+            echo "version_check_passed=false" >> $GITHUB_OUTPUT
             exit 1
           fi
 
           if [[ "$current_version" != "$current_lock_version" ]]; then
             echo "Error: Version mismatch between package.json ($current_version) and package-lock.json ($current_lock_version)"
+            echo "version_check_passed=false" >> $GITHUB_OUTPUT
             exit 1
+          fi
+
+          echo "version_check_passed=true" >> $GITHUB_OUTPUT
+
+      - name: Check changelog entry
+        if: steps.check-skip.outputs.skip_version_check != 'true' && steps.version-check.outputs.version_check_passed == 'true'
+        id: changelog-check
+        run: |
+          current_version=$(jq -r '.version' current-branch/package.json)
+          changelog_file="current-branch/CHANGELOG.md"
+          version_entry="## [$current_version]"
+
+          if ! grep -Fq "$version_entry" "$changelog_file"; then
+              echo "Error: Changelog entry for version $current_version is missing in $changelog_file"
+              exit 1
           fi
