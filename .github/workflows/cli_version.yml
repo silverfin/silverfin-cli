@@ -77,10 +77,10 @@ jobs:
         id: changelog-check
         run: |
           current_version=$(jq -r '.version' current-branch/package.json)
-          changelog_file="CHANGELOG.md"
+          changelog_file="current-branch/CHANGELOG.md"
           version_entry="## [$current_version]"
 
-          if ! grep -q "$version_entry" "$changelog_file"; then
-            echo "Error: Changelog entry for version $current_version is missing in $changelog_file"
-            exit 1
+          if ! grep -Fq "$version_entry" "$changelog_file"; then
+              echo "Error: Changelog entry for version $current_version is missing in $changelog_file"
+              exit 1
           fi
