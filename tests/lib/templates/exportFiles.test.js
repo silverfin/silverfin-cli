@@ -106,7 +106,6 @@ describe("ExportFile", () => {
       ExportFile.save("firm", 100, template);
 
       // Check folder creation
-      console.log(expectedFolderPath);
       expect(fs.existsSync(expectedFolderPath)).toBe(true);
 
       // Check main liquid file
