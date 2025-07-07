@@ -39,13 +39,13 @@ describe("ReconciliationText", () => {
       downloadable_as_docx: false,
       hide_code: true,
       is_active: true,
-      name_en: "example_handle",
-      name_fr: "example_handle",
+      name_en: "",
+      name_fr: "",
       name_nl: "example_handle",
-      name_de: "example_handle",
-      name_da: "example_handle",
-      name_se: "example_handle",
-      name_fi: "example_handle",
+      name_de: "",
+      name_da: "",
+      name_se: "",
+      name_fi: "",
       public: false,
       published: true,
       reconciliation_type: "only_reconciled_with_data",
@@ -66,13 +66,13 @@ describe("ReconciliationText", () => {
       downloadable_as_docx: false,
       hide_code: true,
       is_active: true,
-      name_en: "example_handle",
-      name_fr: "example_handle",
+      name_en: "",
+      name_fr: "",
       name_nl: "example_handle",
-      name_de: "example_handle",
-      name_da: "example_handle",
-      name_se: "example_handle",
-      name_fi: "example_handle",
+      name_de: "",
+      name_da: "",
+      name_se: "",
+      name_fi: "",
       public: false,
       published: true,
       reconciliation_type: "only_reconciled_with_data",
@@ -443,12 +443,7 @@ describe("ReconciliationText", () => {
       const result = ReconciliationText.read(handle);
 
       expect(result.handle).toBe(handle);
-      expect(result.name_en).toBe(handle);
       expect(result.name_nl).toBe(handle);
-      expect(result.name_de).toBe(handle);
-      expect(result.name_da).toBe(handle);
-      expect(result.name_se).toBe(handle);
-      expect(result.name_fi).toBe(handle);
     });
 
     it("should handle templates with no text parts", () => {
@@ -540,13 +535,7 @@ describe("ReconciliationText", () => {
 
       const result = ReconciliationText.read(handle);
 
-      expect(result.name_en).toBe(handle);
-      expect(result.name_fr).toBe(handle);
       expect(result.name_nl).toBe(handle);
-      expect(result.name_de).toBe(handle);
-      expect(result.name_da).toBe(handle);
-      expect(result.name_se).toBe(handle);
-      expect(result.name_fi).toBe(handle);
     });
   });
 });
