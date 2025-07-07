@@ -31,7 +31,9 @@ describe("ExportFile", () => {
       name_fr: "example_name_nl",
       name_en: "example_name_nl",
       file_name: "export_file.sxbrl",
-
+      hide_code: true,
+      published: true,
+      download_warning: "",
       text: "main.liquid",
       encoding: "UTF-8",
       text_parts: {
@@ -48,6 +50,9 @@ describe("ExportFile", () => {
       name_en: "old_name_en",
       file_name: "old_file_name.sxbrl",
       text: "main.liquid",
+      hide_code: true,
+      published: true,
+      download_warning: "",
       encoding: "UTF-8",
       text_parts: {
         old_part: "text_parts/old_part.liquid",
