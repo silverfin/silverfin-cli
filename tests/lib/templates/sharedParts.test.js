@@ -14,34 +14,30 @@ describe("SharedPart", () => {
       id: 808080,
       name: "example_shared_part_name",
       text: "example_shared_part_name.liquid",
+      used_in: [],
       externally_managed: true,
     };
     const name = template.name;
     const configToWrite = {
-      id: {
-        100: 808080,
-      },
+      id: { 100: 808080 },
+      partner_id: {},
       name: "example_shared_part_name",
       text: "example_shared_part_name.liquid",
-      hide_code: true,
-      is_active: true,
-      published: true,
       used_in: [],
+      externally_managed: true,
     };
     const existingConfig = {
       id: { 200: 505050 },
       name: "old_shared_part_name",
       text: "old_shared_part_name.liquid",
-      hide_code: true,
-      is_active: true,
-      published: true,
       used_in: [],
+      externally_managed: true,
     };
 
     const tempDir = path.join(process.cwd(), "tmp");
     const expectedFolderPath = path.join(tempDir, "shared_parts", name);
+    const mainLiquidPath = path.join(expectedFolderPath, `${name}.liquid`);
     const configPath = path.join(expectedFolderPath, "config.json");
-    const mainLiquidPath = path.join(expectedFolderPath, "main.liquid");
 
     beforeEach(() => {
       if (!fs.existsSync(tempDir)) {
@@ -62,6 +58,23 @@ describe("SharedPart", () => {
       const result = await SharedPart.save("firm", 100, template);
       expect(result).toBe(false);
       expect(templateUtils.checkValidName).toHaveBeenCalledWith("example_shared_part_name", "sharedPart");
+    });
+
+    it("should create the necessary files and store template's relevant details", async () => {
+      templateUtils.checkValidName.mockReturnValue(true);
+
+      await SharedPart.save("firm", 100, template);
+
+      // Check folder creation
+      expect(fs.existsSync(expectedFolderPath)).toBe(true);
+      // Check main liquid file
+      expect(fs.existsSync(mainLiquidPath)).toBe(true);
+      const mainLiquidContent = await fsPromises.readFile(mainLiquidPath, "utf-8");
+      expect(mainLiquidContent).toBe(template.text);
+      // Check config file
+      expect(fs.existsSync(configPath)).toBe(true);
+      const configSaved = JSON.parse(await fsPromises.readFile(configPath, "utf-8"));
+      expect(configSaved).toEqual(configToWrite);
     });
   });
 });
