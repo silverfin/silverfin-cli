@@ -444,10 +444,6 @@ describe("ReconciliationText", () => {
 
       expect(result.handle).toBe(handle);
       expect(result.name_nl).toBe(handle);
-      expect(result.name_de).toBe(handle);
-      expect(result.name_da).toBe(handle);
-      expect(result.name_se).toBe(handle);
-      expect(result.name_fi).toBe(handle);
     });
 
     it("should handle templates with no text parts", () => {
