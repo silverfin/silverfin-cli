@@ -411,6 +411,32 @@ program
       toolkit.newAllSharedParts(settings.type, settings.envId);
     }
   });
+
+// UPDATE all templates
+program
+  .command("update-all-templates")
+  .description("Update all templates at once")
+  .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
+  .option("-p, --partner <partner-id>", "Specify the partner to be used")
+  .option("-a, --all", "Update all templates")
+  .option('-m, --message "<message>"', "Add a message to Silverfin's changelog (optional) | Make sure to always enclose the message in double quotes", undefined)
+  .action((options) => {
+    cliUtils.checkPartnerSupport(options);
+    const settings = runCommandChecks(
+      ["all"],
+      options,
+      firmIdDefault,
+      true // Message required
+    );
+
+    if (options.all) {
+      toolkit.publishAllReconciliations(settings.type, settings.envId, options.message);
+      toolkit.publishAllExportFiles(settings.type, settings.envId, options.message);
+      toolkit.publishAllAccountTemplates(settings.type, settings.envId, options.message);
+      toolkit.publishAllSharedParts(settings.type, settings.envId, options.message);
+    }
+  });
+
 // Run Liquid Test
 program
   .command("run-test")
