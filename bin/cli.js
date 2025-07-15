@@ -387,6 +387,30 @@ program
     }
   });
 
+// CREATE all templates
+program
+  .command("create-all-templates")
+  .description("Create all templates at once")
+  .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
+  .option("-p, --partner <partner-id>", "Specify the partner to be used")
+  .option("-a, --all", "Try to create all templates stored in the repository")
+  .action((options) => {
+    cliUtils.checkPartnerSupport(options);
+    const settings = runCommandChecks(
+      ["all"],
+      options,
+      firmIdDefault,
+      false, // Message required
+      false // Confirmation check skipped
+    );
+
+    if (options.all) {
+      toolkit.newAllReconciliations(settings.type, settings.envId);
+      toolkit.newAllExportFiles(settings.type, settings.envId);
+      toolkit.newAllAccountTemplates(settings.type, settings.envId);
+      toolkit.newAllSharedParts(settings.type, settings.envId);
+    }
+  });
 // Run Liquid Test
 program
   .command("run-test")
