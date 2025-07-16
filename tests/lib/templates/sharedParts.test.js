@@ -7,6 +7,9 @@ const { SharedPart } = require("../../../lib/templates/sharedPart");
 
 jest.mock("../../../lib/utils/templateUtils");
 jest.mock("consola");
+jest.mock("../../../lib/utils/apiUtils", () => ({
+  checkRequiredEnvVariables: jest.fn(() => true),
+}));
 
 describe("SharedPart", () => {
   describe("save", () => {
