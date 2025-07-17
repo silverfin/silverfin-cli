@@ -1,7 +1,6 @@
 const fs = require("fs");
 const fsPromises = require("fs").promises;
 const path = require("path");
-const fsUtils = require("../../../lib/utils/fsUtils");
 const templateUtils = require("../../../lib/utils/templateUtils");
 const { SharedPart } = require("../../../lib/templates/sharedPart");
 
@@ -26,13 +25,6 @@ describe("SharedPart", () => {
       partner_id: {},
       name: "example_shared_part_name",
       text: "example_shared_part_name.liquid",
-      used_in: [],
-      externally_managed: true,
-    };
-    const existingConfig = {
-      id: { 200: 505050 },
-      name: "old_shared_part_name",
-      text: "old_shared_part_name.liquid",
       used_in: [],
       externally_managed: true,
     };
