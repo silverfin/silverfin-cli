@@ -2,9 +2,6 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.40.1] (10/07/2025)
-- Add tests for the SharedParts class
-
 ## [1.40.0] (08/07/2025)
 - `stats` command now displays the amount of yaml files that have at least two unit tests defined
 
