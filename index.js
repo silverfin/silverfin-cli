@@ -162,6 +162,42 @@ async function publishReconciliationByHandle(type, envId, handle, message = "Upd
   }
 }
 
+async function publishReconciliationById(type, envId, reconciliationId, message = "Updated with the Silverfin CLI") {
+  try {
+    const matchingHandle = fsUtils.findHandleByID(type, envId, "reconciliationText", reconciliationId);
+
+    if (!matchingHandle) {
+      consola.error(`No template found with reconciliation ID: ${reconciliationId} in ${type} ${envId}`);
+      return false;
+    }
+
+    consola.debug(`Updating reconciliation with ID ${reconciliationId} (handle: ${matchingHandle})...`);
+
+    const template = await ReconciliationText.read(matchingHandle);
+    if (!template) return;
+
+    // Add API-only required fields
+    template.version_comment = message;
+
+    if (type == "partner") {
+      template.version_significant_change = false;
+      delete template.is_active;
+    }
+
+    const response = await SF.updateReconciliationText(type, envId, reconciliationId, template);
+
+    if (response && response.data && response.data.handle) {
+      consola.success(`Reconciliation updated: ${response.data.handle} (ID: ${reconciliationId})`);
+      return true;
+    } else {
+      consola.error(`Reconciliation update failed for ID: ${reconciliationId} in ${type} ${envId}`);
+      return false;
+    }
+  } catch (error) {
+    errorUtils.errorHandler(error);
+  }
+}
+
 async function publishAllReconciliations(type, envId, message = "updated through the Silverfin CLI") {
   const templates = fsUtils.getAllTemplatesOfAType("reconciliationText");
   for (const handle of templates) {
@@ -319,6 +355,41 @@ async function publishExportFileByName(type, envId, name, message = "updated thr
       return true;
     } else {
       consola.error(`Export file update failed: ${name}`);
+      return false;
+    }
+  } catch (error) {
+    errorUtils.errorHandler(error);
+  }
+}
+
+async function publishExportFileById(type, envId, exportFileId, message = "Updated with the Silverfin CLI") {
+  try {
+    const matchingHandle = fsUtils.findHandleByID(type, envId, "exportFile", exportFileId);
+
+    if (!matchingHandle) {
+      consola.error(`No template found with export file ID: ${exportFileId} in ${type} ${envId}`);
+      return false;
+    }
+
+    consola.debug(`Updating export file with ID ${exportFileId} (handle: ${matchingHandle})...`);
+
+    const template = await ExportFile.read(matchingHandle);
+    if (!template) return;
+
+    // Add API-only required fields
+    template.version_comment = message;
+
+    if (type == "partner") {
+      template.version_significant_change = false;
+    }
+
+    const response = await SF.updateExportFile(type, envId, exportFileId, template);
+
+    if (response && response.data && response.data.name_nl) {
+      consola.success(`Export file updated: ${response.data.name_nl} (ID: ${exportFileId})`);
+      return true;
+    } else {
+      consola.error(`Export file update failed for ID: ${exportFileId} in ${type} ${envId}`);
       return false;
     }
   } catch (error) {
@@ -488,6 +559,47 @@ async function publishAccountTemplateByName(type, envId, name, message = "update
   }
 }
 
+async function publishAccountTemplateById(type, envId, accountTemplateId, message = "Updated with the Silverfin CLI") {
+  try {
+    const matchingHandle = fsUtils.findHandleByID(type, envId, "accountTemplate", accountTemplateId);
+
+    if (!matchingHandle) {
+      consola.error(`No template found with account template ID: ${accountTemplateId} in ${type} ${envId}`);
+      return false;
+    }
+
+    consola.debug(`Updating account template with ID ${accountTemplateId} (handle: ${matchingHandle})...`);
+
+    const template = await AccountTemplate.read(matchingHandle);
+    if (!template) return;
+
+    // Add API-only required fields
+    template.version_comment = message;
+
+    // Filter out the mapping_list_ranges that do not have this "type" and "envId"
+    template.mapping_list_ranges =
+      template.mapping_list_ranges?.filter((range) => {
+        return range.type === type && range.env_id === envId;
+      }) || [];
+
+    if (type == "partner") {
+      template.version_significant_change = false;
+    }
+
+    const response = await SF.updateAccountTemplate(type, envId, accountTemplateId, template);
+
+    if (response && response.data && response.data.name_nl) {
+      consola.success(`Account template updated: ${response.data.name_nl} (ID: ${accountTemplateId})`);
+      return true;
+    } else {
+      consola.error(`Account template update failed for ID: ${accountTemplateId} in ${type} ${envId}`);
+      return false;
+    }
+  } catch (error) {
+    errorUtils.errorHandler(error);
+  }
+}
+
 async function publishAllAccountTemplates(type, envId, message = "updated through the Silverfin CLI") {
   const templates = fsUtils.getAllTemplatesOfAType("accountTemplate");
   for (const name of templates) {
@@ -645,6 +757,41 @@ async function publishSharedPartByName(type, envId, name, message = "Updated thr
       return true;
     } else {
       consola.error(`Shared part update failed: ${name}`);
+      return false;
+    }
+  } catch (error) {
+    errorUtils.errorHandler(error);
+  }
+}
+
+async function publishSharedPartById(type, envId, sharedPartId, message = "Updated with the Silverfin CLI") {
+  try {
+    const matchingHandle = fsUtils.findHandleByID(type, envId, "sharedPart", sharedPartId);
+
+    if (!matchingHandle) {
+      consola.error(`No template found with shared part ID: ${sharedPartId} in ${type} ${envId}`);
+      return false;
+    }
+
+    consola.debug(`Updating shared part with ID ${sharedPartId} (handle: ${matchingHandle})...`);
+
+    const template = await SharedPart.read(matchingHandle);
+    if (!template) return;
+
+    // Add API-only required fields
+    template.version_comment = message;
+
+    if (type == "partner") {
+      template.version_significant_change = false;
+    }
+
+    const response = await SF.updateSharedPart(type, envId, sharedPartId, template);
+
+    if (response && response.data && response.data.name) {
+      consola.success(`Shared part updated: ${response.data.name} (ID: ${sharedPartId})`);
+      return true;
+    } else {
+      consola.error(`Shared part update failed for ID: ${sharedPartId} in ${type} ${envId}`);
       return false;
     }
   } catch (error) {
@@ -1025,6 +1172,7 @@ module.exports = {
   fetchAllReconciliations,
   fetchExistingReconciliations,
   publishReconciliationByHandle,
+  publishReconciliationById,
   publishAllReconciliations,
   newReconciliation,
   newAllReconciliations,
@@ -1033,6 +1181,7 @@ module.exports = {
   fetchAllExportFiles,
   fetchExistingExportFiles,
   publishExportFileByName,
+  publishExportFileById,
   publishAllExportFiles,
   newExportFile,
   newAllExportFiles,
@@ -1040,6 +1189,7 @@ module.exports = {
   fetchAccountTemplateById,
   fetchAllAccountTemplates,
   publishAccountTemplateByName,
+  publishAccountTemplateById,
   publishAllAccountTemplates,
   fetchExistingAccountTemplates,
   newAccountTemplate,
@@ -1049,6 +1199,7 @@ module.exports = {
   fetchAllSharedParts,
   fetchExistingSharedParts,
   publishSharedPartByName,
+  publishSharedPartById,
   publishAllSharedParts,
   newSharedPart,
   newAllSharedParts,
