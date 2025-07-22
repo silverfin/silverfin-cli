@@ -11,7 +11,8 @@ const cliUtils = require("../lib/cli/utils");
 const program = new Command();
 const devMode = require("../lib/cli/devMode");
 const { firmCredentials } = require("../lib/api/firmCredentials");
-const SF = require("../lib/api/sfApi");
+const { SilverfinApi } = require("../lib/api/silverfinApi");
+const sfApi = new SilverfinApi();
 const path = require("path");
 const { consola } = require("consola");
 const { runCommandChecks } = require("../lib/cli/utils");
@@ -438,7 +439,7 @@ program
   .command("authorize")
   .description("Authorize the CLI by entering your Silverfin API credentials")
   .action(() => {
-    SF.authorizeFirm(firmIdDefault);
+    sfApi.authentication.authorizeFirm(firmIdDefault);
   });
 
 // Authorize PARTNER
@@ -512,14 +513,14 @@ program
     }
     if (options.refreshToken) {
       cliUtils.checkDefaultFirm(options.refreshToken, firmIdDefault);
-      const refreshedTokens = await SF.refreshFirmTokens(options.refreshToken);
+      const refreshedTokens = await sfApi.authentication.refreshFirmTokens(options.refreshToken);
 
       if (refreshedTokens) {
         consola.success(`Tokens refreshed for firm ID: ${options.refreshToken}`);
       }
     }
     if (options.refreshPartnerToken) {
-      const refreshedTokens = await SF.refreshPartnerToken(options.refreshPartnerToken);
+      const refreshedTokens = await sfApi.authentication.refreshPartnerToken(options.refreshPartnerToken);
 
       if (refreshedTokens) {
         consola.success(`Partner API key refreshed for partner ID: ${options.refreshPartnerToken}`);
