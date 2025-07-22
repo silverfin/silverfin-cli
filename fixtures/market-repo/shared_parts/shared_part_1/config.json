@@ -1,0 +1,39 @@
+{
+  "id": {
+    "1001": 5601,
+    "1002": 7001
+  },
+  "partner_id": {
+    "25": 4501,
+    "26": 7801
+  },
+  "name": "shared_part_1",
+  "text": "shared_part_1.liquid",
+  "used_in": [
+    {
+      "id": {
+        "1001": 768001,
+        "1002": 888001
+      },
+      "type": "reconciliation_text",
+      "handle": "reconciliation_text_1",
+      "partner_id": {
+        "25": 4561,
+        "26": 7891
+      }
+    },
+    {
+      "id": {
+        "1001": 768002,
+        "1002": 888002
+      },
+      "type": "reconciliation_text",
+      "handle": "reconciliation_text_2",
+      "partner_id": {
+        "25": 4562,
+        "26": 7892
+      }
+    }
+  ],
+  "externally_managed": true
+}
