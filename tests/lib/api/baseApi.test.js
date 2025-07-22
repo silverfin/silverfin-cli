@@ -1,10 +1,10 @@
-const { BaseApi } = require("../../../lib/api/baseApi");
-const { AxiosFactory } = require("../../../lib/api/axiosFactory");
+const { BaseApi } = require("../../../lib/api/internal/baseApi");
+const { AxiosFactory } = require("../../../lib/api/internal/axiosFactory");
 const MockAdapter = require("axios-mock-adapter");
 const axios = require("axios");
 const { consola } = require("consola");
 
-jest.mock("../../../lib/api/axiosFactory");
+jest.mock("../../../lib/api/internal/axiosFactory");
 jest.mock("consola");
 
 describe("BaseApi", () => {

@@ -1,11 +1,11 @@
 const { SilverfinApi } = require("../../../lib/api/silverfinApi");
-const { AxiosFactory } = require("../../../lib/api/axiosFactory");
-const { SilverfinAuthorizer } = require("../../../lib/api/silverfinAuthorizer");
+const { AxiosFactory } = require("../../../lib/api/internal/axiosFactory");
+const { SilverfinAuthorizer } = require("../../../lib/api/internal/silverfinAuthorizer");
 const MockAdapter = require("axios-mock-adapter");
 const axios = require("axios");
 
-jest.mock("../../../lib/api/axiosFactory");
-jest.mock("../../../lib/api/silverfinAuthorizer");
+jest.mock("../../../lib/api/internal/axiosFactory");
+jest.mock("../../../lib/api/internal/silverfinAuthorizer");
 
 // Mock environment variables to avoid exit
 process.env.SF_API_CLIENT_ID = 'test-client-id';

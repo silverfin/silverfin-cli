@@ -1,5 +1,5 @@
 const { firmCredentials } = require("../../../lib/api/firmCredentials");
-const { AxiosFactory } = require("../../../lib/api/axiosFactory");
+const { AxiosFactory } = require("../../../lib/api/internal/axiosFactory");
 const open = require("open");
 const { consola } = require("consola");
 
@@ -8,7 +8,7 @@ jest.mock("prompt-sync", () => {
   return () => mockPrompt;
 });
 
-const { SilverfinAuthorizer } = require("../../../lib/api/silverfinAuthorizer"); // it has to be after mock prompt
+const { SilverfinAuthorizer } = require("../../../lib/api/internal/silverfinAuthorizer"); // it has to be after mock prompt
 
 jest.mock("../../../lib/api/firmCredentials", () => ({
   firmCredentials: {
@@ -20,7 +20,7 @@ jest.mock("../../../lib/api/firmCredentials", () => ({
   },
 }));
 
-jest.mock("../../../lib/api/axiosFactory", () => ({
+jest.mock("../../../lib/api/internal/axiosFactory", () => ({
   AxiosFactory: {
     createInstance: jest.fn(),
     createAuthInstanceForFirm: jest.fn(),
