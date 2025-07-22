@@ -38,20 +38,20 @@ describe("SilverfinApi", () => {
 
   describe("Authentication methods", () => {
     it("should call authorizeFirm", async () => {
-      await silverfinApi.authorizeFirm(123);
+      await silverfinApi.authentication.authorizeFirm(123);
       expect(SilverfinAuthorizer.authorizeFirm).toHaveBeenCalledWith(123);
     });
 
     it("should call refreshFirmTokens", async () => {
       SilverfinAuthorizer.refreshFirm.mockResolvedValue({ success: true });
-      const result = await silverfinApi.refreshFirmTokens(123);
+      const result = await silverfinApi.authentication.refreshFirmTokens(123);
       expect(SilverfinAuthorizer.refreshFirm).toHaveBeenCalledWith(123);
       expect(result).toEqual({ success: true });
     });
 
     it("should call refreshPartnerToken", async () => {
       SilverfinAuthorizer.refreshPartner.mockResolvedValue({ success: true });
-      const result = await silverfinApi.refreshPartnerToken(456);
+      const result = await silverfinApi.authentication.refreshPartnerToken(456);
       expect(SilverfinAuthorizer.refreshPartner).toHaveBeenCalledWith(456);
       expect(result).toEqual({ success: true });
     });
@@ -63,7 +63,7 @@ describe("SilverfinApi", () => {
       const responseData = { id: 1, ...attributes };
       mockAdapter.onPost("reconciliations", attributes).reply(200, responseData);
 
-      const result = await silverfinApi.createReconciliationText("firm", 123, attributes);
+      const result = await silverfinApi.reconciliationTexts.create("firm", 123, attributes);
 
       expect(result).toEqual(responseData);
     });
@@ -75,7 +75,7 @@ describe("SilverfinApi", () => {
       ];
       mockAdapter.onGet("reconciliations").reply(200, responseData);
 
-      const result = await silverfinApi.readReconciliationTexts("firm", 123, 2);
+      const result = await silverfinApi.reconciliationTexts.read("firm", 123, 2);
 
       expect(result).toEqual(responseData);
       expect(mockAdapter.history.get[0].params).toEqual({ page: 2, per_page: 200 });
@@ -85,7 +85,7 @@ describe("SilverfinApi", () => {
       const responseData = { id: 1, name: "test" };
       mockAdapter.onGet("reconciliations/1").reply(200, responseData);
 
-      const result = await silverfinApi.readReconciliationTextById("firm", 123, 1);
+      const result = await silverfinApi.reconciliationTexts.readById("firm", 123, 1);
 
       expect(result).toEqual(responseData);
     });
@@ -95,7 +95,7 @@ describe("SilverfinApi", () => {
       const responseData = { id: 1, ...attributes };
       mockAdapter.onPost("reconciliations/1", attributes).reply(200, responseData);
 
-      const result = await silverfinApi.updateReconciliationText("firm", 123, 1, attributes);
+      const result = await silverfinApi.reconciliationTexts.update("firm", 123, 1, attributes);
 
       expect(result).toEqual(responseData);
     });
@@ -107,7 +107,7 @@ describe("SilverfinApi", () => {
       ];
       mockAdapter.onGet("reconciliations").reply(200, reconciliations);
 
-      const result = await silverfinApi.findReconciliationTextByHandle("firm", 123, "test_handle");
+      const result = await silverfinApi.reconciliationTexts.findByHandle("firm", 123, "test_handle");
 
       expect(result.handle).toBe("test_handle");
     });
@@ -115,7 +115,7 @@ describe("SilverfinApi", () => {
     it("should return null when reconciliation text not found", async () => {
       mockAdapter.onGet("reconciliations").reply(200, []);
 
-      const result = await silverfinApi.findReconciliationTextByHandle("firm", 123, "nonexistent");
+      const result = await silverfinApi.reconciliationTexts.findByHandle("firm", 123, "nonexistent");
 
       expect(result).toBeNull();
     });
@@ -127,7 +127,7 @@ describe("SilverfinApi", () => {
       ];
       mockAdapter.onGet("reconciliations").reply(200, reconciliations);
 
-      const result = await silverfinApi.findReconciliationTextByHandle("firm", 123, "test_handle");
+      const result = await silverfinApi.reconciliationTexts.findByHandle("firm", 123, "test_handle");
 
       expect(result.marketplace_template_id).toBeNull();
     });
@@ -138,7 +138,7 @@ describe("SilverfinApi", () => {
       const responseData = [{ id: 1, name: "shared1" }];
       mockAdapter.onGet("shared_parts").reply(200, responseData);
 
-      const result = await silverfinApi.readSharedParts("firm", 123);
+      const result = await silverfinApi.sharedParts.read("firm", 123);
 
       expect(result).toEqual(responseData);
     });
@@ -148,7 +148,7 @@ describe("SilverfinApi", () => {
       const responseData = { id: 1, ...attributes };
       mockAdapter.onPost("shared_parts", attributes).reply(200, responseData);
 
-      const result = await silverfinApi.createSharedPart("firm", 123, attributes);
+      const result = await silverfinApi.sharedParts.create("firm", 123, attributes);
 
       expect(result).toEqual(responseData);
     });
@@ -160,7 +160,7 @@ describe("SilverfinApi", () => {
       ];
       mockAdapter.onGet("shared_parts").reply(200, sharedParts);
 
-      const result = await silverfinApi.findSharedPartByName("firm", 123, "shared1");
+      const result = await silverfinApi.sharedParts.findByName("firm", 123, "shared1");
 
       expect(result.name).toBe("shared1");
     });
@@ -168,7 +168,7 @@ describe("SilverfinApi", () => {
     it("should return null when shared part not found", async () => {
       mockAdapter.onGet("shared_parts").reply(200, []);
 
-      const result = await silverfinApi.findSharedPartByName("firm", 123, "nonexistent");
+      const result = await silverfinApi.sharedParts.findByName("firm", 123, "nonexistent");
 
       expect(result).toBeNull();
     });
@@ -177,7 +177,7 @@ describe("SilverfinApi", () => {
       const responseData = { success: true };
       mockAdapter.onPost("reconciliations/1/shared_parts/2").reply(200, responseData);
 
-      const result = await silverfinApi.addSharedPartToReconciliation("firm", 123, 2, 1);
+      const result = await silverfinApi.reconciliationTexts.addSharedPart("firm", 123, 2, 1);
 
       expect(result).toEqual(responseData);
     });
@@ -185,7 +185,7 @@ describe("SilverfinApi", () => {
     it("should remove shared part from reconciliation", async () => {
       mockAdapter.onDelete("reconciliations/1/shared_parts/2").reply(204);
 
-      const result = await silverfinApi.removeSharedPartFromReconciliation("firm", 123, 2, 1);
+      const result = await silverfinApi.reconciliationTexts.removeSharedPart("firm", 123, 2, 1);
 
       expect(result).toBeUndefined();
     });
@@ -197,7 +197,7 @@ describe("SilverfinApi", () => {
       const responseData = { id: 1, ...attributes };
       mockAdapter.onPost("export_files", attributes).reply(200, responseData);
 
-      const result = await silverfinApi.createExportFile("firm", 123, attributes);
+      const result = await silverfinApi.exportFiles.create("firm", 123, attributes);
 
       expect(result).toEqual(responseData);
     });
@@ -206,7 +206,7 @@ describe("SilverfinApi", () => {
       const responseData = [{ id: 1, name_nl: "export1" }];
       mockAdapter.onGet("export_files").reply(200, responseData);
 
-      const result = await silverfinApi.readExportFiles("firm", 123);
+      const result = await silverfinApi.exportFiles.read("firm", 123);
 
       expect(result).toEqual(responseData);
     });
@@ -218,7 +218,7 @@ describe("SilverfinApi", () => {
       mockAdapter.onGet("export_files").reply(200, exportFiles);
       mockAdapter.onGet("export_files/1").reply(200, exportFileDetail);
 
-      const result = await silverfinApi.findExportFileByName("firm", 123, "export1");
+      const result = await silverfinApi.exportFiles.findByName("firm", 123, "export1");
 
       expect(result).toEqual(exportFileDetail);
     });
@@ -230,7 +230,7 @@ describe("SilverfinApi", () => {
       const responseData = { id: 1, ...attributes };
       mockAdapter.onPost("account_templates", attributes).reply(200, responseData);
 
-      const result = await silverfinApi.createAccountTemplate("firm", 123, attributes);
+      const result = await silverfinApi.accountTemplates.create("firm", 123, attributes);
 
       expect(result).toEqual(responseData);
     });
@@ -239,7 +239,7 @@ describe("SilverfinApi", () => {
       const responseData = [{ id: 1, name_nl: "template1" }];
       mockAdapter.onGet("account_templates").reply(200, responseData);
 
-      const result = await silverfinApi.readAccountTemplates("firm", 123);
+      const result = await silverfinApi.accountTemplates.read("firm", 123);
 
       expect(result).toEqual(responseData);
     });
@@ -250,7 +250,7 @@ describe("SilverfinApi", () => {
       const responseData = [{ id: 1, fiscal_year: { end_date: "2023-12-31" } }];
       mockAdapter.onGet("/companies/1/periods").reply(200, responseData);
 
-      const result = await silverfinApi.getPeriods(123, 1);
+      const result = await silverfinApi.companyData.getPeriods(123, 1);
 
       expect(result).toEqual(responseData);
     });
@@ -261,7 +261,7 @@ describe("SilverfinApi", () => {
         { id: 2, fiscal_year: { end_date: "2022-12-31" } },
       ];
 
-      const result = silverfinApi.findPeriod(1, periods);
+      const result = silverfinApi.companyData.findPeriod(1, periods);
 
       expect(result.id).toBe(1);
     });
@@ -270,7 +270,7 @@ describe("SilverfinApi", () => {
       const responseData = { id: 1, name: "Company 1" };
       mockAdapter.onGet("/companies/1").reply(200, responseData);
 
-      const result = await silverfinApi.getCompanyDrop(123, 1);
+      const result = await silverfinApi.companyData.getCompanyDrop(123, 1);
 
       expect(result).toEqual(responseData);
     });
@@ -279,7 +279,7 @@ describe("SilverfinApi", () => {
       const responseData = [{ id: 1, name: "Workflow 1" }];
       mockAdapter.onGet("/companies/1/periods/1/workflows").reply(200, responseData);
 
-      const result = await silverfinApi.getWorkflows(123, 1, 1);
+      const result = await silverfinApi.companyData.getWorkflows(123, 1, 1);
 
       expect(result).toEqual(responseData);
     });
@@ -291,7 +291,7 @@ describe("SilverfinApi", () => {
       mockAdapter.onGet("/companies/1/periods/1/workflows").reply(200, workflowsData);
       mockAdapter.onGet("/companies/1/periods/1/workflows/1/reconciliations").reply(200, reconciliationsData);
 
-      const result = await silverfinApi.findReconciliationInWorkflows(123, "test_handle", 1, 1);
+      const result = await silverfinApi.companyData.findReconciliationInWorkflows(123, "test_handle", 1, 1);
 
       expect(result.handle).toBe("test_handle");
     });
@@ -303,7 +303,7 @@ describe("SilverfinApi", () => {
       const responseData = { id: 1, status: "running" };
       mockAdapter.onPost("reconciliations/test", attributes).reply(200, responseData);
 
-      const result = await silverfinApi.createTestRun(123, attributes, "reconciliationText");
+      const result = await silverfinApi.testing.createTestRun(123, attributes, "reconciliationText");
 
       expect(result).toEqual(responseData);
     });
@@ -313,7 +313,7 @@ describe("SilverfinApi", () => {
       const responseData = { id: 1, status: "running" };
       mockAdapter.onPost("account_templates/test", attributes).reply(200, responseData);
 
-      const result = await silverfinApi.createTestRun(123, attributes, "accountTemplate");
+      const result = await silverfinApi.testing.createTestRun(123, attributes, "accountTemplate");
 
       expect(result).toEqual(responseData);
     });
@@ -323,7 +323,7 @@ describe("SilverfinApi", () => {
       const responseData = { valid: true };
       mockAdapter.onPost("reconciliations/verify_liquid", attributes).reply(200, responseData);
 
-      const result = await silverfinApi.verifyLiquid(123, attributes);
+      const result = await silverfinApi.testing.verifyLiquid(123, attributes);
 
       expect(result).toEqual(responseData);
     });
@@ -334,7 +334,7 @@ describe("SilverfinApi", () => {
       const responseData = { id: 123, name: "Test Firm" };
       mockAdapter.onGet("/user/firm").reply(200, responseData);
 
-      const result = await silverfinApi.getFirmDetails(123);
+      const result = await silverfinApi.companyData.getFirmDetails(123);
 
       expect(result).toEqual(responseData);
     });
