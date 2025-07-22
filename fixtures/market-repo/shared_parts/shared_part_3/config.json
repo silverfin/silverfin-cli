@@ -1,0 +1,14 @@
+{
+  "id": {
+    "1001": 5603,
+    "1002": 7003
+  },
+  "partner_id": {
+    "25": 4503,
+    "26": 7803
+  },
+  "name": "shared_part_2",
+  "text": "shared_part_2.liquid",
+  "used_in": [],
+  "externally_managed": true
+}
