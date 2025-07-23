@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.41.0] (xx/xx/2025) TODO
+- Add `create-all-templates` and `update-all-templates` commands, which will create or update all templates for a given firm at once
+
 ## [1.40.0] (08/07/2025)
 - `stats` command now displays the amount of yaml files that have at least two unit tests defined
 
