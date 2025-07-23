@@ -401,6 +401,12 @@ program
     if (settings.type == "firm") {
       cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     }
+
+    // Ask for a confirmation if the user has not confirmed with --yes
+    if (!options.yes) {
+      cliUtils.promptConfirmation();
+    }
+
     toolkit.newAllReconciliations(settings.type, settings.envId);
     toolkit.newAllExportFiles(settings.type, settings.envId);
     toolkit.newAllAccountTemplates(settings.type, settings.envId);
@@ -422,6 +428,12 @@ program
     if (settings.type == "firm") {
       cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     }
+
+    // Ask for a confirmation if the user has not confirmed with --yes
+    if (!options.yes) {
+      cliUtils.promptConfirmation();
+    }
+
     toolkit.publishAllReconciliations(settings.type, settings.envId, options.message);
     toolkit.publishAllExportFiles(settings.type, settings.envId, options.message);
     toolkit.publishAllAccountTemplates(settings.type, settings.envId, options.message);
