@@ -393,23 +393,13 @@ program
   .description("Create all templates at once")
   .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
   .option("-p, --partner <partner-id>", "Specify the partner to be used")
-  .option("-a, --all", "Try to create all templates stored in the repository")
   .action((options) => {
-    cliUtils.checkPartnerSupport(options);
-    const settings = runCommandChecks(
-      ["all"],
-      options,
-      firmIdDefault,
-      false, // Message required
-      false // Confirmation check skipped
-    );
-
-    if (options.all) {
-      toolkit.newAllReconciliations(settings.type, settings.envId);
-      toolkit.newAllExportFiles(settings.type, settings.envId);
-      toolkit.newAllAccountTemplates(settings.type, settings.envId);
-      toolkit.newAllSharedParts(settings.type, settings.envId);
-    }
+    // Make sure users cannot use this command for partner environments
+    cliUtils.checkPartnerSupportForBulkCommands(options);
+    toolkit.newAllReconciliations(settings.type, settings.envId);
+    toolkit.newAllExportFiles(settings.type, settings.envId);
+    toolkit.newAllAccountTemplates(settings.type, settings.envId);
+    toolkit.newAllSharedParts(settings.type, settings.envId);
   });
 
 // UPDATE all templates
@@ -418,23 +408,14 @@ program
   .description("Update all templates at once")
   .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
   .option("-p, --partner <partner-id>", "Specify the partner to be used")
-  .option("-a, --all", "Update all templates")
   .option('-m, --message "<message>"', "Add a message to Silverfin's changelog (optional) | Make sure to always enclose the message in double quotes", undefined)
   .action((options) => {
-    cliUtils.checkPartnerSupport(options);
-    const settings = runCommandChecks(
-      ["all"],
-      options,
-      firmIdDefault,
-      true // Message required
-    );
-
-    if (options.all) {
-      toolkit.publishAllReconciliations(settings.type, settings.envId, options.message);
-      toolkit.publishAllExportFiles(settings.type, settings.envId, options.message);
-      toolkit.publishAllAccountTemplates(settings.type, settings.envId, options.message);
-      toolkit.publishAllSharedParts(settings.type, settings.envId, options.message);
-    }
+    // Make sure users cannot use this command for partner environments
+    cliUtils.checkPartnerSupportForBulkCommands(options);
+    toolkit.publishAllReconciliations(settings.type, settings.envId, options.message);
+    toolkit.publishAllExportFiles(settings.type, settings.envId, options.message);
+    toolkit.publishAllAccountTemplates(settings.type, settings.envId, options.message);
+    toolkit.publishAllSharedParts(settings.type, settings.envId, options.message);
   });
 
 // Run Liquid Test
