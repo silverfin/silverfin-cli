@@ -396,6 +396,11 @@ program
   .action((options) => {
     // Make sure users cannot use this command for partner environments
     cliUtils.checkPartnerSupportForBulkCommands(options);
+
+    const settings = cliUtils.getCommandSettings(options);
+    if (settings.type == "firm") {
+      cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
+    }
     toolkit.newAllReconciliations(settings.type, settings.envId);
     toolkit.newAllExportFiles(settings.type, settings.envId);
     toolkit.newAllAccountTemplates(settings.type, settings.envId);
@@ -412,6 +417,11 @@ program
   .action((options) => {
     // Make sure users cannot use this command for partner environments
     cliUtils.checkPartnerSupportForBulkCommands(options);
+
+    const settings = cliUtils.getCommandSettings(options);
+    if (settings.type == "firm") {
+      cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
+    }
     toolkit.publishAllReconciliations(settings.type, settings.envId, options.message);
     toolkit.publishAllExportFiles(settings.type, settings.envId, options.message);
     toolkit.publishAllAccountTemplates(settings.type, settings.envId, options.message);
