@@ -1,4 +1,5 @@
-const SF = require("./lib/api/sfApi");
+const { SilverfinApi } = require("./lib/api/silverfinApi");
+const sfApi = new SilverfinApi();
 const fsUtils = require("./lib/utils/fsUtils");
 const errorUtils = require("./lib/utils/errorUtils");
 const { ReconciliationText } = require("./lib/templates/reconciliationText");
@@ -10,7 +11,7 @@ const { consola } = require("consola");
 
 async function fetchReconciliationById(type, envId, id) {
   try {
-    const template = await SF.readReconciliationTextById(type, envId, id);
+    const template = await sfApi.reconciliationTexts.readById(type, envId, id);
     if (!template || !template.data) {
       consola.error(`Reconciliation with id ${id} wasn't found in ${type} ${envId}`);
       process.exit(1);
@@ -47,7 +48,7 @@ async function fetchReconciliationByHandle(type, envId, handle) {
     }
 
     if (!id) {
-      existingTemplate = await SF.findReconciliationTextByHandle(type, envId, handle);
+      existingTemplate = await sfApi.reconciliationTexts.findByHandle(type, envId, handle);
 
       if (!existingTemplate) {
         consola.error(
@@ -67,7 +68,7 @@ async function fetchReconciliationByHandle(type, envId, handle) {
 }
 
 async function fetchAllReconciliations(type, envId, page = 1) {
-  const templates = await SF.readReconciliationTexts(type, envId, page);
+  const templates = await sfApi.reconciliationTexts.read(type, envId, page);
   if (templates.length == 0) {
     if (page == 1) {
       consola.error(`No reconciliations found in ${type} ${envId}`);
@@ -148,10 +149,10 @@ async function publishReconciliationByHandle(type, envId, handle, message = "Upd
       delete template.is_active;
     }
 
-    const response = await SF.updateReconciliationText(type, envId, templateId, template);
+    const response = await sfApi.reconciliationTexts.update(type, envId, templateId, template);
 
-    if (response && response.data && response.data.handle) {
-      consola.success(`Reconciliation updated: ${response.data.handle}`);
+    if (response && response.handle) {
+      consola.success(`Reconciliation updated: ${response.handle}`);
       return true;
     } else {
       consola.error(`Reconciliation update failed: ${handle}`);
@@ -172,7 +173,7 @@ async function publishAllReconciliations(type, envId, message = "updated through
 
 async function newReconciliation(type, envId, handle) {
   try {
-    const existingTemplate = await SF.findReconciliationTextByHandle(type, envId, handle);
+    const existingTemplate = await sfApi.reconciliationTexts.findByHandle(type, envId, handle);
     if (existingTemplate) {
       consola.warn(`Reconciliation "${handle}" already exists on ${type} ${envId}. Skipping its creation`);
       return;
@@ -181,10 +182,10 @@ async function newReconciliation(type, envId, handle) {
     const template = await ReconciliationText.read(handle);
     if (!template) return;
     template.version_comment = "Created with the Silverfin CLI";
-    const response = await SF.createReconciliationText(type, envId, template);
+    const response = await sfApi.reconciliationTexts.create(type, envId, template);
     // Store new id
-    if (response && response.status == 201) {
-      ReconciliationText.updateTemplateId(type, envId, handle, response.data.id);
+    if (response && response.id) {
+      ReconciliationText.updateTemplateId(type, envId, handle, response.id);
       consola.success(`Reconciliation "${handle}" created on ${type} ${envId}`);
     }
   } catch (error) {
@@ -201,7 +202,7 @@ async function newAllReconciliations(type, envId) {
 
 async function fetchExportFileByName(type, envId, name) {
   try {
-    const template = await SF.findExportFileByName(type, envId, name);
+    const template = await sfApi.exportFiles.findByName(type, envId, name);
 
     if (!template) {
       consola.error(`Export file "${name}" wasn't found in ${type} ${envId}`);
@@ -220,7 +221,7 @@ async function fetchExportFileByName(type, envId, name) {
 
 async function fetchExportFileById(type, envId, id) {
   try {
-    const template = await SF.readExportFileById(type, envId, id);
+    const template = await sfApi.exportFiles.readById(type, envId, id);
 
     if (!template) {
       consola.error(`Export file with id ${id} wasn't found in ${type} ${envId}`);
@@ -244,7 +245,7 @@ async function fetchExportFileById(type, envId, id) {
 }
 
 async function fetchAllExportFiles(type, envId, page = 1) {
-  const templates = await SF.readExportFiles(type, envId, page);
+  const templates = await sfApi.exportFiles.read(type, envId, page);
 
   if (templates.length == 0) {
     if (page == 1) {
@@ -312,10 +313,10 @@ async function publishExportFileByName(type, envId, name, message = "updated thr
       template.version_significant_change = false;
     }
 
-    const response = await SF.updateExportFile(type, envId, templateId, template);
+    const response = await sfApi.exportFiles.update(type, envId, templateId, template);
 
-    if (response && response.data && response.data.name_nl) {
-      consola.success(`Export file updated: ${response.data.name_nl}`);
+    if (response && response.name_nl) {
+      consola.success(`Export file updated: ${response.name_nl}`);
       return true;
     } else {
       consola.error(`Export file update failed: ${name}`);
@@ -336,7 +337,7 @@ async function publishAllExportFiles(type, envId, message = "updated through the
 
 async function newExportFile(type, envId, name) {
   try {
-    const existingTemplate = await SF.findExportFileByName(type, envId, name);
+    const existingTemplate = await sfApi.exportFiles.findByName(type, envId, name);
     if (existingTemplate) {
       consola.warn(`Export file "${name}" already exists on ${type} ${envId}. Skipping its creation`);
       return;
@@ -344,11 +345,11 @@ async function newExportFile(type, envId, name) {
     const template = await ExportFile.read(name);
     if (!template) return;
     template.version_comment = "Created through the Silverfin CLI";
-    const response = await SF.createExportFile(type, envId, template);
-    const handle = response.data.name_nl;
+    const response = await sfApi.exportFiles.create(type, envId, template);
+    const handle = response.name_nl;
     // Store new id
-    if (response && response.status == 201) {
-      ExportFile.updateTemplateId(type, envId, handle, response.data.id);
+    if (response && response.id) {
+      ExportFile.updateTemplateId(type, envId, handle, response.id);
       consola.success(`Export file "${handle}" created on ${type} ${envId}`);
     }
   } catch (error) {
@@ -365,7 +366,7 @@ async function newAllExportFiles(type, envId) {
 
 async function fetchAccountTemplateByName(type, envId, name) {
   try {
-    const template = await SF.findAccountTemplateByName(type, envId, name);
+    const template = await sfApi.accountTemplates.findByName(type, envId, name);
 
     if (!template) {
       consola.error(`Account template "${name}" wasn't found in ${type} ${envId}`);
@@ -384,7 +385,7 @@ async function fetchAccountTemplateByName(type, envId, name) {
 
 async function fetchAccountTemplateById(type, envId, id) {
   try {
-    const template = await SF.readAccountTemplateById(type, envId, id);
+    const template = await sfApi.accountTemplates.readById(type, envId, id);
 
     if (!template) {
       consola.error(`Account template ${id} wasn't found in ${type} ${envId}`);
@@ -402,7 +403,7 @@ async function fetchAccountTemplateById(type, envId, id) {
 }
 
 async function fetchAllAccountTemplates(type, envId, page = 1) {
-  const templates = await SF.readAccountTemplates(type, envId, page);
+  const templates = await sfApi.accountTemplates.read(type, envId, page);
 
   if (templates.length == 0) {
     if (page == 1) {
@@ -474,10 +475,10 @@ async function publishAccountTemplateByName(type, envId, name, message = "update
       template.version_significant_change = false;
     }
 
-    const response = await SF.updateAccountTemplate(type, envId, templateId, template);
+    const response = await sfApi.accountTemplates.update(type, envId, templateId, template);
 
-    if (response && response.data && response.data.name_nl) {
-      consola.success(`Account template updated: ${response.data.name_nl}`);
+    if (response && response.name_nl) {
+      consola.success(`Account template updated: ${response.name_nl}`);
       return true;
     } else {
       consola.error(`Account template update failed: ${name}`);
@@ -498,7 +499,7 @@ async function publishAllAccountTemplates(type, envId, message = "updated throug
 
 async function newAccountTemplate(type, envId, name) {
   try {
-    const existingTemplate = await SF.findAccountTemplateByName(type, envId, name);
+    const existingTemplate = await sfApi.accountTemplates.findByName(type, envId, name);
 
     if (existingTemplate) {
       consola.warn(`Account template "${name}" already exists on ${type} ${envId}. Skipping its creation`);
@@ -513,12 +514,12 @@ async function newAccountTemplate(type, envId, name) {
       return range.type === "firm" && range.env_id === envId;
     });
 
-    const response = await SF.createAccountTemplate(type, envId, template);
-    const handle = response.data.name_nl;
+    const response = await sfApi.accountTemplates.create(type, envId, template);
+    const handle = response.name_nl;
 
     // Store new id
-    if (response && response.status == 201) {
-      AccountTemplate.updateTemplateId(type, envId, handle, response.data.id);
+    if (response && response.id) {
+      AccountTemplate.updateTemplateId(type, envId, handle, response.id);
       consola.success(`Account template "${handle}" created on on ${type} ${envId}.`);
     }
   } catch (error) {
@@ -535,7 +536,7 @@ async function newAllAccountTemplates(type, envId) {
 
 async function fetchSharedPartById(type, envId, sharedPartId) {
   try {
-    const template = await SF.readSharedPartById(type, envId, sharedPartId);
+    const template = await sfApi.sharedParts.readById(type, envId, sharedPartId);
     if (!template || !template.data) {
       consola.error(`Shared part ${sharedPartId} wasn't found in ${type} ${envId}`);
       process.exit(1);
@@ -552,7 +553,7 @@ async function fetchSharedPartById(type, envId, sharedPartId) {
 }
 
 async function fetchSharedPartByName(type, envId, name) {
-  const sharedPartByName = await SF.findSharedPartByName(type, envId, name);
+  const sharedPartByName = await sfApi.sharedParts.findByName(type, envId, name);
   if (!sharedPartByName) {
     consola.error(`Shared part "${name}" wasn't found in ${type} ${envId}`);
     process.exit(1);
@@ -564,7 +565,7 @@ async function fetchSharedPartByName(type, envId, name) {
 }
 
 async function fetchAllSharedParts(type, envId, page = 1) {
-  const response = await SF.readSharedParts(type, envId, page);
+  const response = await sfApi.sharedParts.read(type, envId, page);
   const sharedParts = response.data;
   if (sharedParts.length == 0) {
     if (page == 1) {
@@ -638,10 +639,10 @@ async function publishSharedPartByName(type, envId, name, message = "Updated thr
       template.version_significant_change = false;
     }
 
-    const response = await SF.updateSharedPart(type, envId, templateId, template);
+    const response = await sfApi.sharedParts.update(type, envId, templateId, template);
 
-    if (response && response.data && response.data.name) {
-      consola.success(`Shared part updated: ${response.data.name}`);
+    if (response && response.name) {
+      consola.success(`Shared part updated: ${response.name}`);
       return true;
     } else {
       consola.error(`Shared part update failed: ${name}`);
@@ -662,7 +663,7 @@ async function publishAllSharedParts(type, envId, message = "updated through the
 
 async function newSharedPart(type, envId, name) {
   try {
-    const existingSharedPart = await SF.findSharedPartByName(type, envId, name);
+    const existingSharedPart = await sfApi.sharedParts.findByName(type, envId, name);
 
     if (existingSharedPart) {
       consola.warn(`Shared part "${name}" already exists on ${type} ${envId}. Skipping its creation`);
@@ -671,11 +672,11 @@ async function newSharedPart(type, envId, name) {
     const template = await SharedPart.read(name);
     if (!template) return;
     template.version_comment = "Created through the API";
-    const response = await SF.createSharedPart(type, envId, template);
+    const response = await sfApi.sharedParts.create(type, envId, template);
 
     // Store new firm id
-    if (response && response.status == 201) {
-      SharedPart.updateTemplateId(type, envId, name, response.data.id);
+    if (response && response.id) {
+      SharedPart.updateTemplateId(type, envId, name, response.id);
       consola.success(`Shared part "${name}" created on ${type} ${envId}`);
     }
   } catch (error) {
@@ -727,20 +728,20 @@ async function addSharedPart(type, envId, sharedPartName, templateHandle, templa
     let addSharedPartOnPlatform;
     switch (templateType) {
       case "reconciliationText":
-        addSharedPartOnPlatform = SF.addSharedPartToReconciliation;
+        addSharedPartOnPlatform = sfApi.reconciliationTexts.addSharedPart;
         break;
       case "exportFile":
-        addSharedPartOnPlatform = SF.addSharedPartToExportFile;
+        addSharedPartOnPlatform = sfApi.exportFiles.addSharedPart;
         break;
       case "accountTemplate":
-        addSharedPartOnPlatform = SF.addSharedPartToAccountTemplate;
+        addSharedPartOnPlatform = sfApi.accountTemplates.addSharedPart;
         break;
     }
 
     const response = await addSharedPartOnPlatform(type, envId, sharedPartId, templateId);
 
     // Success or failure
-    if (!response || !response.status || !response.status === 201) {
+    if (!response) {
       consola.warn(`Adding shared part "${sharedPartName}" to "${templateHandle}" failed (${templateType}).`);
       return false;
     }
@@ -825,7 +826,7 @@ async function addAllSharedParts(type, envId, force = false) {
 
     // Fetch shared part from the platform
     const sharedPartId = sharedPartConfig[envConfigKey][envId];
-    const sharedPartData = await SF.readSharedPartById(type, envId, sharedPartId);
+    const sharedPartData = await sfApi.sharedParts.readById(type, envId, sharedPartId);
     if (!sharedPartData) {
       consola.warn(`Shared part ${sharedPartName} not found in ${type} ${envId}. Skipping.`);
       continue;
@@ -885,19 +886,19 @@ async function removeSharedPart(type, envId, sharedPartHandle, templateHandle, t
     let removeSharedPart;
     switch (templateType) {
       case "reconciliationText":
-        removeSharedPart = SF.removeSharedPartFromReconciliation;
+        removeSharedPart = sfApi.reconciliationTexts.removeSharedPart;
 
         break;
       case "exportFile":
-        removeSharedPart = SF.removeSharedPartFromExportFile;
+        removeSharedPart = sfApi.exportFiles.removeSharedPart;
         break;
       case "accountTemplate":
-        removeSharedPart = SF.removeSharedPartFromAccountTemplate;
+        removeSharedPart = sfApi.accountTemplates.removeSharedPart;
         break;
     }
     const response = await removeSharedPart(type, envId, sharedPartId, templateId);
 
-    if (response && response?.status === 200) {
+    if (response) {
       consola.debug(`Remove shared part with id ${sharedPartId} removed from ${templateType} with id ${templateId} on the platform.`);
     }
 
@@ -945,16 +946,16 @@ async function getTemplateId(type, envId, templateType, handle) {
   let templateText;
   switch (templateType) {
     case "reconciliationText":
-      templateText = await SF.findReconciliationTextByHandle(type, envId, handle);
+      templateText = await sfApi.reconciliationTexts.findByHandle(type, envId, handle);
       break;
     case "exportFile":
-      templateText = await SF.findExportFileByName(type, envId, handle);
+      templateText = await sfApi.exportFiles.findByName(type, envId, handle);
       break;
     case "sharedPart":
-      templateText = await SF.findSharedPartByName(type, envId, handle);
+      templateText = await sfApi.sharedParts.findByName(type, envId, handle);
       break;
     case "accountTemplate":
-      templateText = await SF.findAccountTemplateByName(type, envId, handle);
+      templateText = await sfApi.accountTemplates.findByName(type, envId, handle);
       break;
   }
 
@@ -1006,7 +1007,7 @@ async function getAllTemplatesId(type, envId, templateType) {
 
 async function updateFirmName(firmId) {
   try {
-    const firmDetails = await SF.getFirmDetails(firmId);
+    const firmDetails = await sfApi.companyData.getFirmDetails(firmId);
     if (!firmDetails) {
       consola.warn(`Firm ${firmId} not found.`);
       return false;
