@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.41.0] (28/07/2025)
+- Add tests for the accountTemplate class
+
 ## [1.40.0] (08/07/2025)
 - `stats` command now displays the amount of yaml files that have at least two unit tests defined
 
