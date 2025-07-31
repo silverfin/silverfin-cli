@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.41.1] (31/07/2025)
+- Make sure that not all locales get populated automatically
+
 ## [1.41.0] (28/07/2025)
 - Add tests for the accountTemplate class
 
