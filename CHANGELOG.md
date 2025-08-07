@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.42.0] (07/08/2025)
+Now it is possible to call update commands using the `--id` option, which allows to update a specific template by its ID.
+For example: `silverfin update-reconciliation --id 12345`
+
 ## [1.41.0] (28/07/2025)
 - Add tests for the accountTemplate class
 
