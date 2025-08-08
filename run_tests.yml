@@ -1,0 +1,215 @@
+name: run-liquid-tests
+run-name: Run liquid tests of updated reconciliations and reconciliations that use updated shared parts
+on: 
+  workflow_call:
+
+  pull_request:
+    branches:
+      - "*"
+  push:
+    branches:
+      - "main"
+
+permissions:
+  contents: read
+jobs:
+  check-auth:
+    uses: ./.github/workflows/check_auth.yml
+    secrets: inherit
+
+  check-changed-templates:
+    runs-on: ubuntu-latest
+    outputs:
+      changed_templates: ${{ steps.templates_changed.outputs.changed_templates }}
+    steps:
+      - name: Checkout Repository - Fetch all history for all tags and branches
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Get changed liquid files
+        id: changed-files
+        uses: tj-actions/changed-files@v41
+        with:
+          since_last_remote_commit: false
+          dir_names: false
+          ref: 'main'
+          files: |
+            **/**.{liquid,yml,yaml,json}
+      - name: Filter templates changed
+        id: templates_changed
+        run: |
+          pattern="(?:reconciliation_texts|shared_parts)/([^/]+)/"
+          changed_files="${{ steps.changed-files.outputs.all_changed_files }}"
+          if [ -n "$changed_files" ]; then
+            filtered_names=($(printf "%s\n" "$changed_files" | grep -oP "$pattern" || true))
+            if [ $? -ne 0 ]; then
+              echo "No files match the pattern"
+              changed_templates=()
+            else
+              # Remove the trailing "/" from the extracted names
+              filtered_names=("${filtered_names[@]%/}")
+              # Remove duplicates
+              changed_templates=($(printf "%s\n" "${filtered_names[@]}" | sort -u))
+            fi
+          else
+            echo "No changed files"
+            changed_templates=()
+          fi
+          # Store outputs
+          if [ ${#changed_templates[@]} -eq 0 ]; then
+            echo "changed_templates=[]" >> $GITHUB_OUTPUT
+          else
+            echo "changed_templates=${changed_templates[*]}" >> $GITHUB_OUTPUT
+            # Print the templates names
+            for name in "${changed_templates[@]}"; do
+              echo "$name"
+            done
+          fi
+          exit 0
+
+  test-templates:
+    runs-on: ubuntu-latest
+    env:
+      SF_API_CLIENT_ID: "${{ secrets.SF_API_CLIENT_ID }}"
+      SF_API_SECRET: "${{ secrets.SF_API_SECRET }}"
+      CHANGED_TEMPLATES: "${{ needs.check-changed-templates.outputs.changed_templates }}"
+    if: ${{ needs.check-changed-templates.outputs.changed_templates != '[]' }}
+    needs: [check-auth, check-changed-templates]
+    steps:
+      - name: Checkout Repository - Fetch all history for all tags and branches
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Setup Node v18
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      - name: Load Silverfin config file from secrets
+        run: |
+          mkdir -p $HOME/.silverfin/
+          touch $HOME/.silverfin/config.json
+          echo '${{ secrets.CONFIG_JSON }}' > $HOME/.silverfin/config.json
+      - name: Add silverfin-cli package latest version
+        run: |
+          npm install https://github.com/silverfin/silverfin-cli.git
+          VERSION=$(./node_modules/silverfin-cli/bin/cli.js -V)
+          echo "CLI version: ${VERSION}"
+      - name: Run liquid tests for updated templates
+        run: |
+          declare -a ERRORS
+          for CURRENT_DIR in ${{ env.CHANGED_TEMPLATES }}; do
+            echo "Checking ${CURRENT_DIR}"
+            while [[ "${CURRENT_DIR}" != "." ]]; do
+              if [[ -e "${CURRENT_DIR}/config.json" ]]; then
+                HANDLE=$(cat ${CURRENT_DIR}/config.json | jq -r ".handle // .name")
+                
+                # Check if test_firm_id is present in config
+                TEST_FIRM_ID=$(cat ${CURRENT_DIR}/config.json | jq -r ".test_firm_id // empty")
+
+                if [[ -n "$TEST_FIRM_ID" ]]; then
+                  # Check if test_firm_id exists in the .id object
+                  AVAILABLE_FIRM_IDS=$(cat ${CURRENT_DIR}/config.json | jq -r ".id | keys[]" 2>/dev/null || echo "")
+                  
+                  if [[ "$AVAILABLE_FIRM_IDS" == *"$TEST_FIRM_ID"* ]]; then
+                    FIRM_ID="$TEST_FIRM_ID"
+                    echo "Using configured test_firm_id: ${FIRM_ID}"
+                  else
+                    echo "Warning: test_firm_id '${TEST_FIRM_ID}' not found in .id object, falling back to default"
+                    FIRM_ID=$(cat ${CURRENT_DIR}/config.json | jq -r ".id" | jq "keys_unsorted" | jq "first" | tr -d '"')
+                  fi
+                else
+                  # No test_firm_id configured, use default
+                  FIRM_ID=$(cat ${CURRENT_DIR}/config.json | jq -r ".id" | jq "keys_unsorted" | jq "first" | tr -d '"')
+                fi
+                if [[ "${CURRENT_DIR}" == *reconciliation_texts* ]]; then
+                  # FETCH THE NEWEST VERSION OF THE TOKENS FROM THE SECRETS, IN CASE THEY WERE UPDATED BY THE INITIATION OF A CONCURRENT WORKFLOW
+                  echo '${{ secrets.CONFIG_JSON }}' > $HOME/.silverfin/config.json
+                  # RUN TEST
+                  echo "Running tests for ${HANDLE} in firm ${FIRM_ID}"
+                  FORMATTED_OUTPUT=$(node ./node_modules/silverfin-cli/bin/cli.js run-test --handle "${HANDLE}" --firm "${FIRM_ID}")
+                  OUTPUT=$(node ./node_modules/silverfin-cli/bin/cli.js run-test --handle "${HANDLE}" --firm "${FIRM_ID}" --status 2>&1)
+                  # CHECK OUTPUT
+                  if [[ "$OUTPUT" =~ "PASSED" ]]; then
+                    echo "${HANDLE}: passed"
+                  elif [[ "$OUTPUT" =~ "FAILED" ]]; then
+                    echo "${HANDLE}: failed"
+                    echo "Details of test run: ${FORMATTED_OUTPUT}"
+                    ERRORS+=("${HANDLE}")
+                  else
+                    echo "${HANDLE}: other errors: ${OUTPUT}"
+                    ERRORS+=("${OUTPUT}")
+                  fi
+                fi
+                break
+              else
+                echo "Config file not found in ${CURRENT_DIR}"
+                CURRENT_DIR="$(dirname "${CURRENT_DIR}")"
+              fi
+            done
+          done
+          # CHECK ERRORS PRESENT
+          if [ ${#ERRORS[@]} -eq 0 ]; then
+              echo "All tests have passed"
+          else
+              echo "Errors: ${ERRORS[@]}, please run the tests locally to fix the errors"
+              exit 1
+          fi
+     
+      # - name: Get changed files in the shared_parts folder
+      #   id: changed-files-shared-parts
+      #   uses: tj-actions/changed-files@v35
+      #   with:
+      #     since_last_remote_commit: false
+      #     dir_names: true
+      #     files: "shared_parts"
+      # - name: List all changed files in the shared_parts folder
+      #   run: |
+      #     for file in ${{ steps.changed-files-shared-parts.outputs.all_changed_files }}; do
+      #       echo "$file was changed"
+      #     done
+      # - name: Run liquid tests for reconciliations that use updated shared parts
+      #   run: |
+      #     declare -a ERRORS
+      #     for CURRENT_DIR in ${{ steps.changed-files-shared-parts.outputs.all_changed_files }}; do
+      #       echo "Checking ${CURRENT_DIR}"
+      #       while [[ "${CURRENT_DIR}" != "." ]]; do
+      #         if [[ -e "${CURRENT_DIR}/config.json" ]]; then
+      #           JSON=$(cat ${CURRENT_DIR}/config.json)
+      #           HANDLES=$(echo "$JSON" | jq -r '.used_in[].handle')
+      #           # LOOP THROUGH EACH RECONCILIATION
+      #           for HANDLE in $HANDLES; do
+      #             # CHECK IF RECONCILIATION CONFIG IS IMPORTED
+      #             if [[ -f "./reconciliation_texts/${HANDLE}/config.json" ]]; then
+      #               # RUN THE TEST FOR THE FIRST FIRM ID IN THE RECONCILIATION CONFIG
+      #               FIRM_ID=$(cat ./reconciliation_texts/${HANDLE}/config.json | jq -r ".id" | jq "keys_unsorted" | jq "first" | tr -d '"')
+      #               # RUN TEST
+      #               echo "Running tests for ${HANDLE} in firm ${FIRM_ID}"
+      #               FORMATTED_OUTPUT=$(node ./node_modules/silverfin-cli/bin/cli.js run-test --handle "${HANDLE}" --firm "${FIRM_ID}")
+      #               OUTPUT=$(node ./node_modules/silverfin-cli/bin/cli.js run-test --handle "${HANDLE}" --firm "${FIRM_ID}" --status 2>&1)
+      #               # CHECK OUTPUT
+      #               if [[ "$OUTPUT" =~ "PASSED" ]]; then
+      #                 echo "${HANDLE}: passed"
+      #               elif [[ "$OUTPUT" =~ "FAILED" ]]; then
+      #                 echo "${HANDLE}: failed"
+      #                 echo "Details of test run: ${FORMATTED_OUTPUT}"
+      #                 ERRORS+=("${HANDLE}")
+      #               else
+      #                 echo "${HANDLE}: other errors: ${OUTPUT}"
+      #                 ERRORS+=("${OUTPUT}")
+      #               fi
+      #             fi
+      #           done
+      #           break
+      #         else
+      #           echo "Config file not found in ${CURRENT_DIR}"
+      #           CURRENT_DIR="$(dirname "${CURRENT_DIR}")"
+      #         fi
+      #       done
+      #     done
+      #     # CHECK ERRORS PRESENT
+      #     if [ ${#ERRORS[@]} -eq 0 ]; then
+      #         echo "All tests have passed"
+      #     else
+      #         echo "Errors: ${ERRORS[@]}, please run the tests locally to fix the errors"
+      #         exit 1
+      #     fi

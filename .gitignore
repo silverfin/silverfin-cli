@@ -7,7 +7,7 @@ config.json
 .DS_Store
 
 # Template directories
-reconciliation_texts
+# reconciliation_texts
 shared_parts
 account_templates
 permanent_texts
