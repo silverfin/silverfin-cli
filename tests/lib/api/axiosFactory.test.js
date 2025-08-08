@@ -1,7 +1,7 @@
 const { consola } = require("consola");
 const axios = require("axios");
 const { firmCredentials } = require("../../../lib/api/firmCredentials");
-const { AxiosFactory } = require("../../../lib/api/axiosFactory");
+const { AxiosFactory } = require("../../../lib/api/internal/axiosFactory");
 const AxiosMockAdapter = require("axios-mock-adapter");
 
 jest.mock("consola");
