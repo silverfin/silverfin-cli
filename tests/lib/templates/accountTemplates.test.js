@@ -215,6 +215,34 @@ describe("AccountTemplate", () => {
       const oldPartLiquidContent = await fsPromises.readFile(oldPartLiquidPath, "utf-8");
       expect(oldPartLiquidContent).toBe(existingPartContent);
     });
+
+    it("should not overwrite existing YAML test files when importing a template", async () => {
+      templateUtils.missingLiquidCode.mockReturnValue(false);
+      templateUtils.checkValidName.mockReturnValue(true);
+      templateUtils.filterParts.mockReturnValue(textParts);
+
+      const existingYamlContent = "existing:\n  yaml:\n    content: true\n  tests:\n    - test1\n    - test2";
+
+      // Create existing template structure
+      fs.mkdirSync(path.join(tempDir, "account_templates"));
+      fs.mkdirSync(path.join(tempDir, "account_templates", "name_nl"));
+      fs.mkdirSync(path.join(tempDir, "account_templates", "name_nl", "tests"));
+      fs.writeFileSync(configPath, JSON.stringify(existingConfig));
+      fs.writeFileSync(testLiquidPath, existingYamlContent);
+
+      // Verify the existing YAML file exists and has the expected content
+      expect(fs.existsSync(testLiquidPath)).toBe(true);
+      let yamlContent = await fsPromises.readFile(testLiquidPath, "utf-8");
+      expect(yamlContent).toBe(existingYamlContent);
+
+      // Import the template
+      await AccountTemplate.save("firm", 100, template);
+
+      // Verify the YAML file still contains the original content and wasn't overwritten
+      yamlContent = await fsPromises.readFile(testLiquidPath, "utf-8");
+      expect(yamlContent).toBe(existingYamlContent);
+      expect(yamlContent).not.toBe(template.tests);
+    });
   });
 
   describe("read", () => {
