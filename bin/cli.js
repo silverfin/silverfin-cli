@@ -60,14 +60,15 @@ program
   .description("Update an existing reconciliation template")
   .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
   .option("-p, --partner <partner-id>", "Specify the partner to be used")
-  .option("-h, --handle <handle>", "Specify the reconcilation to be used (mandatory)")
+  .option("-h, --handle <handle>", "Specify the reconcilation to be used")
+  .option("-i, --id <reconciliation-id>", "Specify the firm reconciliation ID to be used")
   .option("-a, --all", "Update all reconciliations")
   .option('-m, --message "<message>"', "Add a message to Silverfin's changelog (optional) | Make sure to always enclose the message in double quotes", undefined)
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     cliUtils.checkPartnerSupport(options);
     const settings = runCommandChecks(
-      ["handle", "all"],
+      ["handle", "id", "all"],
       options,
       firmIdDefault,
       true // Message required
@@ -75,6 +76,8 @@ program
 
     if (options.handle) {
       toolkit.publishReconciliationByHandle(settings.type, settings.envId, options.handle, options.message);
+    } else if (options.id) {
+      toolkit.publishReconciliationById(settings.type, settings.envId, options.id, options.message);
     } else if (options.all) {
       toolkit.publishAllReconciliations(settings.type, settings.envId, options.message);
     }
@@ -136,14 +139,15 @@ program
   .description("Update an existing export file template")
   .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
   .option("-p, --partner <partner-id>", "Specify the partner to be used")
-  .option('-n, --name "<name>"', "Specify the export file to be used (mandatory) | Make sure to always enclose the name in double quotes")
+  .option('-n, --name "<name>"', "Specify the export file to be used | Make sure to always enclose the name in double quotes")
+  .option("-i, --id <export-file-id>", "Specify the export file ID to be used")
   .option("-a, --all", "Update all export files")
   .option('-m, --message "<message>"', "Add a message to Silverfin's changelog (optional) | Make sure to always enclose the message in double quotes", undefined)
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     cliUtils.checkPartnerSupport(options);
     const settings = runCommandChecks(
-      ["name", "all"],
+      ["name", "id", "all"],
       options,
       firmIdDefault,
       true // Message required
@@ -151,6 +155,8 @@ program
 
     if (options.name) {
       toolkit.publishExportFileByName(settings.type, settings.envId, options.name, options.message);
+    } else if (options.id) {
+      toolkit.publishExportFileById(settings.type, settings.envId, options.id, options.message);
     } else if (options.all) {
       toolkit.publishAllExportFiles(settings.type, settings.envId, options.message);
     }
@@ -211,14 +217,15 @@ program
   .description("Update an existing account template")
   .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
   .option("-p, --partner <partner-id>", "Specify the partner to be used")
-  .option('-n, --name "<name>"', "Specify the account template to be used (mandatory) | Make sure to always enclose the name in double quotes")
+  .option('-n, --name "<name>"', "Specify the account template to be used | Make sure to always enclose the name in double quotes")
+  .option("-i, --id <account-template-id>", "Specify the account template ID to be used")
   .option("-a, --all", "Update all account templates")
   .option('-m, --message "<message>"', "Add a message to Silverfin's changelog (optional) | Make sure to always enclose the message in double quotes", undefined)
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     cliUtils.checkPartnerSupport(options);
     const settings = runCommandChecks(
-      ["name", "all"],
+      ["name", "id", "all"],
       options,
       firmIdDefault,
       true // Message required
@@ -226,6 +233,8 @@ program
 
     if (options.name) {
       toolkit.publishAccountTemplateByName(settings.type, settings.envId, options.name, options.message);
+    } else if (options.id) {
+      toolkit.publishAccountTemplateById(settings.type, settings.envId, options.id, options.message);
     } else if (options.all) {
       toolkit.publishAllAccountTemplates(settings.type, settings.envId, options.message);
     }
@@ -287,14 +296,15 @@ program
   .description("Update an existing shared part")
   .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
   .option("-p, --partner <partner-id>", "Specify the partner to be used")
-  .option("-s, --shared-part <name>", "Specify the shared part to be used (mandatory)")
+  .option("-s, --shared-part <name>", "Specify the shared part to be used")
+  .option("-i, --id <shared-part-id>", "Specify the shared part ID to be used")
   .option("-a, --all", "Update all shared parts")
   .option('-m, --message "<message>"', "Add a message to Silverfin's changelog (optional) | Make sure to always enclose the message in double quotes", undefined)
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     cliUtils.checkPartnerSupport(options);
     const settings = runCommandChecks(
-      ["sharedPart", "all"],
+      ["sharedPart", "id", "all"],
       options,
       firmIdDefault,
       true // Message required
@@ -302,6 +312,8 @@ program
 
     if (options.sharedPart) {
       toolkit.publishSharedPartByName(settings.type, settings.envId, options.sharedPart, options.message);
+    } else if (options.id) {
+      toolkit.publishSharedPartById(settings.type, settings.envId, options.id, options.message);
     } else if (options.all) {
       toolkit.publishAllSharedParts(settings.type, settings.envId, options.message);
     }

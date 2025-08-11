@@ -1,0 +1,22 @@
+{
+  "defaultFirmIDs": {
+    "market-repo": "1001",
+    "another-repo": "1002"
+  },
+  "host": "https://test-environment.silverfin.com",
+  "1001": {
+    "firmName": "The Demo Firm"
+  },
+  "1002": {
+    "firmName": "The Production Firm"
+  },
+  "partnerCredentials": {
+    "25": {
+      "name": "Partner 1"
+    },
+    "26": {
+      "name": "Partner 2"
+    }
+  }
+}
+
