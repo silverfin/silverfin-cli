@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.43.0] (11/08/2025)
+- It is now possible to use the `create-test` command on files that are relying directly on partners code.
+- period.custom data is now picked up when using the `create-test` command
+
 ## [1.42.0] (07/08/2025)
 Now it is possible to call update commands using the `--id` option, which allows to update a specific template by its ID.
 For example: `silverfin update-reconciliation --id 12345`
