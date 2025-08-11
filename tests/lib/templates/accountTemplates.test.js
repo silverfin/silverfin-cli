@@ -215,5 +215,112 @@ describe("AccountTemplate", () => {
       const oldPartLiquidContent = await fsPromises.readFile(oldPartLiquidPath, "utf-8");
       expect(oldPartLiquidContent).toBe(existingPartContent);
     });
+
+    it("should not overwrite existing YAML test files when importing a template", async () => {
+      templateUtils.missingLiquidCode.mockReturnValue(false);
+      templateUtils.checkValidName.mockReturnValue(true);
+      templateUtils.filterParts.mockReturnValue(textParts);
+
+      const existingYamlContent = "existing:\n  yaml:\n    content: true\n  tests:\n    - test1\n    - test2";
+
+      // Create existing template structure
+      fs.mkdirSync(path.join(tempDir, "account_templates"));
+      fs.mkdirSync(path.join(tempDir, "account_templates", "name_nl"));
+      fs.mkdirSync(path.join(tempDir, "account_templates", "name_nl", "tests"));
+      fs.writeFileSync(configPath, JSON.stringify(existingConfig));
+      fs.writeFileSync(testLiquidPath, existingYamlContent);
+
+      // Verify the existing YAML file exists and has the expected content
+      expect(fs.existsSync(testLiquidPath)).toBe(true);
+      let yamlContent = await fsPromises.readFile(testLiquidPath, "utf-8");
+      expect(yamlContent).toBe(existingYamlContent);
+
+      // Import the template
+      await AccountTemplate.save("firm", 100, template);
+
+      // Verify the YAML file still contains the original content and wasn't overwritten
+      yamlContent = await fsPromises.readFile(testLiquidPath, "utf-8");
+      expect(yamlContent).toBe(existingYamlContent);
+      expect(yamlContent).not.toBe(template.tests);
+    });
+  });
+
+  describe("read", () => {
+    const name = "test_account_template";
+    const tempDir = path.join(process.cwd(), "tmp");
+    const templateDir = path.join(tempDir, "account_templates", name);
+    const configPath = path.join(templateDir, "config.json");
+    const mainLiquidPath = path.join(templateDir, "main.liquid");
+    const testLiquidPath = path.join(templateDir, "tests", `${name}_liquid_test.yml`);
+    const part1LiquidPath = path.join(templateDir, "text_parts", "part_1.liquid");
+
+    const configContent = {
+      id: { 100: 808080 },
+      name_en: "test_account_template",
+      name_nl: "test_account_template",
+      name_fr: "test_account_template",
+      text: "main.liquid",
+      text_parts: {
+        part_1: "text_parts/part_1.liquid",
+      },
+      externally_managed: true,
+      account_range: null,
+      mapping_list_ranges: [],
+      hide_code: true,
+      published: true,
+    };
+
+    beforeEach(() => {
+      if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir, { recursive: true });
+      }
+      process.chdir(tempDir);
+
+      // Create necessary directories and files
+      fs.mkdirSync(templateDir, { recursive: true });
+      fs.mkdirSync(path.join(templateDir, "text_parts"), { recursive: true });
+      fs.mkdirSync(path.join(templateDir, "tests"), { recursive: true });
+      fs.writeFileSync(configPath, JSON.stringify(configContent));
+      fs.writeFileSync(mainLiquidPath, "Main liquid content");
+      fs.writeFileSync(part1LiquidPath, "Part 1 content");
+      fs.writeFileSync(testLiquidPath, "# Add your Liquid Tests here");
+
+      // Mock valid name check
+      templateUtils.checkValidName.mockReturnValue(true);
+    });
+
+    afterEach(() => {
+      if (fs.existsSync(tempDir)) {
+        fs.rmdirSync(tempDir, { recursive: true });
+      }
+      jest.resetAllMocks();
+    });
+
+    it("should read and process the account template correctly", () => {
+      const result = AccountTemplate.read(name);
+
+      expect(result).toEqual({
+        name_en: "test_account_template",
+        name_nl: "test_account_template",
+        name_fr: "test_account_template",
+        externally_managed: true,
+        account_range: null,
+        mapping_list_ranges: [],
+        hide_code: true,
+        published: true,
+        text: "Main liquid content",
+        text_parts: [{ name: "part_1", content: "Part 1 content" }],
+      });
+    });
+
+    it("should create liquid test file if it's missing", async () => {
+      await fsPromises.unlink(testLiquidPath);
+
+      AccountTemplate.read(name);
+
+      expect(fs.existsSync(testLiquidPath)).toBe(true);
+      const content = await fsPromises.readFile(testLiquidPath, "utf-8");
+      expect(content).toBe("# Add your Liquid Tests here");
+    });
   });
 });
