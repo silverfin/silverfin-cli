@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.45.0] (xx/xx/2025) TODO
+- Added `description_en`, `description_fr`, `description_nl` to the `accountTemplate` class
+- Added `description_en`, `description_fr`, `description_nl` to the `exportFile` class
+- Added `description_en`, `description_fr`, `description_nl` to the `reconciliationText` class
+
 ## [1.44.0] (11/07/2025)
 - `create-account-template` command will now create an empty .yml file
 
