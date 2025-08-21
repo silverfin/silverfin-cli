@@ -113,6 +113,7 @@ describe("import-reconciliation", () => {
               part_2: "text_parts/part_2.liquid",
             },
             test: "tests/test_reconciliation_liquid_test.yml",
+            test_firm_id: null,
             externally_managed: true,
             auto_hide_formula: "",
             downloadable_as_docx: false,
