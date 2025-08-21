@@ -25,7 +25,6 @@ describe("AccountTemplate", () => {
       externally_managed: true,
       hide_code: true,
       mapping_list_ranges: [],
-      test_firm_id: null,
     };
     const name_nl = template.name_nl;
     const configToWrite = {
