@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.44.1] (11/07/2025)
+- Add all 7 locales to the config file
+
 ## [1.44.0] (11/07/2025)
 - `create-account-template` command will now create an empty .yml file
 
