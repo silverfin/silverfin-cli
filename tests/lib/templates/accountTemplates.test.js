@@ -45,6 +45,7 @@ describe("AccountTemplate", () => {
       mapping_list_ranges: [],
       hide_code: true,
       published: true,
+      test_firm_id: null,
     };
     const existingConfig = {
       id: { 200: 505050 },
@@ -60,6 +61,7 @@ describe("AccountTemplate", () => {
       mapping_list_ranges: [],
       hide_code: false,
       published: true,
+      test_firm_id: null,
     };
 
     const tempDir = path.join(process.cwd(), "tmp");

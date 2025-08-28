@@ -47,6 +47,7 @@ describe("ReconciliationText", () => {
       reconciliation_type: "only_reconciled_with_data",
       use_full_width: true,
       virtual_account_number: "",
+      test_firm_id: null,
     };
     const existingConfig = {
       id: { 200: 505050 },
@@ -69,6 +70,7 @@ describe("ReconciliationText", () => {
       reconciliation_type: "only_reconciled_with_data",
       use_full_width: true,
       virtual_account_number: "",
+      test_firm_id: null,
     };
 
     const tempDir = path.join(process.cwd(), "tmp");
