@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.48.0] (25/09/2025)
+In this version we are introducing TAB autocompletion for the CLI commands. It should autocomplete command names, flags, and template handles and names.
+To enable it, run `silverfin config --set-autocompletion` and follow the instructions.
+
 ## [1.47.0] (23/09/2025)
 - Added `create-all-templates` and `update-all-templates` commands, which will create or update all templates for a given firm at once
 
