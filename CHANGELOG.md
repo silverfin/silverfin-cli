@@ -2,11 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.46.0] (29/08/2025)
+In this version we are introducing TAB autocompletion for the CLI commands. It should autocomplete command names, flags, and template handles and names.
+To enable it, run `silverfin config --set-autocompletion` and follow the instructions.
+
 ## [1.45.0] (28/08/2025)
 - A new config file attribute `test_firm_id` was added for account templates and reconciliations texts.
 Adding it with a specific firm will make sure that this firm is used for the Github actions. 
 
-## [1.44.0] (11/08/2025)
+## [1.44.0] (11/07/2025)
 - `create-account-template` command will now create an empty .yml file
 
 ## [1.43.0] (11/08/2025)
