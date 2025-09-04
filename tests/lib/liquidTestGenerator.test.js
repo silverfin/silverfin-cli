@@ -121,15 +121,13 @@ describe("liquidTestGenerator", () => {
       data: [mockPeriodData],
     });
     SF.findPeriod = jest.fn().mockReturnValue(mockPeriodData);
-    SF.getPeriodCustom = jest.fn().mockResolvedValue({
-      data: [
-        {
-          namespace: "pit_integration",
-          key: "code_1002",
-          value: "yes",
-        },
-      ],
-    });
+    SF.getAllPeriodCustom = jest.fn().mockResolvedValue([
+      {
+        namespace: "pit_integration",
+        key: "code_1002",
+        value: "yes",
+      },
+    ]);
     SF.getReconciliationCustom = jest.fn().mockResolvedValue({
       data: [
         {
@@ -236,7 +234,7 @@ describe("liquidTestGenerator", () => {
       });
 
       it("should handle empty period custom data", async () => {
-        SF.getPeriodCustom = jest.fn().mockResolvedValue({ data: [] });
+        SF.getAllPeriodCustom = jest.fn().mockResolvedValue([]);
 
         await testGenerator(mockUrl, mockTestName);
 
