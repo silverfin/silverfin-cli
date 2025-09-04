@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.45.1] (29/08/2025)
+- Fix: when fetching the Period CustomDrop, we were limited to 200 results. Implemented pagination to fetch all results.
+
 ## [1.45.0] (28/08/2025)
 - A new config file attribute `test_firm_id` was added for account templates and reconciliations texts.
 Adding it with a specific firm will make sure that this firm is used for the Github actions. 
