@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.45.2] (12/09/2025)
+- Fix: make sure template supprots all 7 locales but not all locales get populated automatically.
+
 ## [1.45.1] (29/08/2025)
 - Fix: when fetching the Period CustomDrop, we were limited to 200 results. Implemented pagination to fetch all results.
 
