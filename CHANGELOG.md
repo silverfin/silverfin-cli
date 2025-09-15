@@ -2,12 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.45.0] (xx/xx/2025) TODO
+## [1.45.3] (15/09/2025)
 - Added `description_en`, `description_fr`, `description_nl` to the `accountTemplate` class
 - Added `description_en`, `description_fr`, `description_nl` to the `exportFile` class
 - Added `description_en`, `description_fr`, `description_nl` to the `reconciliationText` class
 
-## [1.44.0] (11/07/2025)
+## [1.45.2] (12/09/2025)
+- Fix: make sure template supports all 7 locales but not all locales get populated automatically.
+
+## [1.45.1] (29/08/2025)
+- Fix: when fetching the Period CustomDrop, we were limited to 200 results. Implemented pagination to fetch all results.
+
+## [1.45.0] (28/08/2025)
+- A new config file attribute `test_firm_id` was added for account templates and reconciliations texts.
+Adding it with a specific firm will make sure that this firm is used for the Github actions. 
+
+## [1.44.0] (11/08/2025)
 - `create-account-template` command will now create an empty .yml file
 
 ## [1.43.0] (11/08/2025)

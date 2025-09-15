@@ -39,9 +39,13 @@ describe("ReconciliationText", () => {
       downloadable_as_docx: false,
       hide_code: true,
       is_active: true,
-      name_en: "example_handle",
-      name_fr: "example_handle",
+      name_en: "",
+      name_fr: "",
       name_nl: "example_handle",
+      name_de: "",
+      name_da: "",
+      name_se: "",
+      name_fi: "",
       description_en: "",
       description_fr: "",
       description_nl: "",
@@ -50,6 +54,7 @@ describe("ReconciliationText", () => {
       reconciliation_type: "only_reconciled_with_data",
       use_full_width: true,
       virtual_account_number: "",
+      test_firm_id: null,
     };
     const existingConfig = {
       id: { 200: 505050 },
@@ -64,14 +69,19 @@ describe("ReconciliationText", () => {
       downloadable_as_docx: false,
       hide_code: true,
       is_active: true,
-      name_en: "example_handle",
-      name_fr: "example_handle",
+      name_en: "",
+      name_fr: "",
       name_nl: "example_handle",
+      name_de: "",
+      name_da: "",
+      name_se: "",
+      name_fi: "",
       public: false,
       published: true,
       reconciliation_type: "only_reconciled_with_data",
       use_full_width: true,
       virtual_account_number: "",
+      test_firm_id: null,
     };
 
     const tempDir = path.join(process.cwd(), "tmp");
@@ -257,6 +267,79 @@ describe("ReconciliationText", () => {
       const oldPartLiquidContent = await fsPromises.readFile(oldPartLiquidPath, "utf-8");
       expect(oldPartLiquidContent).toBe(existingPartContent);
     });
+
+    it("should save template with all locale names", async () => {
+      templateUtils.missingLiquidCode.mockReturnValue(false);
+      templateUtils.checkValidName.mockReturnValue(true);
+      templateUtils.filterParts.mockReturnValue(textParts);
+
+      const templateWithLocales = {
+        ...template,
+        name_en: "Custom English Name",
+        name_fr: "Nom Français Personnalisé",
+        name_nl: "Aangepaste Nederlandse Naam",
+        name_de: "Benutzerdefinierter Deutscher Name",
+        name_da: "Tilpasset Dansk Navn",
+        name_se: "Anpassat Svenskt Namn",
+        name_fi: "Mukautettu Suomenkielinen Nimi",
+      };
+
+      await ReconciliationText.save("firm", 100, templateWithLocales);
+
+      // Check config file contains all locale names
+      expect(fs.existsSync(configPath)).toBe(true);
+      const configSaved = JSON.parse(await fsPromises.readFile(configPath, "utf-8"));
+      expect(configSaved.name_en).toBe("Custom English Name");
+      expect(configSaved.name_fr).toBe("Nom Français Personnalisé");
+      expect(configSaved.name_nl).toBe("Aangepaste Nederlandse Naam");
+      expect(configSaved.name_de).toBe("Benutzerdefinierter Deutscher Name");
+      expect(configSaved.name_da).toBe("Tilpasset Dansk Navn");
+      expect(configSaved.name_se).toBe("Anpassat Svenskt Namn");
+      expect(configSaved.name_fi).toBe("Mukautettu Suomenkielinen Nimi");
+    });
+
+    it("should preserve existing locale names when saving template", async () => {
+      templateUtils.missingLiquidCode.mockReturnValue(false);
+      templateUtils.checkValidName.mockReturnValue(true);
+      templateUtils.filterParts.mockReturnValue(textParts);
+
+      const existingConfigWithLocales = {
+        ...existingConfig,
+        name_en: "Existing English Name",
+        name_fr: "Nom Français Existant",
+        name_nl: "Bestaande Nederlandse Naam",
+        name_de: "Bestehender Deutscher Name",
+        name_da: "Eksisterende Dansk Navn",
+        name_se: "Befintligt Svenskt Namn",
+        name_fi: "Olemassa Oleva Suomenkielinen Nimi",
+      };
+
+      fs.mkdirSync(path.join(tempDir, "reconciliation_texts"));
+      fs.mkdirSync(path.join(tempDir, "reconciliation_texts", "example_handle"));
+      fs.writeFileSync(configPath, JSON.stringify(existingConfigWithLocales));
+
+      // Save template without locale names
+      const templateWithoutLocales = { ...template };
+      delete templateWithoutLocales.name_en;
+      delete templateWithoutLocales.name_fr;
+      delete templateWithoutLocales.name_nl;
+      delete templateWithoutLocales.name_de;
+      delete templateWithoutLocales.name_da;
+      delete templateWithoutLocales.name_se;
+      delete templateWithoutLocales.name_fi;
+
+      await ReconciliationText.save("firm", 100, templateWithoutLocales);
+
+      // Check that existing locale names are preserved
+      const configSaved = JSON.parse(await fsPromises.readFile(configPath, "utf-8"));
+      expect(configSaved.name_en).toBe("Existing English Name");
+      expect(configSaved.name_fr).toBe("Nom Français Existant");
+      expect(configSaved.name_nl).toBe("Bestaande Nederlandse Naam");
+      expect(configSaved.name_de).toBe("Bestehender Deutscher Name");
+      expect(configSaved.name_da).toBe("Eksisterende Dansk Navn");
+      expect(configSaved.name_se).toBe("Befintligt Svenskt Namn");
+      expect(configSaved.name_fi).toBe("Olemassa Oleva Suomenkielinen Nimi");
+    });
   });
 
   describe("read", () => {
@@ -273,6 +356,11 @@ describe("ReconciliationText", () => {
       handle: "example_handle",
       name_en: "Example Handle",
       name_nl: "Voorbeeld Handle",
+      name_fr: "Exemple",
+      name_de: "Beispiel Handle",
+      name_da: "Eksempel Handle",
+      name_se: "Exempel Handle",
+      name_fi: "Esimerkki Handle",
       reconciliation_type: "can_be_reconciled_without_data",
       text: "main.liquid",
       text_parts: {
@@ -321,6 +409,11 @@ describe("ReconciliationText", () => {
         handle: "example_handle",
         name_en: "Example Handle",
         name_nl: "Voorbeeld Handle",
+        name_de: "Beispiel Handle",
+        name_da: "Eksempel Handle",
+        name_se: "Exempel Handle",
+        name_fi: "Esimerkki Handle",
+        name_fr: "Exemple",
         reconciliation_type: "can_be_reconciled_without_data",
         externally_managed: true,
         text: "Main liquid content",
@@ -366,12 +459,15 @@ describe("ReconciliationText", () => {
       delete incompleteConfig.handle;
       delete incompleteConfig.name_en;
       delete incompleteConfig.name_nl;
+      delete incompleteConfig.name_de;
+      delete incompleteConfig.name_da;
+      delete incompleteConfig.name_se;
+      delete incompleteConfig.name_fi;
       fs.writeFileSync(configPath, JSON.stringify(incompleteConfig));
 
       const result = ReconciliationText.read(handle);
 
       expect(result.handle).toBe(handle);
-      expect(result.name_en).toBe(handle);
       expect(result.name_nl).toBe(handle);
     });
 
@@ -425,6 +521,46 @@ describe("ReconciliationText", () => {
       const result = ReconciliationText.read(handle);
 
       expect(result.downloadable_as_docx).toBe(true);
+    });
+
+    it("should handle templates with custom locale names", () => {
+      const customLocaleConfig = {
+        ...configContent,
+        name_en: "Custom English Name",
+        name_fr: "Nom Français Personnalisé",
+        name_nl: "Aangepaste Nederlandse Naam",
+        name_de: "Benutzerdefinierter Deutscher Name",
+        name_da: "Tilpasset Dansk Navn",
+        name_se: "Anpassat Svenskt Namn",
+        name_fi: "Mukautettu Suomenkielinen Nimi",
+      };
+      fs.writeFileSync(configPath, JSON.stringify(customLocaleConfig));
+
+      const result = ReconciliationText.read(handle);
+
+      expect(result.name_en).toBe("Custom English Name");
+      expect(result.name_fr).toBe("Nom Français Personnalisé");
+      expect(result.name_nl).toBe("Aangepaste Nederlandse Naam");
+      expect(result.name_de).toBe("Benutzerdefinierter Deutscher Name");
+      expect(result.name_da).toBe("Tilpasset Dansk Navn");
+      expect(result.name_se).toBe("Anpassat Svenskt Namn");
+      expect(result.name_fi).toBe("Mukautettu Suomenkielinen Nimi");
+    });
+
+    it("should add missing locale names to config with handle as fallback", () => {
+      const incompleteLocaleConfig = { ...configContent };
+      delete incompleteLocaleConfig.name_en;
+      delete incompleteLocaleConfig.name_fr;
+      delete incompleteLocaleConfig.name_nl;
+      delete incompleteLocaleConfig.name_de;
+      delete incompleteLocaleConfig.name_da;
+      delete incompleteLocaleConfig.name_se;
+      delete incompleteLocaleConfig.name_fi;
+      fs.writeFileSync(configPath, JSON.stringify(incompleteLocaleConfig));
+
+      const result = ReconciliationText.read(handle);
+
+      expect(result.name_nl).toBe(handle);
     });
   });
 });

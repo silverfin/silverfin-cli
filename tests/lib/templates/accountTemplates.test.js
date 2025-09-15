@@ -13,8 +13,6 @@ describe("AccountTemplate", () => {
     const textParts = { part_1: "Part 1: updated content" };
     const template = {
       name_nl: "name_nl",
-      name_en: "name_nl",
-      name_fr: "name_nl",
       id: 808080,
       text: "Main liquid content",
       text_parts: [
@@ -39,8 +37,12 @@ describe("AccountTemplate", () => {
       text_parts: {
         part_1: "text_parts/part_1.liquid",
       },
-      name_fr: "name_nl",
-      name_en: "name_nl",
+      name_fr: "",
+      name_en: "",
+      name_de: "",
+      name_da: "",
+      name_fi: "",
+      name_se: "",
       description_en: "",
       description_fr: "",
       description_nl: "",
@@ -48,6 +50,7 @@ describe("AccountTemplate", () => {
       mapping_list_ranges: [],
       hide_code: true,
       published: true,
+      test_firm_id: null,
     };
     const existingConfig = {
       id: { 200: 505050 },
@@ -57,12 +60,17 @@ describe("AccountTemplate", () => {
         old_part: "text_parts/old_part.liquid",
         part_1: "text_parts/part_1.liquid",
       },
-      name_fr: "name_fr",
-      name_en: "name_en",
+      name_fr: "",
+      name_en: "",
+      name_de: "",
+      name_da: "",
+      name_fi: "",
+      name_se: "",
       account_range: null,
       mapping_list_ranges: [],
       hide_code: false,
       published: true,
+      test_firm_id: null,
     };
 
     const tempDir = path.join(process.cwd(), "tmp");
