@@ -37,12 +37,12 @@ describe("AccountTemplate", () => {
       text_parts: {
         part_1: "text_parts/part_1.liquid",
       },
-      name_fr: "",
-      name_en: "",
-      name_de: "",
-      name_da: "",
-      name_fi: "",
-      name_se: "",
+      name_fr: "name_nl",
+      name_en: "name_nl",
+      name_de: "name_nl",
+      name_da: "name_nl",
+      name_fi: "name_nl",
+      name_se: "name_nl",
       description_en: "",
       description_fr: "",
       description_nl: "",
@@ -168,12 +168,17 @@ describe("AccountTemplate", () => {
         text_parts: {
           part_1: "text_parts/part_1.liquid",
         },
-        name_fr: "name_nl",
+        name_da: "name_nl",
+        name_de: "name_nl",
         name_en: "name_nl",
+        name_fi: "name_nl",
+        name_fr: "name_nl",
+        name_se: "name_nl",
         account_range: null,
         mapping_list_ranges: [],
         hide_code: true,
         published: true,
+        test_firm_id: null,
       };
       expect(fs.existsSync(configPath)).toBe(true);
       configSaved = JSON.parse(await fsPromises.readFile(configPath, "utf-8"));
