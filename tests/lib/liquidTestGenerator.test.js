@@ -20,7 +20,6 @@ jest.mock("../../lib/utils/liquidTestUtils", () => {
     createBaseLiquidTest: jest.fn(),
     exportYAML: jest.fn(),
     extractURL: jest.fn(),
-    processCustom: jest.fn(),
   };
 });
 
@@ -99,9 +98,6 @@ describe("liquidTestGenerator", () => {
 
     Utils.extractURL.mockReturnValue(mockParameters);
     Utils.exportYAML.mockImplementation(() => {});
-    Utils.processCustom.mockReturnValue({
-      "test_namespace.test_key": "test_value",
-    });
 
     // Mock template reading
     ReconciliationText.read.mockResolvedValue(mockReconciliationTemplate);
