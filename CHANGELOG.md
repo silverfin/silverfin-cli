@@ -2,8 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.43.0] (11/08/2025)
+## [1.45.x] (xx/xx/2025)
 - Added `create-all-templates` and `update-all-templates` commands, which will create or update all templates for a given firm at once
+
+## [1.45.2] (12/09/2025)
+- Fix: make sure template supprots all 7 locales but not all locales get populated automatically.
+
+## [1.45.1] (29/08/2025)
+- Fix: when fetching the Period CustomDrop, we were limited to 200 results. Implemented pagination to fetch all results.
+
+## [1.45.0] (28/08/2025)
+- A new config file attribute `test_firm_id` was added for account templates and reconciliations texts.
+Adding it with a specific firm will make sure that this firm is used for the Github actions. 
+
+## [1.44.0] (11/08/2025)
+- `create-account-template` command will now create an empty .yml file
+
+## [1.43.0] (11/08/2025)
+- It is now possible to use the `create-test` command on files that are relying directly on partners code.
+- period.custom data is now picked up when using the `create-test` command
 
 ## [1.42.0] (07/08/2025)
 Now it is possible to call update commands using the `--id` option, which allows to update a specific template by its ID.
