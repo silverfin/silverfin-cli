@@ -404,11 +404,7 @@ program
   .command("create-all-templates")
   .description("Create all templates at once")
   .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
-  .option("-p, --partner <partner-id>", "Specify the partner to be used")
   .action((options) => {
-    // Make sure users cannot use this command for partner environments
-    cliUtils.checkPartnerSupportForBulkCommands(options);
-
     const settings = cliUtils.getCommandSettings(options);
     if (settings.type == "firm") {
       cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
@@ -430,12 +426,8 @@ program
   .command("update-all-templates")
   .description("Update all templates at once")
   .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
-  .option("-p, --partner <partner-id>", "Specify the partner to be used")
   .option('-m, --message "<message>"', "Add a message to Silverfin's changelog (optional) | Make sure to always enclose the message in double quotes", undefined)
   .action((options) => {
-    // Make sure users cannot use this command for partner environments
-    cliUtils.checkPartnerSupportForBulkCommands(options);
-
     const settings = cliUtils.getCommandSettings(options);
     if (settings.type == "firm") {
       cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
