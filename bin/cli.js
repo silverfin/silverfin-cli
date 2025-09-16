@@ -404,6 +404,7 @@ program
   .command("create-all-templates")
   .description("Create all templates at once")
   .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
+  .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     const settings = cliUtils.getCommandSettings(options);
     if (settings.type == "firm") {
@@ -427,6 +428,7 @@ program
   .description("Update all templates at once")
   .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
   .option('-m, --message "<message>"', "Add a message to Silverfin's changelog (optional) | Make sure to always enclose the message in double quotes", undefined)
+  .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
     const settings = cliUtils.getCommandSettings(options);
     if (settings.type == "firm") {
