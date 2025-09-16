@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.45.x] (xx/xx/2025)
+## [1.99.9] (xx/xx/2025)
 - Added `create-all-templates` and `update-all-templates` commands, which will create or update all templates for a given firm at once
 
 ## [1.45.2] (12/09/2025)
