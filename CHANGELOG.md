@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.45.3] (16/09/2025)
+- Fix: when creating a yaml file from an existing template, and a CustomDrop collection contains more than 10 items, we were wrongly sorting them alphabetically instead of by key id.
+
 ## [1.45.2] (12/09/2025)
 - Fix: make sure template supprots all 7 locales but not all locales get populated automatically.
 
