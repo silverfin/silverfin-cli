@@ -31,18 +31,17 @@ describe("AccountTemplate", () => {
       },
       partner_id: {},
       externally_managed: true,
+      name_en: "",
       name_nl: "name_nl",
+      name_fr: "",
+      description_en: "",
+      description_fr: "",
+      description_nl: "",
       text: "main.liquid",
       test: "tests/name_nl_liquid_test.yml",
       text_parts: {
         part_1: "text_parts/part_1.liquid",
       },
-      name_fr: "",
-      name_en: "",
-      name_de: "",
-      name_da: "",
-      name_fi: "",
-      name_se: "",
       account_range: null,
       mapping_list_ranges: [],
       hide_code: true,
@@ -59,10 +58,6 @@ describe("AccountTemplate", () => {
       },
       name_fr: "",
       name_en: "",
-      name_de: "",
-      name_da: "",
-      name_fi: "",
-      name_se: "",
       account_range: null,
       mapping_list_ranges: [],
       hide_code: false,
@@ -155,10 +150,27 @@ describe("AccountTemplate", () => {
       await AccountTemplate.save("firm", 100, template);
 
       // Check config file after save
-      configToWrite.id[200] = 505050;
+      const expectedConfig = {
+        id: { 100: 808080, 200: 505050 },
+        partner_id: {},
+        externally_managed: true,
+        name_en: "",
+        name_nl: "name_nl",
+        name_fr: "",
+        text: "main.liquid",
+        test: "tests/name_nl_liquid_test.yml",
+        text_parts: {
+          part_1: "text_parts/part_1.liquid",
+        },
+        account_range: null,
+        mapping_list_ranges: [],
+        hide_code: true,
+        published: true,
+        test_firm_id: null,
+      };
       expect(fs.existsSync(configPath)).toBe(true);
       configSaved = JSON.parse(await fsPromises.readFile(configPath, "utf-8"));
-      expect(configSaved).toEqual(configToWrite);
+      expect(configSaved).toEqual(expectedConfig);
     });
 
     it("should replace existing liquid files if the template already exists", async () => {

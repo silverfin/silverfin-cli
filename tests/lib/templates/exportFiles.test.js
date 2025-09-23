@@ -27,13 +27,12 @@ describe("ExportFile", () => {
       id: { 100: 808080 },
       partner_id: {},
       externally_managed: true,
+      name_en: "example_name_nl",
       name_nl: "example_name_nl",
       name_fr: "example_name_nl",
-      name_en: "example_name_nl",
-      name_de: "",
-      name_da: "",
-      name_se: "",
-      name_fi: "",
+      description_en: "",
+      description_fr: "",
+      description_nl: "",
       file_name: "export_file.sxbrl",
       hide_code: true,
       published: true,
@@ -52,10 +51,9 @@ describe("ExportFile", () => {
       name_nl: "example_name_nl",
       name_fr: "old_name_fr",
       name_en: "old_name_en",
-      name_de: "",
-      name_da: "",
-      name_se: "",
-      name_fi: "",
+      description_en: "",
+      description_nl: "",
+      description_fr: "",
       file_name: "old_file_name.sxbrl",
       text: "main.liquid",
       hide_code: true,
@@ -155,10 +153,29 @@ describe("ExportFile", () => {
       ExportFile.save("firm", 100, template);
 
       // Check config file after save
-      configToWrite.id[200] = 505050;
+      const expectedConfig = {
+        id: { 100: 808080, 200: 505050 },
+        partner_id: {},
+        externally_managed: true,
+        name_en: "example_name_nl",
+        name_nl: "example_name_nl",
+        name_fr: "example_name_nl",
+        description_en: "",
+        description_nl: "",
+        description_fr: "",
+        file_name: "export_file.sxbrl",
+        hide_code: true,
+        published: true,
+        download_warning: "",
+        text: "main.liquid",
+        encoding: "UTF-8",
+        text_parts: {
+          part_1: "text_parts/part_1.liquid",
+        },
+      };
       expect(fs.existsSync(configPath)).toBe(true);
       configSaved = JSON.parse(await fsPromises.readFile(configPath, "utf-8"));
-      expect(configSaved).toEqual(configToWrite);
+      expect(configSaved).toEqual(expectedConfig);
     });
 
     // NOTE: Do we need to modify this behavior?

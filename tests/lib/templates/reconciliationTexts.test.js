@@ -40,12 +40,11 @@ describe("ReconciliationText", () => {
       hide_code: true,
       is_active: true,
       name_en: "",
-      name_fr: "",
       name_nl: "example_handle",
-      name_de: "",
-      name_da: "",
-      name_se: "",
-      name_fi: "",
+      name_fr: "",
+      description_en: "",
+      description_fr: "",
+      description_nl: "",
       public: false,
       published: true,
       reconciliation_type: "only_reconciled_with_data",
@@ -66,9 +65,9 @@ describe("ReconciliationText", () => {
       downloadable_as_docx: false,
       hide_code: true,
       is_active: true,
-      name_en: "",
-      name_fr: "",
       name_nl: "example_handle",
+      name_fr: "",
+      name_en: "",
       name_de: "",
       name_da: "",
       name_se: "",
@@ -170,10 +169,37 @@ describe("ReconciliationText", () => {
       await ReconciliationText.save("firm", 100, template);
 
       // Check config file after save
-      configToWrite.id[200] = 505050;
+      const expectedConfig = {
+        id: { 100: 808080, 200: 505050 },
+        partner_id: {},
+        handle: "example_handle",
+        text: "main.liquid",
+        text_parts: {
+          part_1: "text_parts/part_1.liquid",
+        },
+        test: "tests/example_handle_liquid_test.yml",
+        externally_managed: true,
+        auto_hide_formula: "",
+        downloadable_as_docx: false,
+        hide_code: true,
+        is_active: true,
+        name_en: "",
+        name_nl: "example_handle",
+        name_fr: "",
+        name_de: "",
+        name_da: "",
+        name_fi: "",
+        name_se: "",
+        public: false,
+        published: true,
+        reconciliation_type: "only_reconciled_with_data",
+        test_firm_id: null,
+        use_full_width: true,
+        virtual_account_number: "",
+      };
       expect(fs.existsSync(configPath)).toBe(true);
       configSaved = JSON.parse(await fsPromises.readFile(configPath, "utf-8"));
-      expect(configSaved).toEqual(configToWrite);
+      expect(configSaved).toEqual(expectedConfig);
     });
 
     it("should replace existing liquid files if the template already exists", async () => {
