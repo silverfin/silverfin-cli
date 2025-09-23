@@ -1166,6 +1166,52 @@ async function updateFirmName(firmId) {
   }
 }
 
+async function generateCompanyExportFile(firmId, companyId, periodId, exportFileId) {
+  try {
+    const responseCreate = await SF.createExportFileInstance(firmId, companyId, periodId, exportFileId);
+    if (!responseCreate || !responseCreate.id) {
+      consola.error(`Export file generation failed for company ${companyId}, period ${periodId}, export file ${exportFileId}`);
+    }
+    const exportFileInstanceId = responseCreate.id;
+    consola.debug(`Export file generation started for company ${companyId}, period ${periodId}, export file ${exportFileId}. Instance ID: ${exportFileInstanceId}`);
+
+    let responseFetch;
+    let attempts = 0;
+    let delay = 1000;
+    const maxDelay = 5000;
+    const maxAttempts = 25;
+
+    while (attempts < maxAttempts) {
+      await new Promise((resolve) => setTimeout(resolve, delay));
+
+      responseFetch = await SF.getExportFileInstance(firmId, companyId, periodId, exportFileInstanceId);
+
+      consola.debug(`Checking status of export file instance ${exportFileInstanceId}... Attempt ${attempts + 1} of ${maxAttempts}`);
+
+      if (responseFetch && responseFetch.state === "pending") {
+        consola.debug(
+          `Export file generation still in queue for firm ${firmId}, company ${companyId}, period ${periodId}, export file ${exportFileId}. Instance ID: ${exportFileInstanceId}`
+        );
+        attempts++;
+        delay = Math.min(delay + 1000, maxDelay);
+        continue;
+      } else if (responseFetch && responseFetch.state === "created") {
+        consola.success(
+          `Export file generation completed for firm ${firmId}, company ${companyId}, period ${periodId}, export file ${exportFileId}. Instance ID: ${exportFileInstanceId}`
+        );
+        return responseFetch;
+      } else {
+        consola.error(
+          `Export file generation encountered an unexpected state for firm ${firmId}, company ${companyId}, period ${periodId}, export file ${exportFileId}. Instance ID: ${exportFileInstanceId}. State: ${responseFetch ? responseFetch.state : "unknown"}`
+        );
+        return false;
+      }
+    }
+  } catch (error) {
+    errorUtils.errorHandler(error);
+  }
+}
+
 module.exports = {
   fetchReconciliationByHandle,
   fetchReconciliationById,
@@ -1209,4 +1255,5 @@ module.exports = {
   getTemplateId,
   getAllTemplatesId,
   updateFirmName,
+  generateCompanyExportFile,
 };

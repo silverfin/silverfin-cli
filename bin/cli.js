@@ -697,6 +697,29 @@ program
     }
   });
 
+// GENERATE export file
+program
+  .command("generate-export-file")
+  .description("Create a new export file instance from an export file template")
+  .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
+  .requiredOption("-c, --company <company-id>", "Specify the company to be used")
+  .requiredOption("-p, --period <period-id>", "Specify the period to be used")
+  .requiredOption("-e, --export-file <export-file-id>", "Specify the export file template to be used")
+  .option("--url", "Get the url of the generated export file (optional)", false)
+  .action(async (options) => {
+    const exportFile = await toolkit.generateCompanyExportFile(options.firm, options.company, options.period, options.exportFile);
+
+    if (!exportFile) {
+      process.exit(1);
+    }
+
+    if (options.url) {
+      consola.info({ url: exportFile.content_url });
+    } else {
+      // TODO: open browser?
+    }
+  });
+
 // Update the CLI
 if (pkg.repository && pkg.repository.url) {
   program
