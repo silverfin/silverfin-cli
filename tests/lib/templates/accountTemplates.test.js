@@ -157,9 +157,6 @@ describe("AccountTemplate", () => {
         name_en: "",
         name_nl: "name_nl",
         name_fr: "",
-        description_en: "",
-        description_fr: "",
-        description_nl: "",
         text: "main.liquid",
         test: "tests/name_nl_liquid_test.yml",
         text_parts: {
