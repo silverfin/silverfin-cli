@@ -2,11 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.46.0] (23/09/2025)
+- Added `description_en`, `description_nl`, `description_fr` to the `accountTemplate` class
+- Added `description_en`, `description_nl`, `description_fr` to the `exportFile` class
+- Added `description_en`, `description_nl`, `description_fr` to the `reconciliationText` class
+
 ## [1.45.3] (16/09/2025)
 - Fix: when creating a yaml file from an existing template, and a CustomDrop collection contains more than 10 items, we were wrongly sorting them alphabetically instead of by key id.
 
 ## [1.45.2] (12/09/2025)
-- Fix: make sure template supprots all 7 locales but not all locales get populated automatically.
+- Fix: make sure template supports all 7 locales but not all locales get populated automatically.
 
 ## [1.45.1] (29/08/2025)
 - Fix: when fetching the Period CustomDrop, we were limited to 200 results. Implemented pagination to fetch all results.
