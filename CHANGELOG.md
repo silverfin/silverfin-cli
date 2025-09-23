@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.47.0] (23/09/2025)
+- Added `create-all-templates` and `update-all-templates` commands, which will create or update all templates for a given firm at once
+
 ## [1.46.0] (23/09/2025)
 - Added `description_en`, `description_nl`, `description_fr` to the `accountTemplate` class
 - Added `description_en`, `description_nl`, `description_fr` to the `exportFile` class
