@@ -1,5 +1,25 @@
 #!/usr/bin/env bash
 
+_complete_directories() {
+  local directory="$1"
+  local cur="$2"
+
+  if [ -d "$directory" ]; then
+    local IFS=$'\n'
+    local dirs=($(find "$directory" -mindepth 1 -maxdepth 1 -type d -printf '%f\n'))
+    COMPREPLY=()
+    for dir in "${dirs[@]}"; do
+      if [[ "$dir" == "$cur"* ]]; then
+        if [[ "$dir" == *" "* ]]; then
+          COMPREPLY+=("\"$dir\"")
+        else
+          COMPREPLY+=("$dir")
+        fi
+      fi
+    done
+  fi
+}
+
 _silverfin() {
   local cur=${COMP_WORDS[COMP_CWORD]}
   local prev=${COMP_WORDS[COMP_CWORD - 1]}
@@ -23,29 +43,21 @@ _silverfin() {
   case "$prev" in
   --handle | -h)
     if [[ "$command" == *-reconciliation ]]; then
-      if [ -d "./reconciliation_texts" ]; then
-        COMPREPLY=($(compgen -W "$(ls -1 ./reconciliation_texts/)" -- "$cur"))
-      fi
+      _complete_directories "./reconciliation_texts" "$cur"
     fi
     return 0
     ;;
   --name | -n)
     if [[ "$command" == *-export-file ]]; then
-      if [ -d "./export_files" ]; then
-        COMPREPLY=($(compgen -W "$(ls -1 ./export_files/)" -- "$cur"))
-      fi
+      _complete_directories "./export_files" "$cur"
     elif [[ "$command" == *-account-template ]]; then
-      if [ -d "./account_templates" ]; then
-        COMPREPLY=($(compgen -W "$(ls -1 ./account_templates/)" -- "$cur"))
-      fi
+      _complete_directories "./account_templates" "$cur"
     fi
     return 0
     ;;
   --shared-part | -s)
     if [[ "$command" == *-shared-part ]]; then
-      if [ -d "./shared_parts" ]; then
-        COMPREPLY=($(compgen -W "$(ls -1 ./shared_parts/)" -- "$cur"))
-      fi
+      _complete_directories "./shared_parts" "$cur"
     fi
     return 0
     ;;
