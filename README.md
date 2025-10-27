@@ -237,6 +237,32 @@ You can run the Liquid Tests of a reconciliation using the following command:
 silverfin run-test --handle <handle>
 ```
 
+#### Run a specific test
+
+To run a specific test by name:
+
+```bash
+silverfin run-test --handle <handle> --test <test-name>
+```
+
+#### Run batch tests (pattern matching)
+
+To run all tests that contain a specific batch identifier, use the `--batch` option. This is useful when you want to test a group of related tests without running all tests:
+
+```bash
+silverfin run-test --handle <handle> --batch <batch>
+```
+
+For example, if you have tests named `unit_3_test_1`, `unit_3_test_2`, `unit_3_test_3`, `unit_4_test_1`, etc., you can run only the tests for unit 3:
+
+```bash
+silverfin run-test --handle <handle> --batch "unit_3_"
+```
+
+This will run all tests that contain the string "unit_3_" in their name (i.e., `unit_3_test_1`, `unit_3_test_2`, and `unit_3_test_3`).
+
+**Note:** You cannot use both `--test` and `--batch` options at the same time.
+
 ### Updating the CLI
 
 Whenever a new version of the CLI is available, you should see a message in your terminal informing it, so you can keep it always up to date. To update the CLI to the latest version, you can run the following command:
@@ -257,6 +283,12 @@ There are two different ways to use the `development-mode`:
 
 ```bash
 silverfin development-mode --handle <handle>
+```
+
+You can also use the `--batch` option with development mode to run only tests matching a specific batch identifier:
+
+```bash
+silverfin development-mode --handle <handle> --batch "unit_3_"
 ```
 
 - Using the `--update-templates` flag. This will listen for changes in liquid files. Every time a change is saved to a liquid file of a reconciliation or shared part, it will be updated in Silverfin. **Note that this will not run any liquid test, and it will replace the liquid code of your template in Silverfin.** (equivalent to use: `silverfin update-reconciliation --handle <handle>` or `silverfin update-shared-part --shared-part <name>`)
