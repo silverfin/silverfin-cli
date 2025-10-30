@@ -458,6 +458,7 @@ program
   .option("--html-preview", "Get a static html of the export-view of the template generated with the Liquid Test data (optional)", false)
   .option("--preview-only", "Skip the checking of the results of the Liquid Test in case you only want to generate a preview template (optional)", false)
   .option("--status", "Only return the status of the test runs as PASSED/FAILED (optional)", false)
+  .option("--batched", "Run tests in parallel batches per test (optional)", false)
 
   .action((options) => {
     if (!options.handle && !options.accountTemplate) {
@@ -475,7 +476,7 @@ program
         consola.info(`When using "--preview-only" you need to specify at least one of the following options: "--html-input", "--html-preview"`);
         process.exit(1);
       }
-      liquidTestRunner.runTestsWithOutput(options.firm, templateType, templateName, options.test, options.previewOnly, options.htmlInput, options.htmlPreview);
+      liquidTestRunner.runTestsWithOutput(options.firm, templateType, templateName, options.test, options.previewOnly, options.htmlInput, options.htmlPreview, options.batched);
     }
   });
 
