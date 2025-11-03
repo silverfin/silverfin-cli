@@ -466,6 +466,7 @@ program
       consola.error("You need to specify either a reconciliation handle or an account template");
       process.exit(1);
     }
+    cliUtils.checkUniqueOption(["batched", "test"], options);
 
     const templateType = options.handle ? "reconciliationText" : "accountTemplate";
     const templateName = options.handle ? options.handle : options.accountTemplate;
