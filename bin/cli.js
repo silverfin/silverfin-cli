@@ -471,7 +471,7 @@ program
     const templateName = options.handle ? options.handle : options.accountTemplate;
 
     if (options.status) {
-      liquidTestRunner.runTestsStatusOnly(options.firm, templateType, templateName, options.test);
+      liquidTestRunner.runTestsStatusOnly(options.firm, templateType, templateName, options.test, options.batched, options.batchSize);
     } else {
       if (options.previewOnly && !options.htmlInput && !options.htmlPreview) {
         consola.info(`When using "--preview-only" you need to specify at least one of the following options: "--html-input", "--html-preview"`);
