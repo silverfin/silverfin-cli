@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.47.1] (13/11/2025)
+- Fix: Update authorize command to use user-inputted firm ID when calling `getFirmName` function rather than default firm ID
+
 ## [1.47.0] (23/09/2025)
 - Added `create-all-templates` and `update-all-templates` commands, which will create or update all templates for a given firm at once
 
