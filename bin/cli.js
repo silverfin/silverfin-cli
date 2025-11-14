@@ -16,6 +16,7 @@ const path = require("path");
 const { consola } = require("consola");
 const { runCommandChecks } = require("../lib/cli/utils");
 const { CwdValidator } = require("../lib/cli/cwdValidator");
+const { AutoCompletions } = require("../lib/cli/autoCompletions");
 
 const firmIdDefault = cliUtils.loadDefaultFirmId();
 cliUtils.handleUncaughtErrors();
@@ -536,8 +537,9 @@ program
   .addOption(new Option("--refresh-partner-token <partnerId>", "Get a new partner api key using the stored api key"))
   .addOption(new Option("--set-host <host>", "Set a custom host for the Silverfin API (e.g. https://live.getsilverfin.com)"))
   .addOption(new Option("--get-host", "Get the current host for the Silverfin API"))
+  .addOption(new Option("--set-autocompletion", "Set TAB autocompletion for the CLI"))
   .action(async (options) => {
-    cliUtils.checkUniqueOption(["setFirm", "getFirm", "listAll", "updateName", "refreshToken", "refreshPartnerToken", "setHost", "getHost"], options);
+    cliUtils.checkUniqueOption(["setFirm", "getFirm", "listAll", "updateName", "refreshToken", "refreshPartnerToken", "setHost", "getHost", "setAutocompletion"], options);
     if (options.setFirm) {
       firmCredentials.setDefaultFirmId(options.setFirm);
       const currentDirectory = path.basename(process.cwd());
@@ -591,6 +593,9 @@ program
     if (options.getHost) {
       const host = firmCredentials.getHost();
       consola.info(`Current host: ${host}`);
+    }
+    if (options.setAutocompletion) {
+      AutoCompletions.set();
     }
   });
 

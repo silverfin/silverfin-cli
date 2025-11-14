@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+_complete_directories() {
+  local directory="$1"
+  local cur="$2"
+  if [ -d "$directory" ]; then
+    local IFS=$'\n'
+    local dirs=()
+
+    # Use appropriate find command based on availability
+    if command -v gfind &>/dev/null; then
+      # macOS with GNU findutils
+      dirs=($(gfind "$directory" -mindepth 1 -maxdepth 1 -type d -printf '%f\n'))
+    elif find --version 2>/dev/null | grep -q GNU; then
+      # Linux with GNU find
+      dirs=($(find "$directory" -mindepth 1 -maxdepth 1 -type d -printf '%f\n'))
+    else
+      # BSD find (macOS default) - use alternative
+      dirs=($(find "$directory" -mindepth 1 -maxdepth 1 -type d -exec basename {} \;))
+    fi
+
+    COMPREPLY=()
+    for dir in "${dirs[@]}"; do
+      if [[ "$dir" == "$cur"* ]]; then
+        if [[ "$dir" == *" "* ]]; then
+          COMPREPLY+=("\"$dir\"")
+        else
+          COMPREPLY+=("$dir")
+        fi
+      fi
+    done
+  fi
+}
+_silverfin() {
+  local cur=${COMP_WORDS[COMP_CWORD]}
+  local prev=${COMP_WORDS[COMP_CWORD - 1]}
+  local command=${COMP_WORDS[1]}
+  COMPREPLY=()
+  # Command
+  if [ $COMP_CWORD -eq 1 ]; then
+    local sf_commands=""
+    sf_commands=$(silverfin --help 2>/dev/null | grep -E "^\s+[a-z][a-z-]*\s" | awk '{print $1}' | tr '\n' ' ')
+    # Fallback
+    if [ -z "$sf_commands" ]; then
+      sf_commands="import-reconciliation update-reconciliation create-reconciliation import-export-file update-export-file create-export-file import-account-template update-account-template create-account-template import-shared-part update-shared-part create-shared-part add-shared-part remove-shared-part run-test create-test authorize authorize-partner stats config get-reconciliation-id get-export-file-id get-account-template-id get-shared-part-id development-mode update help"
+    fi
+    COMPREPLY=($(compgen -W "$sf_commands" -- "$cur"))
+    return 0
+  fi
+  # Template name
+  case "$prev" in
+  --handle | -h)
+    if [[ "$command" == *-reconciliation ]]; then
+      _complete_directories "./reconciliation_texts" "$cur"
+    fi
+    return 0
+    ;;
+  --name | -n)
+    if [[ "$command" == *-export-file ]]; then
+      _complete_directories "./export_files" "$cur"
+    elif [[ "$command" == *-account-template ]]; then
+      _complete_directories "./account_templates" "$cur"
+    fi
+    return 0
+    ;;
+  --shared-part | -s)
+    if [[ "$command" == *-shared-part ]]; then
+      _complete_directories "./shared_parts" "$cur"
+    fi
+    return 0
+    ;;
+  esac
+  # Flags
+  if [[ "$cur" == --* ]]; then
+    local flags=""
+    flags=$(silverfin "$command" --help 2>/dev/null | grep -oE -- '--[a-zA-Z][a-zA-Z0-9-]*' | sort -u | tr '\n' ' ')
+    COMPREPLY=($(compgen -W "$flags" -- "$cur"))
+    return 0
+  fi
+}
+_silverfin_init_completion() {
+  if [[ -n ${ZSH_VERSION-} ]]; then
+    if ! command -v bashcompinit >/dev/null 2>&1; then
+      autoload -U bashcompinit
+    fi
+    if ! command -v complete >/dev/null 2>&1; then
+      bashcompinit
+    fi
+  fi
+  if command -v complete >/dev/null 2>&1; then
+    complete -F _silverfin silverfin
+  fi
+}
+_silverfin_init_completion
