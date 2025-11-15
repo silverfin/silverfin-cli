@@ -459,24 +459,39 @@ program
   .option("--html-preview", "Get a static html of the export-view of the template generated with the Liquid Test data (optional)", false)
   .option("--preview-only", "Skip the checking of the results of the Liquid Test in case you only want to generate a preview template (optional)", false)
   .option("--status", "Only return the status of the test runs as PASSED/FAILED (optional)", false)
+  .option("--batched", "Run tests in parallel batches per test (optional)", false)
+  .option("--batch-size <number>", "Batch size when using --batched. Default: unlimited (all tests at once). Reduce if you encounter timeouts or rate limits (optional)")
 
   .action((options) => {
     if (!options.handle && !options.accountTemplate) {
       consola.error("You need to specify either a reconciliation handle or an account template");
       process.exit(1);
     }
+    if (options.batched && options.test) {
+      cliUtils.checkUniqueOption(["batched", "test"], options);
+    }
 
     const templateType = options.handle ? "reconciliationText" : "accountTemplate";
     const templateName = options.handle ? options.handle : options.accountTemplate;
 
     if (options.status) {
-      liquidTestRunner.runTestsStatusOnly(options.firm, templateType, templateName, options.test);
+      liquidTestRunner.runTestsStatusOnly(options.firm, templateType, templateName, options.test, options.batched, options.batchSize);
     } else {
       if (options.previewOnly && !options.htmlInput && !options.htmlPreview) {
         consola.info(`When using "--preview-only" you need to specify at least one of the following options: "--html-input", "--html-preview"`);
         process.exit(1);
       }
-      liquidTestRunner.runTestsWithOutput(options.firm, templateType, templateName, options.test, options.previewOnly, options.htmlInput, options.htmlPreview);
+      liquidTestRunner.runTestsWithOutput(
+        options.firm,
+        templateType,
+        templateName,
+        options.test,
+        options.previewOnly,
+        options.htmlInput,
+        options.htmlPreview,
+        options.batched,
+        options.batchSize
+      );
     }
   });
 
