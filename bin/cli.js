@@ -451,15 +451,15 @@ program
   .command("run-test")
   .description("Run Liquid Tests for a reconciliation template from a YAML file")
   .requiredOption("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
-  .option("-h, --handle <handle>", "Specify the reconciliation to be used (mandatory)")
-  .option("-at, --account-template <name>", "Specify the account template to be used (mandatory)")
+  .option("-h, --handle <handle...>", "Specify one or more reconciliations to be used (mandatory)")
+  .option("-at, --account-template <name...>", "Specify one or more account templates to be used (mandatory)")
   .option("-t, --test <test-name>", "Specify the name of the test to be run (optional)", "")
   .option("--html-input", "Get a static html of the input-view of the template generated with the Liquid Test data (optional)", false)
   .option("--html-preview", "Get a static html of the export-view of the template generated with the Liquid Test data (optional)", false)
   .option("--preview-only", "Skip the checking of the results of the Liquid Test in case you only want to generate a preview template (optional)", false)
   .option("--status", "Only return the status of the test runs as PASSED/FAILED (optional)", false)
 
-  .action((options) => {
+  .action(async (options) => {
     if (!options.handle && !options.accountTemplate) {
       consola.error("You need to specify either a reconciliation handle or an account template");
       process.exit(1);
@@ -468,14 +468,20 @@ program
     const templateType = options.handle ? "reconciliationText" : "accountTemplate";
     const templateName = options.handle ? options.handle : options.accountTemplate;
 
+    // Check if multiple handles are provided without --status flag
+    if (templateName.length > 1 && !options.status) {
+      consola.error("Multiple handles are only allowed when used with the --status flag");
+      process.exit(1);
+    }
+
     if (options.status) {
-      liquidTestRunner.runTestsStatusOnly(options.firm, templateType, templateName, options.test);
+      await liquidTestRunner.runTestsStatusOnly(options.firm, templateType, templateName, options.test);
     } else {
       if (options.previewOnly && !options.htmlInput && !options.htmlPreview) {
         consola.info(`When using "--preview-only" you need to specify at least one of the following options: "--html-input", "--html-preview"`);
         process.exit(1);
       }
-      liquidTestRunner.runTestsWithOutput(options.firm, templateType, templateName, options.test, options.previewOnly, options.htmlInput, options.htmlPreview);
+      await liquidTestRunner.runTestsWithOutput(options.firm, templateType, templateName, options.test, options.previewOnly, options.htmlInput, options.htmlPreview);
     }
   });
 
