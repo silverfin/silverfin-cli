@@ -468,21 +468,30 @@ program
     const templateType = options.handle ? "reconciliationText" : "accountTemplate";
     const templateName = options.handle ? options.handle : options.accountTemplate;
 
-    // Check if multiple handles are provided without --status flag
-    if (templateName.length > 1 && !options.status) {
-      consola.error("Multiple handles are only allowed when used with the --status flag");
+    // Normalize to array for uniform handling (Commander returns array for variadic, string otherwise)
+    const templateNames = Array.isArray(templateName) ? templateName : [templateName];
+
+    // Block multiple handles/templates without --status
+    if (templateNames.length > 1 && !options.status) {
+      consola.error("Multiple handles/templates are only allowed when used with the --status flag");
       process.exit(1);
     }
 
     if (options.status) {
-      await liquidTestRunner.runTestsStatusOnly(options.firm, templateType, templateName, options.test);
-    } else {
-      if (options.previewOnly && !options.htmlInput && !options.htmlPreview) {
-        consola.info(`When using "--preview-only" you need to specify at least one of the following options: "--html-input", "--html-preview"`);
-        process.exit(1);
-      }
-      await liquidTestRunner.runTestsWithOutput(options.firm, templateType, templateName, options.test, options.previewOnly, options.htmlInput, options.htmlPreview);
+      // Status mode: allow multiple, pass array of template names
+      await liquidTestRunner.runTestsStatusOnly(options.firm, templateType, templateNames, options.test);
+      return;
     }
+
+    // Non-status mode: always run a single template, pass string handle/name
+    const singleTemplateName = templateNames[0];
+
+    if (options.previewOnly && !options.htmlInput && !options.htmlPreview) {
+      consola.info(`When using "--preview-only" you need to specify at least one of the following options: "--html-input", "--html-preview"`);
+      process.exit(1);
+    }
+
+    await liquidTestRunner.runTestsWithOutput(options.firm, templateType, singleTemplateName, options.test, options.previewOnly, options.htmlInput, options.htmlPreview);
   });
 
 // Create Liquid Test
