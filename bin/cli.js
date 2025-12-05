@@ -467,6 +467,12 @@ program
 
     const templateType = options.handle ? "reconciliationText" : "accountTemplate";
     const templateName = options.handle ? options.handle : options.accountTemplate;
+
+    if (!templateName || templateName.length === 0) {
+      consola.error("You need to provide at least one handle or account template name");
+      process.exit(1);
+    }
+
     // Block multiple handles/templates without --status
     if (templateName.length > 1 && !options.status) {
       consola.error("Multiple handles/templates are only allowed when used with the --status flag");
