@@ -28,6 +28,7 @@ describe("liquidTestGenerator", () => {
   const mockUrl = "https://live.getsilverfin.com/f/123/456/ledgers/789/workflows/101/reconciliation_texts/202";
   const mockTestName = "unit_1_test_1";
   const mockParameters = {
+    templateType: "reconciliationText",
     firmId: "123",
     companyId: "456",
     ledgerId: "789",
@@ -167,7 +168,8 @@ describe("liquidTestGenerator", () => {
                 }),
               }),
             }),
-          })
+          }),
+          "reconciliationText"
         );
       });
 
@@ -175,7 +177,7 @@ describe("liquidTestGenerator", () => {
         ReconciliationText.read.mockResolvedValue(false);
 
         await expect(testGenerator(mockUrl, mockTestName)).rejects.toThrow("Process.exit called with code undefined");
-        expect(consola.warn).toHaveBeenCalledWith(`Reconciliation "${mockReconciliationHandle}" wasn't found`);
+        expect(consola.warn).toHaveBeenCalledWith(`Template "${mockReconciliationHandle}" wasn't found`);
       });
 
       it("should read shared parts correctly", async () => {
@@ -225,7 +227,8 @@ describe("liquidTestGenerator", () => {
                 }),
               }),
             }),
-          })
+          }),
+          "reconciliationText"
         );
       });
 
@@ -247,7 +250,8 @@ describe("liquidTestGenerator", () => {
                 }),
               }),
             }),
-          })
+          }),
+          "reconciliationText"
         );
       });
     });
@@ -265,7 +269,7 @@ describe("liquidTestGenerator", () => {
         ReconciliationText.read.mockResolvedValue(false);
 
         await expect(testGenerator(mockUrl, mockTestName)).rejects.toThrow("Process.exit called with code undefined");
-        expect(consola.warn).toHaveBeenCalledWith(`Reconciliation "${mockReconciliationHandle}" wasn't found`);
+        expect(consola.warn).toHaveBeenCalledWith(`Template "${mockReconciliationHandle}" wasn't found`);
       });
 
       it("should warn and return gracefully for missing shared parts", async () => {
@@ -305,7 +309,8 @@ describe("liquidTestGenerator", () => {
                 }),
               }),
             }),
-          })
+          }),
+          "reconciliationText"
         );
       });
 
@@ -330,7 +335,8 @@ describe("liquidTestGenerator", () => {
                 }),
               }),
             }),
-          })
+          }),
+          "reconciliationText"
         );
       });
     });
