@@ -13,8 +13,8 @@ describe("AccountTemplate", () => {
     const textParts = { part_1: "Part 1: updated content" };
     const template = {
       name_nl: "name_nl",
-      name_en: "name_nl",
-      name_fr: "name_nl",
+      name_en: "",
+      name_fr: "",
       id: 808080,
       text: "Main liquid content",
       text_parts: [
