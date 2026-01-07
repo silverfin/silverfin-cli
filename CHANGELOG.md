@@ -1,6 +1,9 @@
 # Changelog
 
 All notable changes to this project will be documented in this file.
+## [1.49.0] (07/01/2026)
+In this version we are introducing Liquid batch/pattern testing. An extra option was added to the `silverfin run-test`command to run all tests which conatin a common string. 
+To enable it run `silverfin run-test -p "string pattern" -h template_handle`
 
 ## [1.48.0] (25/09/2025)
 In this version we are introducing TAB autocompletion for the CLI commands. It should autocomplete command names, flags, and template handles and names.
