@@ -688,7 +688,7 @@ program
   .option("-t, --test <test-name>", `Specify the name of the test to be run (optional). It has to be used together with "--handle"`, "")
   .option("--html", `Get a html file of the template's input-view generated with the Liquid Test information (optional). It has to be used together with "--handle"`, false)
   .option("--yes", "Skip the prompt confirmation (optional)")
-  .option("-b, --pattern <pattern>", `Run all tests that match this pattern (optional). It has to be used together with "--handle" or "--account-template"`, "")
+  .option("-p, --pattern <pattern>", `Run all tests that match this pattern (optional). It has to be used together with "--handle" or "--account-template"`, "")
   .action((options) => {
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     cliUtils.checkUniqueOption(["handle", "updateTemplates", "accountTemplate"], options);
