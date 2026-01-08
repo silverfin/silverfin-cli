@@ -1,8 +1,13 @@
 # Changelog
 
 All notable changes to this project will be documented in this file.
+
+## [1.50.0] (07/01/2026)
+
+We introduce a new command `silverfin generate-export-file` which enables the creation of export files (XBRLs, iXBRLs, CSV, etc.) with the CLI. This could be used as part of your development process, for example, after updating an export file template to quickly generate a new export without the need to go to Silverfin's website. It should display any validation errors in the terminal and open the generated file in the default application (browser, text editor, etc.). See more details on how to use it by running `silverfin generate-export-file --help`.
+
 ## [1.49.0] (07/01/2026)
-In this version we are introducing Liquid batch/pattern testing. An extra option was added to the `silverfin run-test`command to run all tests which conatin a common string. 
+In this version we are introducing Liquid batch/pattern testing. An extra option was added to the `silverfin run-test`command to run all tests which conatin a common string.
 To enable it run `silverfin run-test -p "string pattern" -h template_handle`
 
 ## [1.48.0] (25/09/2025)

@@ -3,6 +3,8 @@
 const toolkit = require("../index");
 const liquidTestGenerator = require("../lib/liquidTestGenerator");
 const liquidTestRunner = require("../lib/liquidTestRunner");
+const { ExportFileInstanceGenerator } = require("../lib/exportFileInstanceGenerator");
+const { LiquidSamplerRunner } = require("../lib/liquidSamplerRunner");
 const stats = require("../lib/cli/stats");
 const { Command, Option } = require("commander");
 const pkg = require("../package.json");
@@ -486,6 +488,41 @@ program
     }
   });
 
+// Run Liquid Sampler
+program
+  .command("run-sampler")
+  .description("Run Liquid Sampler for partner templates (reconciliation texts, account detail templates, and/or shared parts)")
+  .requiredOption("-p, --partner <partner-id>", "Specify the partner to be used")
+  .option("-h, --handle <handles...>", "Specify reconciliation text handle(s) - can specify multiple")
+  .option("-at, --account-template <names...>", "Specify account detail template name(s) - can specify multiple")
+  .option("-s, --shared-part <names...>", "Specify shared part name(s) - can specify multiple")
+  .option("-i, --id <sampler-id>", "Specify an existing sampler ID to fetch results for (optional)")
+  .action(async (options) => {
+    // If an existing sampler ID is provided, fetch and display results
+    if (options.id) {
+      await new LiquidSamplerRunner(options.partner).checkStatus(options.id);
+      return;
+    }
+
+    // Validate: at least one template specified
+    const handles = options.handle || [];
+    const accountTemplates = options.accountTemplate || [];
+    const sharedParts = options.sharedPart || [];
+
+    if (handles.length === 0 && accountTemplates.length === 0 && sharedParts.length === 0) {
+      consola.error("You need to specify at least one template using -h, -at, or -s");
+      process.exit(1);
+    }
+
+    const templateHandles = {
+      reconciliationTexts: handles,
+      accountTemplates: accountTemplates,
+      sharedParts: sharedParts,
+    };
+
+    await new LiquidSamplerRunner(options.partner).run(templateHandles);
+  });
+
 // Create Liquid Test
 program
   .command("create-test")
@@ -712,6 +749,20 @@ program
     if (options.updateTemplates) {
       devMode.watchLiquidFiles(options.firm);
     }
+  });
+
+// GENERATE export file
+program
+  .command("generate-export-file")
+  .description("Create a new export file instance from an export file template (e.g. (i)XBRL)")
+  .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
+  .requiredOption("-c, --company <company-id>", "Specify the company to be used")
+  .requiredOption("-p, --period <period-id>", "Specify the period to be used")
+  .requiredOption("-e, --export-file <export-file-id>", "Specify the export file template to be used")
+  .action(async (options) => {
+    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
+    const generator = new ExportFileInstanceGenerator(options.firm, options.company, options.period, options.exportFile);
+    await generator.generateAndOpenFile();
   });
 
 // Update the CLI
