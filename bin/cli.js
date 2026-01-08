@@ -3,6 +3,7 @@
 const toolkit = require("../index");
 const liquidTestGenerator = require("../lib/liquidTestGenerator");
 const liquidTestRunner = require("../lib/liquidTestRunner");
+const { ExportFileInstanceGenerator } = require("../lib/exportFileInstanceGenerator");
 const stats = require("../lib/cli/stats");
 const { Command, Option } = require("commander");
 const pkg = require("../package.json");
@@ -712,6 +713,20 @@ program
     if (options.updateTemplates) {
       devMode.watchLiquidFiles(options.firm);
     }
+  });
+
+// GENERATE export file
+program
+  .command("generate-export-file")
+  .description("Create a new export file instance from an export file template (e.g. (i)XBRL)")
+  .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
+  .requiredOption("-c, --company <company-id>", "Specify the company to be used")
+  .requiredOption("-p, --period <period-id>", "Specify the period to be used")
+  .requiredOption("-e, --export-file <export-file-id>", "Specify the export file template to be used")
+  .action(async (options) => {
+    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
+    const generator = new ExportFileInstanceGenerator(options.firm, options.company, options.period, options.exportFile);
+    await generator.generateAndOpenFile();
   });
 
 // Update the CLI
