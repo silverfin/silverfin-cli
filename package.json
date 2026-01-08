@@ -1,6 +1,6 @@
 {
   "name": "silverfin-cli",
-  "version": "1.50.0",
+  "version": "1.51.0",
   "description": "Command line tool for Silverfin template development",
   "main": "index.js",
   "license": "MIT",
@@ -25,10 +25,8 @@
     "axios": "^1.6.2",
     "chalk": "4.1.2",
     "chokidar": "^3.6.0",
-    "command-exists": "^1.2.9",
     "commander": "^9.4.0",
     "consola": "^3.2.3",
-    "is-wsl": "^2.2.0",
     "open": "^8.4.0",
     "prompt-sync": "^4.2.0",
     "yaml": "^2.2.1"
