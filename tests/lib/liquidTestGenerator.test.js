@@ -3,6 +3,7 @@ const SF = require("../../lib/api/sfApi");
 const { firmCredentials } = require("../../lib/api/firmCredentials");
 const Utils = require("../../lib/utils/liquidTestUtils");
 const { ReconciliationText } = require("../../lib/templates/reconciliationText");
+const { AccountTemplate } = require("../../lib/templates/accountTemplate");
 const { SharedPart } = require("../../lib/templates/sharedPart");
 const { consola } = require("consola");
 
@@ -10,6 +11,7 @@ const { consola } = require("consola");
 jest.mock("../../lib/api/sfApi");
 jest.mock("../../lib/api/firmCredentials");
 jest.mock("../../lib/templates/reconciliationText");
+jest.mock("../../lib/templates/accountTemplate");
 jest.mock("../../lib/templates/sharedPart");
 jest.mock("consola");
 
@@ -28,6 +30,7 @@ describe("liquidTestGenerator", () => {
   const mockUrl = "https://live.getsilverfin.com/f/123/456/ledgers/789/workflows/101/reconciliation_texts/202";
   const mockTestName = "unit_1_test_1";
   const mockParameters = {
+    templateType: "reconciliationText",
     firmId: "123",
     companyId: "456",
     ledgerId: "789",
@@ -167,7 +170,8 @@ describe("liquidTestGenerator", () => {
                 }),
               }),
             }),
-          })
+          }),
+          "reconciliationText"
         );
       });
 
@@ -175,7 +179,7 @@ describe("liquidTestGenerator", () => {
         ReconciliationText.read.mockResolvedValue(false);
 
         await expect(testGenerator(mockUrl, mockTestName)).rejects.toThrow("Process.exit called with code undefined");
-        expect(consola.warn).toHaveBeenCalledWith(`Reconciliation "${mockReconciliationHandle}" wasn't found`);
+        expect(consola.warn).toHaveBeenCalledWith(`Template "${mockReconciliationHandle}" wasn't found`);
       });
 
       it("should read shared parts correctly", async () => {
@@ -225,7 +229,8 @@ describe("liquidTestGenerator", () => {
                 }),
               }),
             }),
-          })
+          }),
+          "reconciliationText"
         );
       });
 
@@ -247,7 +252,8 @@ describe("liquidTestGenerator", () => {
                 }),
               }),
             }),
-          })
+          }),
+          "reconciliationText"
         );
       });
     });
@@ -265,7 +271,7 @@ describe("liquidTestGenerator", () => {
         ReconciliationText.read.mockResolvedValue(false);
 
         await expect(testGenerator(mockUrl, mockTestName)).rejects.toThrow("Process.exit called with code undefined");
-        expect(consola.warn).toHaveBeenCalledWith(`Reconciliation "${mockReconciliationHandle}" wasn't found`);
+        expect(consola.warn).toHaveBeenCalledWith(`Template "${mockReconciliationHandle}" wasn't found`);
       });
 
       it("should warn and return gracefully for missing shared parts", async () => {
@@ -305,7 +311,8 @@ describe("liquidTestGenerator", () => {
                 }),
               }),
             }),
-          })
+          }),
+          "reconciliationText"
         );
       });
 
@@ -330,7 +337,282 @@ describe("liquidTestGenerator", () => {
                 }),
               }),
             }),
-          })
+          }),
+          "reconciliationText"
+        );
+      });
+    });
+
+    describe("account template test generation", () => {
+      const mockAccountUrl = "https://live.getsilverfin.com/f/123/456/ledgers/789/workflows/101/account_entry/5000";
+      const mockAccountParameters = {
+        templateType: "accountTemplate",
+        firmId: "123",
+        companyId: "456",
+        ledgerId: "789",
+        workflowId: "101",
+        accountId: "5000",
+      };
+      const mockAccountTemplateHandle = "test_account_template";
+      const mockAccountResponse = {
+        account: {
+          id: 1001,
+          number: "5000",
+          name: "Test Account",
+        },
+        value: "12345.67",
+        starred: false,
+        account_reconciliation_template: {
+          id: 9999,
+        },
+      };
+      const mockAccountTemplateDetails = {
+        name_nl: "test_account_template",
+        name_en: "Test Account Template",
+        id: 9999,
+      };
+      const mockAccountTemplate = {
+        name_nl: "test_account_template",
+        id: 9999,
+        text: "Main liquid content for account template",
+        text_parts: [{ name: "part_1", content: "Part 1 content" }],
+        externally_managed: true,
+      };
+
+      beforeEach(() => {
+        // Override extractURL for account template tests
+        Utils.extractURL.mockReturnValue(mockAccountParameters);
+        Utils.createBaseLiquidTest.mockReturnValue({
+          [mockTestName]: {
+            context: { period: "2024-12-31" },
+            data: {
+              periods: {
+                replace_period_name: {
+                  accounts: {},
+                },
+              },
+            },
+            expectation: {
+              reconciled: true,
+              results: {},
+            },
+          },
+        });
+
+        // Mock AccountTemplate.read
+        AccountTemplate.read.mockResolvedValue(mockAccountTemplate);
+
+        // Mock SF API calls for account templates
+        SF.findAccountByNumber = jest.fn().mockResolvedValue(mockAccountResponse);
+        SF.readAccountTemplateById = jest.fn().mockResolvedValue(mockAccountTemplateDetails);
+        SF.getAccountTemplateCustom = jest.fn().mockResolvedValue({
+          data: [
+            {
+              namespace: "account_namespace",
+              key: "account_key",
+              value: "account_value",
+            },
+          ],
+        });
+        SF.getAccountTemplateResults = jest.fn().mockResolvedValue({
+          data: { account_result1: "value1", account_result2: "value2" },
+        });
+      });
+
+      it("should read account template correctly", async () => {
+        await testGenerator(mockAccountUrl, mockTestName);
+
+        // Verify account lookup
+        expect(SF.findAccountByNumber).toHaveBeenCalledWith(
+          mockAccountParameters.firmId,
+          mockAccountParameters.companyId,
+          mockAccountParameters.ledgerId,
+          mockAccountParameters.accountId
+        );
+
+        // Verify template details fetch
+        expect(SF.readAccountTemplateById).toHaveBeenCalledWith("firm", mockAccountParameters.firmId, 9999);
+
+        // Verify AccountTemplate.read was called with the correct handle
+        expect(AccountTemplate.read).toHaveBeenCalledWith(mockAccountTemplateHandle);
+      });
+
+      it("should set current_account in context", async () => {
+        await testGenerator(mockAccountUrl, mockTestName);
+
+        expect(Utils.exportYAML).toHaveBeenCalledWith(
+          mockAccountTemplateHandle,
+          expect.objectContaining({
+            [mockTestName]: expect.objectContaining({
+              context: expect.objectContaining({
+                current_account: "5000",
+                period: "2024-12-31",
+              }),
+            }),
+          }),
+          "accountTemplate"
+        );
+      });
+
+      it("should fetch account template custom and results", async () => {
+        await testGenerator(mockAccountUrl, mockTestName);
+
+        // Verify custom fetch
+        expect(SF.getAccountTemplateCustom).toHaveBeenCalledWith(
+          "firm",
+          mockAccountParameters.firmId,
+          mockAccountParameters.companyId,
+          mockAccountParameters.ledgerId,
+          mockAccountResponse.account.id
+        );
+
+        // Verify results fetch
+        expect(SF.getAccountTemplateResults).toHaveBeenCalledWith(
+          "firm",
+          mockAccountParameters.firmId,
+          mockAccountParameters.companyId,
+          mockAccountParameters.ledgerId,
+          mockAccountResponse.account.id
+        );
+
+        // Verify account data structure in test object
+        expect(Utils.exportYAML).toHaveBeenCalledWith(
+          mockAccountTemplateHandle,
+          expect.objectContaining({
+            [mockTestName]: expect.objectContaining({
+              data: expect.objectContaining({
+                periods: expect.objectContaining({
+                  "2024-12-31": expect.objectContaining({
+                    accounts: expect.objectContaining({
+                      5000: expect.objectContaining({
+                        name: "Test Account",
+                        value: 12345.67,
+                        custom: expect.objectContaining({
+                          "account_namespace.account_key": "account_value",
+                        }),
+                      }),
+                    }),
+                  }),
+                }),
+              }),
+              expectation: expect.objectContaining({
+                results: expect.objectContaining({
+                  account_result1: "value1",
+                  account_result2: "value2",
+                }),
+              }),
+            }),
+          }),
+          "accountTemplate"
+        );
+      });
+
+      it("should use starred status from account response", async () => {
+        const starredAccountResponse = {
+          ...mockAccountResponse,
+          starred: true,
+        };
+        SF.findAccountByNumber.mockResolvedValue(starredAccountResponse);
+
+        await testGenerator(mockAccountUrl, mockTestName);
+
+        // The starred status should be extracted from response (not from workflow lookup)
+        expect(SF.findReconciliationInWorkflow).not.toHaveBeenCalled();
+      });
+
+      it("should skip dependency resolution for account templates", async () => {
+        await testGenerator(mockAccountUrl, mockTestName);
+
+        // Verify shared parts are NOT searched (dependency resolution is skipped)
+        expect(SharedPart.read).not.toHaveBeenCalled();
+
+        // Verify the test object does not contain reconciliation dependencies
+        // (only account data should be present)
+        expect(Utils.exportYAML).toHaveBeenCalledWith(
+          mockAccountTemplateHandle,
+          expect.objectContaining({
+            [mockTestName]: expect.objectContaining({
+              data: expect.objectContaining({
+                periods: expect.objectContaining({
+                  "2024-12-31": expect.objectContaining({
+                    accounts: expect.any(Object),
+                    // Should not have reconciliations object
+                  }),
+                }),
+              }),
+            }),
+          }),
+          "accountTemplate"
+        );
+      });
+
+      it("should handle missing account template association gracefully", async () => {
+        const accountWithoutTemplate = {
+          ...mockAccountResponse,
+          account_reconciliation_template: null,
+        };
+        SF.findAccountByNumber.mockResolvedValue(accountWithoutTemplate);
+
+        await expect(testGenerator(mockAccountUrl, mockTestName)).rejects.toThrow("Process.exit called with code 1");
+        expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("No account template associated with account"));
+      });
+
+      it("should handle missing account template file gracefully", async () => {
+        AccountTemplate.read.mockResolvedValue(false);
+
+        await expect(testGenerator(mockAccountUrl, mockTestName)).rejects.toThrow("Process.exit called with code undefined");
+        expect(consola.warn).toHaveBeenCalledWith(`Template "${mockAccountTemplateHandle}" wasn't found`);
+      });
+
+      it("should handle account lookup errors gracefully", async () => {
+        SF.findAccountByNumber.mockRejectedValue(new Error("Account not found"));
+
+        await expect(testGenerator(mockAccountUrl, mockTestName)).rejects.toThrow("Process.exit called with code 1");
+        expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("Failed to get account template details"));
+      });
+
+      it("should process period custom data for account templates", async () => {
+        await testGenerator(mockAccountUrl, mockTestName);
+
+        expect(Utils.exportYAML).toHaveBeenCalledWith(
+          mockAccountTemplateHandle,
+          expect.objectContaining({
+            [mockTestName]: expect.objectContaining({
+              data: expect.objectContaining({
+                periods: expect.objectContaining({
+                  "2024-12-31": expect.objectContaining({
+                    custom: expect.objectContaining({
+                      "pit_integration.code_1002": "yes",
+                    }),
+                  }),
+                }),
+              }),
+            }),
+          }),
+          "accountTemplate"
+        );
+      });
+
+      it("should handle empty period custom data for account templates", async () => {
+        SF.getAllPeriodCustom.mockResolvedValue([]);
+
+        await testGenerator(mockAccountUrl, mockTestName);
+
+        // Should not add custom data if empty
+        expect(Utils.exportYAML).toHaveBeenCalledWith(
+          mockAccountTemplateHandle,
+          expect.objectContaining({
+            [mockTestName]: expect.objectContaining({
+              data: expect.objectContaining({
+                periods: expect.objectContaining({
+                  "2024-12-31": expect.not.objectContaining({
+                    custom: expect.anything(),
+                  }),
+                }),
+              }),
+            }),
+          }),
+          "accountTemplate"
         );
       });
     });
