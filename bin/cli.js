@@ -466,7 +466,12 @@ program
     }
 
     const templateType = options.handle ? "reconciliationText" : "accountTemplate";
-    const templateName = options.handle ? options.handle : options.accountTemplate;
+    let templateName = options.handle ? options.handle : options.accountTemplate;
+
+    // Support pipe-separated values: if single string contains pipes, split it
+    if (templateName.length === 1 && typeof templateName[0] === 'string' && templateName[0].includes('|')) {
+      templateName = templateName[0].split('|').map(name => name.trim()).filter(name => name.length > 0);
+    }
 
     if (!templateName || templateName.length === 0) {
       consola.error("You need to provide at least one handle or account template name");
