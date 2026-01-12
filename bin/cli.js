@@ -474,12 +474,7 @@ program
     }
 
     const templateType = options.handle ? "reconciliationText" : "accountTemplate";
-    let templateName = options.handle ? options.handle : options.accountTemplate;
-
-    // Support pipe-separated values: if single string contains pipes, split it
-    if (templateName.length === 1 && typeof templateName[0] === 'string' && templateName[0].includes('|')) {
-      templateName = templateName[0].split('|').map(name => name.trim()).filter(name => name.length > 0);
-    }
+    const templateName = options.handle ? options.handle : options.accountTemplate;
 
     if (!templateName || templateName.length === 0) {
       consola.error("You need to provide at least one handle or account template name");
@@ -506,7 +501,16 @@ program
       process.exit(1);
     }
 
-    await liquidTestRunner.runTestsWithOutput(options.firm, templateType, singleTemplateName, options.test, options.previewOnly, options.htmlInput, options.htmlPreview, options.pattern);
+    await liquidTestRunner.runTestsWithOutput(
+      options.firm,
+      templateType,
+      singleTemplateName,
+      options.test,
+      options.previewOnly,
+      options.htmlInput,
+      options.htmlPreview,
+      options.pattern
+    );
   });
 
 // Create Liquid Test
