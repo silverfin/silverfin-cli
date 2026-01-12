@@ -3,6 +3,7 @@
 const toolkit = require("../index");
 const liquidTestGenerator = require("../lib/liquidTestGenerator");
 const liquidTestRunner = require("../lib/liquidTestRunner");
+const { ExportFileInstanceGenerator } = require("../lib/exportFileInstanceGenerator");
 const stats = require("../lib/cli/stats");
 const { Command, Option } = require("commander");
 const pkg = require("../package.json");
@@ -16,6 +17,7 @@ const path = require("path");
 const { consola } = require("consola");
 const { runCommandChecks } = require("../lib/cli/utils");
 const { CwdValidator } = require("../lib/cli/cwdValidator");
+const { AutoCompletions } = require("../lib/cli/autoCompletions");
 
 const firmIdDefault = cliUtils.loadDefaultFirmId();
 cliUtils.handleUncaughtErrors();
@@ -458,10 +460,16 @@ program
   .option("--html-preview", "Get a static html of the export-view of the template generated with the Liquid Test data (optional)", false)
   .option("--preview-only", "Skip the checking of the results of the Liquid Test in case you only want to generate a preview template (optional)", false)
   .option("--status", "Only return the status of the test runs as PASSED/FAILED (optional)", false)
+  .option("-p, --pattern <pattern>", "Run all tests that match this pattern (optional)", "")
 
   .action(async (options) => {
     if (!options.handle && !options.accountTemplate) {
       consola.error("You need to specify either a reconciliation handle or an account template");
+      process.exit(1);
+    }
+
+    if (options.test && options.pattern) {
+      consola.error("You cannot use both --test and --pattern options at the same time");
       process.exit(1);
     }
 
@@ -486,7 +494,7 @@ program
 
     if (options.status) {
       // Status mode: allow multiple, pass array of template names
-      await liquidTestRunner.runTestsStatusOnly(options.firm, templateType, templateName, options.test);
+      await liquidTestRunner.runTestsStatusOnly(options.firm, templateType, templateName, options.test, options.pattern);
       return;
     }
 
@@ -498,7 +506,7 @@ program
       process.exit(1);
     }
 
-    await liquidTestRunner.runTestsWithOutput(options.firm, templateType, singleTemplateName, options.test, options.previewOnly, options.htmlInput, options.htmlPreview);
+    await liquidTestRunner.runTestsWithOutput(options.firm, templateType, singleTemplateName, options.test, options.previewOnly, options.htmlInput, options.htmlPreview, options.pattern);
   });
 
 // Create Liquid Test
@@ -558,8 +566,9 @@ program
   .addOption(new Option("--refresh-partner-token <partnerId>", "Get a new partner api key using the stored api key"))
   .addOption(new Option("--set-host <host>", "Set a custom host for the Silverfin API (e.g. https://live.getsilverfin.com)"))
   .addOption(new Option("--get-host", "Get the current host for the Silverfin API"))
+  .addOption(new Option("--set-autocompletion", "Set TAB autocompletion for the CLI"))
   .action(async (options) => {
-    cliUtils.checkUniqueOption(["setFirm", "getFirm", "listAll", "updateName", "refreshToken", "refreshPartnerToken", "setHost", "getHost"], options);
+    cliUtils.checkUniqueOption(["setFirm", "getFirm", "listAll", "updateName", "refreshToken", "refreshPartnerToken", "setHost", "getHost", "setAutocompletion"], options);
     if (options.setFirm) {
       firmCredentials.setDefaultFirmId(options.setFirm);
       const currentDirectory = path.basename(process.cwd());
@@ -613,6 +622,9 @@ program
     if (options.getHost) {
       const host = firmCredentials.getHost();
       consola.info(`Current host: ${host}`);
+    }
+    if (options.setAutocompletion) {
+      AutoCompletions.set();
     }
   });
 
@@ -699,24 +711,44 @@ program
   .option("-t, --test <test-name>", `Specify the name of the test to be run (optional). It has to be used together with "--handle"`, "")
   .option("--html", `Get a html file of the template's input-view generated with the Liquid Test information (optional). It has to be used together with "--handle"`, false)
   .option("--yes", "Skip the prompt confirmation (optional)")
+  .option("-p, --pattern <pattern>", `Run all tests that match this pattern (optional). It has to be used together with "--handle" or "--account-template"`, "")
   .action((options) => {
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     cliUtils.checkUniqueOption(["handle", "updateTemplates", "accountTemplate"], options);
+
+    if (options.test && options.pattern) {
+      consola.error("You cannot use both --test and --pattern options at the same time");
+      process.exit(1);
+    }
 
     if (options.updateTemplates && !options.yes) {
       cliUtils.promptConfirmation();
     }
 
     if (options.accountTemplate) {
-      devMode.watchLiquidTest(options.firm, options.accountTemplate, options.test, options.html, "accountTemplate");
+      devMode.watchLiquidTest(options.firm, options.accountTemplate, options.test, options.html, "accountTemplate", options.pattern);
     }
 
     if (options.handle) {
-      devMode.watchLiquidTest(options.firm, options.handle, options.test, options.html, "reconciliationText");
+      devMode.watchLiquidTest(options.firm, options.handle, options.test, options.html, "reconciliationText", options.pattern);
     }
     if (options.updateTemplates) {
       devMode.watchLiquidFiles(options.firm);
     }
+  });
+
+// GENERATE export file
+program
+  .command("generate-export-file")
+  .description("Create a new export file instance from an export file template (e.g. (i)XBRL)")
+  .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
+  .requiredOption("-c, --company <company-id>", "Specify the company to be used")
+  .requiredOption("-p, --period <period-id>", "Specify the period to be used")
+  .requiredOption("-e, --export-file <export-file-id>", "Specify the export file template to be used")
+  .action(async (options) => {
+    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
+    const generator = new ExportFileInstanceGenerator(options.firm, options.company, options.period, options.exportFile);
+    await generator.generateAndOpenFile();
   });
 
 // Update the CLI

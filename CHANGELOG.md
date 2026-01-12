@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.51.0] (08/01/2026)
+
+This update should have no user impact whatsoever.
+Replace Windows-specific dependencies with built-in functionality to improve cross-platform compatibility and reduce security risks related to npm dependencies.
+Unify how files are downloaded, stored and opened across different commands.
+
+## [1.50.0] (07/01/2026)
+
+We introduce a new command `silverfin generate-export-file` which enables the creation of export files (XBRLs, iXBRLs, CSV, etc.) with the CLI. This could be used as part of your development process, for example, after updating an export file template to quickly generate a new export without the need to go to Silverfin's website. It should display any validation errors in the terminal and open the generated file in the default application (browser, text editor, etc.). See more details on how to use it by running `silverfin generate-export-file --help`.
+
+## [1.49.0] (07/01/2026)
+In this version we are introducing Liquid batch/pattern testing. An extra option was added to the `silverfin run-test`command to run all tests which conatin a common string.
+To enable it run `silverfin run-test -p "string pattern" -h template_handle`
+
+## [1.48.0] (25/09/2025)
+In this version we are introducing TAB autocompletion for the CLI commands. It should autocomplete command names, flags, and template handles and names.
+To enable it, run `silverfin config --set-autocompletion` and follow the instructions.
+
+## [1.47.1] (13/11/2025)
+- Fix: Update authorize command to use user-inputted firm ID when calling `getFirmName` function rather than default firm ID
+
 ## [1.47.0] (23/09/2025)
 - Added `create-all-templates` and `update-all-templates` commands, which will create or update all templates for a given firm at once
 
@@ -21,7 +42,7 @@ All notable changes to this project will be documented in this file.
 
 ## [1.45.0] (28/08/2025)
 - A new config file attribute `test_firm_id` was added for account templates and reconciliations texts.
-Adding it with a specific firm will make sure that this firm is used for the Github actions. 
+Adding it with a specific firm will make sure that this firm is used for the Github actions.
 
 ## [1.44.0] (11/08/2025)
 - `create-account-template` command will now create an empty .yml file
