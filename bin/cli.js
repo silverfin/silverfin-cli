@@ -453,8 +453,8 @@ program
   .command("run-test")
   .description("Run Liquid Tests for a reconciliation template from a YAML file")
   .requiredOption("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
-  .option("-h, --handle <handle>", "Specify the reconciliation to be used (mandatory)")
-  .option("-at, --account-template <name>", "Specify the account template to be used (mandatory)")
+  .option("-h, --handle <handle...>", "Specify one or more reconciliations to be used (mandatory)")
+  .option("-at, --account-template <name...>", "Specify one or more account templates to be used (mandatory)")
   .option("-t, --test <test-name>", "Specify the name of the test to be run (optional)", "")
   .option("--html-input", "Get a static html of the input-view of the template generated with the Liquid Test data (optional)", false)
   .option("--html-preview", "Get a static html of the export-view of the template generated with the Liquid Test data (optional)", false)
@@ -462,7 +462,7 @@ program
   .option("--status", "Only return the status of the test runs as PASSED/FAILED (optional)", false)
   .option("-p, --pattern <pattern>", "Run all tests that match this pattern (optional)", "")
 
-  .action((options) => {
+  .action(async (options) => {
     if (!options.handle && !options.accountTemplate) {
       consola.error("You need to specify either a reconciliation handle or an account template");
       process.exit(1);
@@ -474,17 +474,39 @@ program
     }
 
     const templateType = options.handle ? "reconciliationText" : "accountTemplate";
-    const templateName = options.handle ? options.handle : options.accountTemplate;
+    let templateName = options.handle ? options.handle : options.accountTemplate;
+
+    // Support pipe-separated values: if single string contains pipes, split it
+    if (templateName.length === 1 && typeof templateName[0] === 'string' && templateName[0].includes('|')) {
+      templateName = templateName[0].split('|').map(name => name.trim()).filter(name => name.length > 0);
+    }
+
+    if (!templateName || templateName.length === 0) {
+      consola.error("You need to provide at least one handle or account template name");
+      process.exit(1);
+    }
+
+    // Block multiple handles/templates without --status
+    if (templateName.length > 1 && !options.status) {
+      consola.error("Multiple handles/templates are only allowed when used with the --status flag");
+      process.exit(1);
+    }
 
     if (options.status) {
-      liquidTestRunner.runTestsStatusOnly(options.firm, templateType, templateName, options.test, options.pattern);
-    } else {
-      if (options.previewOnly && !options.htmlInput && !options.htmlPreview) {
-        consola.info(`When using "--preview-only" you need to specify at least one of the following options: "--html-input", "--html-preview"`);
-        process.exit(1);
-      }
-      liquidTestRunner.runTestsWithOutput(options.firm, templateType, templateName, options.test, options.previewOnly, options.htmlInput, options.htmlPreview, options.pattern);
+      // Status mode: allow multiple, pass array of template names
+      await liquidTestRunner.runTestsStatusOnly(options.firm, templateType, templateName, options.test, options.pattern);
+      return;
     }
+
+    // Non-status mode: always run a single template, pass string handle/name
+    const singleTemplateName = templateName[0];
+
+    if (options.previewOnly && !options.htmlInput && !options.htmlPreview) {
+      consola.info(`When using "--preview-only" you need to specify at least one of the following options: "--html-input", "--html-preview"`);
+      process.exit(1);
+    }
+
+    await liquidTestRunner.runTestsWithOutput(options.firm, templateType, singleTemplateName, options.test, options.previewOnly, options.htmlInput, options.htmlPreview, options.pattern);
   });
 
 // Create Liquid Test
