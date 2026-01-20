@@ -407,6 +407,47 @@ test_case_1:
       expect(result).not.toContain(targetHandle);
     });
 
+    it("should not include the target handle itself (self-reference)", () => {
+      const targetHandle = "target_template";
+      const dependentHandle = "template_one";
+
+      const selfDir = path.join(reconciliationTextsDir, targetHandle);
+      const dependentDir = path.join(reconciliationTextsDir, dependentHandle);
+
+      fs.mkdirSync(path.join(selfDir, "tests"), { recursive: true });
+      fs.mkdirSync(path.join(dependentDir, "tests"), { recursive: true });
+
+      // Target template references itself (should be ignored)
+      fs.writeFileSync(
+        path.join(selfDir, "tests", `${targetHandle}_liquid_test.yml`),
+        `
+test_case_1:
+  data:
+    periods:
+      "2024-01-01":
+        reconciliations:
+          ${targetHandle}: {}
+`
+      );
+
+      // Another template references targetHandle (should be found)
+      fs.writeFileSync(
+        path.join(dependentDir, "tests", `${dependentHandle}_liquid_test.yml`),
+        `
+test_case_1:
+  data:
+    periods:
+      "2024-01-01":
+        reconciliations:
+          ${targetHandle}: {}
+`
+      );
+
+      const result = fsUtils.checkLiquidTestDependencies(targetHandle);
+      expect(result).toContain(dependentHandle);
+      expect(result).not.toContain(targetHandle);
+    });
+
     it("should handle parsing errors gracefully", () => {
       const targetHandle = "target_template";
       const validHandle = "template_one";
