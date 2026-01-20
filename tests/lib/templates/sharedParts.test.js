@@ -29,22 +29,24 @@ describe("SharedPart", () => {
       externally_managed: true,
     };
 
-    const tempDir = path.join(process.cwd(), "tmp");
-    const expectedFolderPath = path.join(tempDir, "shared_parts", name);
-    const mainLiquidPath = path.join(expectedFolderPath, `${name}.liquid`);
-    const configPath = path.join(expectedFolderPath, "config.json");
+    const repoRoot = path.resolve(__dirname, "../../..");
+    let tempDir;
+    let expectedFolderPath;
+    let mainLiquidPath;
+    let configPath;
 
     beforeEach(() => {
-      if (!fs.existsSync(tempDir)) {
-        fs.mkdirSync(tempDir, { recursive: true });
-      }
+      tempDir = fs.mkdtempSync(path.join(repoRoot, "tmp-"));
       process.chdir(tempDir);
+
+      expectedFolderPath = path.join(tempDir, "shared_parts", name);
+      mainLiquidPath = path.join(expectedFolderPath, `${name}.liquid`);
+      configPath = path.join(expectedFolderPath, "config.json");
     });
 
     afterEach(() => {
-      if (fs.existsSync(tempDir)) {
-        fs.rmdirSync(tempDir, { recursive: true });
-      }
+      process.chdir(repoRoot);
+      if (tempDir && fs.existsSync(tempDir)) fs.rmSync(tempDir, { recursive: true, force: true });
       jest.resetAllMocks();
     });
 
@@ -75,10 +77,11 @@ describe("SharedPart", () => {
 
   describe("read", () => {
     const name = "example_shared_part_name";
-    const tempDir = path.join(process.cwd(), "tmp");
-    const expectedFolderPath = path.join(tempDir, "shared_parts", name);
-    const mainLiquidPath = path.join(expectedFolderPath, `${name}.liquid`);
-    const configPath = path.join(expectedFolderPath, "config.json");
+    const repoRoot = path.resolve(__dirname, "../../..");
+    let tempDir;
+    let expectedFolderPath;
+    let mainLiquidPath;
+    let configPath;
 
     const configContent = {
       id: { 100: 808080 },
@@ -90,10 +93,12 @@ describe("SharedPart", () => {
     };
 
     beforeEach(() => {
-      if (!fs.existsSync(tempDir)) {
-        fs.mkdirSync(tempDir, { recursive: true });
-      }
+      tempDir = fs.mkdtempSync(path.join(repoRoot, "tmp-"));
       process.chdir(tempDir);
+
+      expectedFolderPath = path.join(tempDir, "shared_parts", name);
+      mainLiquidPath = path.join(expectedFolderPath, `${name}.liquid`);
+      configPath = path.join(expectedFolderPath, "config.json");
 
       // Create necessary directories and files
       fs.mkdirSync(expectedFolderPath, { recursive: true });
@@ -106,9 +111,8 @@ describe("SharedPart", () => {
     });
 
     afterEach(() => {
-      if (fs.existsSync(tempDir)) {
-        fs.rmdirSync(tempDir, { recursive: true });
-      }
+      process.chdir(repoRoot);
+      if (tempDir && fs.existsSync(tempDir)) fs.rmSync(tempDir, { recursive: true, force: true });
       jest.resetAllMocks();
     });
 

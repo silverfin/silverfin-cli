@@ -11,16 +11,14 @@ describe("fsUtils", () => {
     let reconciliationTextsDir;
 
     beforeEach(() => {
-      if (!fs.existsSync(tempDir)) {
-        fs.mkdirSync(tempDir, { recursive: true });
-      }
+      tempDir = fs.mkdtempSync(path.join(repoRoot, "tmp-"));
       process.chdir(tempDir);
+      reconciliationTextsDir = path.join(tempDir, "reconciliation_texts");
     });
 
     afterEach(() => {
-      if (fs.existsSync(tempDir)) {
-        fs.rmSync(tempDir, { recursive: true, force: true });
-      }
+      process.chdir(repoRoot);
+      if (tempDir && fs.existsSync(tempDir)) fs.rmSync(tempDir, { recursive: true, force: true });
       jest.resetAllMocks();
     });
 
