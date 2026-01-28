@@ -1,6 +1,8 @@
 # Changelog
 
 All notable changes to this project will be documented in this file.
+## [1.54.0] (17/02/2026)
+Added `create-test` command support for account templates (fetches template data, period data, and custom data).
 
 ## [1.53.0] (11/02/2026)
 We have introduced a new command `silverfin check-dependencies -h reconciliation_handle`.
