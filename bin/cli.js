@@ -523,7 +523,8 @@ program
   .option("-h, --handle <handles...>", "Specify reconciliation text handle(s) - can specify multiple")
   .option("-at, --account-template <names...>", "Specify account detail template name(s) - can specify multiple")
   .option("-s, --shared-part <names...>", "Specify shared part name(s) - can specify multiple")
-  .option("-i, --id <sampler-id>", "Specify an existing sampler ID to fetch results for (optional)")
+  .option("--firm-ids <firm-ids...>", "Specify firm ID(s) to run the sampler against - can specify multiple (optional)")
+  .option("--id <sampler-id>", "Specify an existing sampler ID to fetch results for (optional)")
   .action(async (options) => {
     // If an existing sampler ID is provided, fetch and display results
     if (options.id) {
@@ -547,7 +548,9 @@ program
       sharedParts: sharedParts,
     };
 
-    await new LiquidSamplerRunner(options.partner).run(templateHandles);
+    const firmIds = options.firmIds || [];
+
+    await new LiquidSamplerRunner(options.partner).run(templateHandles, firmIds);
   });
 
 // Create Liquid Test
