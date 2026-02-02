@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.52.1] (21/01/2026)
+In this update we solved a bug related to the `silverfin run-test -p "string pattern" -h template_handle` command. Previously, when we run tests and define a pattern, those tests can include an alias, but the anchor was defined in a different section that gets filtered out when running the tests. This has now been resolved.
+
 ## [1.52.0] (12/01/2026)
 This update improves test execution performance when running tests with status checks across multiple template handles. 
 Tests are now run in parallel for multiple handles when using the `--status` flag, significantly reducing the overall execution time. Previously, tests with status checks for multiple handles would run sequentially, but now they leverage parallel processing for better efficiency. This change only affects the `silverfin run-test` command when both multiple handles and the status flag are used together.
