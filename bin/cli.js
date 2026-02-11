@@ -427,7 +427,7 @@ program
 // UPDATE all templates
 program
   .command("update-all-templates")
-  .description("Update all templates at once")
+  .description("Update all templates at once (reconciliations, export files, account templates and shared parts)")
   .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
   .option('-m, --message "<message>"', "Add a message to Silverfin's changelog (optional) | Make sure to always enclose the message in double quotes", undefined)
   .option("--yes", "Skip the prompt confirmation (optional)")

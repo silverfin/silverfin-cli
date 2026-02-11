@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.52.2] (11/02/2026)
+Update description of the `silverfin update-all-templates` command
+
 ## [1.52.1] (21/01/2026)
 In this update we solved a bug related to the `silverfin run-test -p "string pattern" -h template_handle` command. Previously, when we run tests and define a pattern, those tests can include an alias, but the anchor was defined in a different section that gets filtered out when running the tests. This has now been resolved.
 
