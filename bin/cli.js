@@ -18,6 +18,7 @@ const { consola } = require("consola");
 const { runCommandChecks } = require("../lib/cli/utils");
 const { CwdValidator } = require("../lib/cli/cwdValidator");
 const { AutoCompletions } = require("../lib/cli/autoCompletions");
+const fsUtils = require("../lib/utils/fsUtils");
 
 const firmIdDefault = cliUtils.loadDefaultFirmId();
 cliUtils.handleUncaughtErrors();
@@ -524,6 +525,21 @@ program
     const reconciledStatus = options.unreconciled ? false : true;
     const testName = options.test ? options.test : "test_name";
     liquidTestGenerator.testGenerator(options.url, testName, reconciledStatus);
+  });
+
+// Check Liquid Test dependencies for a reconciliation template
+program
+  .command("check-dependencies")
+  .description("List reconciliation templates whose Liquid Tests reference the given handle")
+  .requiredOption("-h, --handle <handle>", "Specify the reconciliation handle to check dependencies for")
+  .action((options) => {
+    const dependentHandles = fsUtils.checkLiquidTestDependencies(options.handle);
+    if (dependentHandles.length === 0) {
+      consola.info(`No other reconciliation templates reference "${options.handle}" in their Liquid Test data.`);
+    } else {
+      consola.info(`Templates that reference "${options.handle}" in their Liquid Test data:`);
+      dependentHandles.forEach((handle) => consola.log(`  - ${handle}`));
+    }
   });
 
 // Authorize APP

@@ -66,24 +66,28 @@ describe("ExportFile", () => {
       },
     };
 
-    const tempDir = path.join(process.cwd(), "tmp");
-    const expectedFolderPath = path.join(tempDir, "export_files", name_nl);
-    const configPath = path.join(expectedFolderPath, "config.json");
-    const mainLiquidPath = path.join(expectedFolderPath, "main.liquid");
-    const part1LiquidPath = path.join(expectedFolderPath, "text_parts", "part_1.liquid");
-    const oldPartLiquidPath = path.join(expectedFolderPath, "text_parts", "old_part.liquid");
+    const repoRoot = path.resolve(__dirname, "../../..");
+    let tempDir;
+    let expectedFolderPath;
+    let configPath;
+    let mainLiquidPath;
+    let part1LiquidPath;
+    let oldPartLiquidPath;
 
     beforeEach(() => {
-      if (!fs.existsSync(tempDir)) {
-        fs.mkdirSync(tempDir, { recursive: true });
-      }
+      tempDir = fs.mkdtempSync(path.join(repoRoot, "tmp-"));
       process.chdir(tempDir);
+
+      expectedFolderPath = path.join(tempDir, "export_files", name_nl);
+      configPath = path.join(expectedFolderPath, "config.json");
+      mainLiquidPath = path.join(expectedFolderPath, "main.liquid");
+      part1LiquidPath = path.join(expectedFolderPath, "text_parts", "part_1.liquid");
+      oldPartLiquidPath = path.join(expectedFolderPath, "text_parts", "old_part.liquid");
     });
 
     afterEach(() => {
-      if (fs.existsSync(tempDir)) {
-        fs.rmdirSync(tempDir, { recursive: true });
-      }
+      process.chdir(repoRoot);
+      if (tempDir && fs.existsSync(tempDir)) fs.rmSync(tempDir, { recursive: true, force: true });
       jest.resetAllMocks();
     });
 

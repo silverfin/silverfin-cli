@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.53.0] (11/02/2026)
+We have introduced a new command `silverfin check-dependencies -h reconciliation_handle`.
+Currently, it only works for reconciliation templates and detects which templates reference the given handle in their Liquid Test data.
+
 ## [1.52.2] (11/02/2026)
 Update description of the `silverfin update-all-templates` command
 
