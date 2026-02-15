@@ -570,6 +570,7 @@ program
   .command("stats")
   .description("Generate an overview with some statistics")
   .requiredOption("-s, --since <date>, Specify the date which is going to be used to filter the data from (format: YYYY-MM-DD) (mandatory)")
+  .option("-w, --workflow [handle]", "Optionally filter test statistics by workflow (workflow handle is optional)")
   .action((options) => {
     stats.generateOverview(options.since);
   });
