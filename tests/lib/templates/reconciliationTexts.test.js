@@ -397,7 +397,7 @@ describe("ReconciliationText", () => {
 
     afterEach(() => {
       if (fs.existsSync(tempDir)) {
-        fs.rmdirSync(tempDir, { recursive: true });
+        fs.rmSync(tempDir, { recursive: true, force: true });
       }
       jest.resetAllMocks();
     });
@@ -568,6 +568,89 @@ describe("ReconciliationText", () => {
       const result = ReconciliationText.read(handle);
 
       expect(result.name_nl).toBe(handle);
+    });
+
+    it("should find a text part that was moved into a subdirectory", () => {
+      // Move part_1.liquid into a subfolder
+      const subDir = path.join(templateDir, "text_parts", "tables");
+      fs.mkdirSync(subDir, { recursive: true });
+      fs.renameSync(part1LiquidPath, path.join(subDir, "part_1.liquid"));
+
+      const result = ReconciliationText.read(handle);
+
+      expect(result.text_parts).toEqual([{ name: "part_1", content: "Part 1 content" }]);
+    });
+
+    it("should update config.json when a text part is moved to a subdirectory", () => {
+      // Move part_1.liquid into a subfolder
+      const subDir = path.join(templateDir, "text_parts", "tables");
+      fs.mkdirSync(subDir, { recursive: true });
+      fs.renameSync(part1LiquidPath, path.join(subDir, "part_1.liquid"));
+
+      ReconciliationText.read(handle);
+
+      const updatedConfig = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+      expect(updatedConfig.text_parts.part_1).toBe("text_parts/tables/part_1.liquid");
+    });
+
+    it("should find a text part nested multiple levels deep", () => {
+      // Move part_1.liquid into a deeply nested subfolder
+      // First, ensure no leftover from other tests by recreating the file at original location
+      if (!fs.existsSync(part1LiquidPath)) {
+        fs.writeFileSync(part1LiquidPath, "Part 1 content");
+      }
+      // Remove any subdirectories left from previous tests
+      const textPartsDir = path.join(templateDir, "text_parts");
+      for (const entry of fs.readdirSync(textPartsDir)) {
+        const fullPath = path.join(textPartsDir, entry);
+        if (fs.statSync(fullPath).isDirectory()) {
+          fs.rmSync(fullPath, { recursive: true, force: true });
+        }
+      }
+      const deepDir = path.join(templateDir, "text_parts", "section", "subsection");
+      fs.mkdirSync(deepDir, { recursive: true });
+      fs.renameSync(part1LiquidPath, path.join(deepDir, "part_1.liquid"));
+
+      const result = ReconciliationText.read(handle);
+
+      expect(result.text_parts).toEqual([{ name: "part_1", content: "Part 1 content" }]);
+
+      const updatedConfig = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+      expect(updatedConfig.text_parts.part_1).toBe("text_parts/section/subsection/part_1.liquid");
+    });
+
+    it("should not add new files on disk that are not in the config", () => {
+      // Add a new liquid file that is NOT listed in config
+      fs.writeFileSync(path.join(templateDir, "text_parts", "extra_part.liquid"), "Extra content");
+
+      const result = ReconciliationText.read(handle);
+
+      // Should only contain part_1, not extra_part
+      expect(result.text_parts).toEqual([{ name: "part_1", content: "Part 1 content" }]);
+
+      const updatedConfig = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+      expect(updatedConfig.text_parts).not.toHaveProperty("extra_part");
+    });
+
+    it("should keep config entry unchanged when a text part file is missing from disk", () => {
+      // Delete part_1.liquid from disk but keep it in the config
+      fs.unlinkSync(part1LiquidPath);
+
+      // The config should still have the original path (not removed by syncTextPartsFromDisk)
+      // We can't call read() fully because it will fail when trying to read the missing file,
+      // so we just verify the config is not modified by writing it and checking it
+      const configBefore = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+      expect(configBefore.text_parts.part_1).toBe("text_parts/part_1.liquid");
+
+      // read() will fail at readPartsLiquid, but the config should not have been altered
+      try {
+        ReconciliationText.read(handle);
+      } catch (e) {
+        // Expected to fail when reading the missing file
+      }
+
+      const configAfter = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+      expect(configAfter.text_parts.part_1).toBe("text_parts/part_1.liquid");
     });
   });
 });
