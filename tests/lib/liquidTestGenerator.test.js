@@ -178,7 +178,7 @@ describe("liquidTestGenerator", () => {
       it("should handle missing reconciliation template gracefully", async () => {
         ReconciliationText.read.mockResolvedValue(false);
 
-        await expect(testGenerator(mockUrl, mockTestName)).rejects.toThrow("Process.exit called with code undefined");
+        await expect(testGenerator(mockUrl, mockTestName)).rejects.toThrow("Process.exit called with code 1");
         expect(consola.warn).toHaveBeenCalledWith(`Template "${mockReconciliationHandle}" wasn't found`);
       });
 
@@ -270,7 +270,7 @@ describe("liquidTestGenerator", () => {
       it("should warn and exit for missing reconciliation template", async () => {
         ReconciliationText.read.mockResolvedValue(false);
 
-        await expect(testGenerator(mockUrl, mockTestName)).rejects.toThrow("Process.exit called with code undefined");
+        await expect(testGenerator(mockUrl, mockTestName)).rejects.toThrow("Process.exit called with code 1");
         expect(consola.warn).toHaveBeenCalledWith(`Template "${mockReconciliationHandle}" wasn't found`);
       });
 
@@ -560,7 +560,7 @@ describe("liquidTestGenerator", () => {
       it("should handle missing account template file gracefully", async () => {
         AccountTemplate.read.mockResolvedValue(false);
 
-        await expect(testGenerator(mockAccountUrl, mockTestName)).rejects.toThrow("Process.exit called with code undefined");
+        await expect(testGenerator(mockAccountUrl, mockTestName)).rejects.toThrow("Process.exit called with code 1");
         expect(consola.warn).toHaveBeenCalledWith(`Template "${mockAccountTemplateHandle}" wasn't found`);
       });
 
