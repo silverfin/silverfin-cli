@@ -1,6 +1,7 @@
 # Changelog
 
 All notable changes to this project will be documented in this file.
+
 ## [1.54.0] (17/02/2026)
 Added `create-test` command support for account templates (fetches template data, period data, and custom data).
 
