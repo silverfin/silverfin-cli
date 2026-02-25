@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 
 ## [1.55.0] (25/02/2026)
-In this update we have introduced a new feature that allows you to move text parts into subdirectories. The config file will be updated to reflect the new location of the text parts.
+In this update we have introduced a new feature that allows you to move text parts into subdirectories. 
 
 ## [1.54.0] (17/02/2026)
 Added `create-test` command support for account templates (fetches template data, period data, and custom data).
