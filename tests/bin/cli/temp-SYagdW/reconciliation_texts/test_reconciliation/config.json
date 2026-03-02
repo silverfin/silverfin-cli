@@ -1,0 +1,30 @@
+{
+  "id": {
+    "1001": 12345
+  },
+  "partner_id": {},
+  "test": "tests/test_reconciliation_liquid_test.yml",
+  "handle": "test_reconciliation",
+  "name_en": "Test Reconciliation",
+  "name_nl": "test_reconciliation",
+  "name_fr": "",
+  "description_en": "",
+  "description_nl": "",
+  "description_fr": "",
+  "auto_hide_formula": "",
+  "virtual_account_number": "",
+  "reconciliation_type": "can_be_reconciled_without_data",
+  "public": false,
+  "is_active": true,
+  "externally_managed": true,
+  "published": true,
+  "hide_code": true,
+  "use_full_width": true,
+  "downloadable_as_docx": false,
+  "test_firm_id": null,
+  "text": "main.liquid",
+  "text_parts": {
+    "part_1": "text_parts/part_1.liquid",
+    "part_2": "text_parts/part_2.liquid"
+  }
+}

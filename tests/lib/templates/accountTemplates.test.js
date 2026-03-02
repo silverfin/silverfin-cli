@@ -318,7 +318,7 @@ describe("AccountTemplate", () => {
 
     afterEach(() => {
       if (fs.existsSync(tempDir)) {
-        fs.rmdirSync(tempDir, { recursive: true });
+        fs.rmSync(tempDir, { recursive: true, force: true });
       }
       jest.resetAllMocks();
     });

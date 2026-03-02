@@ -275,6 +275,34 @@ describe("ReconciliationText", () => {
       expect(oldPartLiquidContent).toBe(existingPartContent);
     });
 
+    it("should preserve subfolder paths in config and write part files to subfolder on re-import", async () => {
+      templateUtils.missingLiquidCode.mockReturnValue(false);
+      templateUtils.checkValidName.mockReturnValue(true);
+      templateUtils.filterParts.mockReturnValue(textParts);
+
+      const existingConfigWithSubfolder = {
+        ...existingConfig,
+        text_parts: { part_1: "text_parts/tables/part_1.liquid" },
+      };
+      const subfolderPath = path.join(expectedFolderPath, "text_parts", "tables");
+      const partInSubfolderPath = path.join(subfolderPath, "part_1.liquid");
+
+      fs.mkdirSync(path.join(tempDir, "reconciliation_texts"));
+      fs.mkdirSync(path.join(tempDir, "reconciliation_texts", "example_handle"));
+      fs.mkdirSync(path.join(tempDir, "reconciliation_texts", "example_handle", "text_parts"));
+      fs.mkdirSync(subfolderPath);
+      fs.writeFileSync(configPath, JSON.stringify(existingConfigWithSubfolder));
+      fs.writeFileSync(partInSubfolderPath, "Old content in subfolder");
+
+      await ReconciliationText.save("firm", 100, template);
+
+      const configSaved = JSON.parse(await fsPromises.readFile(configPath, "utf-8"));
+      expect(configSaved.text_parts.part_1).toBe("text_parts/tables/part_1.liquid");
+
+      const partContent = await fsPromises.readFile(partInSubfolderPath, "utf-8");
+      expect(partContent).toBe(textParts.part_1);
+    });
+
     it("should save template with all locale names", async () => {
       templateUtils.missingLiquidCode.mockReturnValue(false);
       templateUtils.checkValidName.mockReturnValue(true);
@@ -396,8 +424,9 @@ describe("ReconciliationText", () => {
     });
 
     afterEach(() => {
+      process.chdir(path.resolve(__dirname, "../../.."));
       if (fs.existsSync(tempDir)) {
-        fs.rmdirSync(tempDir, { recursive: true });
+        fs.rmSync(tempDir, { recursive: true, force: true });
       }
       jest.resetAllMocks();
     });
@@ -568,6 +597,49 @@ describe("ReconciliationText", () => {
       const result = ReconciliationText.read(handle);
 
       expect(result.name_nl).toBe(handle);
+    });
+
+    it("should read a text part from a subdirectory when config path is set manually", () => {
+      // User manually set config to point to a subfolder; file lives there
+      const subDir = path.join(templateDir, "text_parts", "tables");
+      fs.mkdirSync(subDir, { recursive: true });
+      fs.renameSync(part1LiquidPath, path.join(subDir, "part_1.liquid"));
+
+      const configWithSubfolderPath = { ...configContent, text_parts: { part_1: "text_parts/tables/part_1.liquid" } };
+      fs.writeFileSync(configPath, JSON.stringify(configWithSubfolderPath));
+
+      const result = ReconciliationText.read(handle);
+
+      expect(result.text_parts).toEqual([{ name: "part_1", content: "Part 1 content" }]);
+    });
+
+    it("should read a text part nested multiple levels deep when config path is set manually", () => {
+      const deepDir = path.join(templateDir, "text_parts", "section", "subsection");
+      fs.mkdirSync(deepDir, { recursive: true });
+      fs.writeFileSync(path.join(deepDir, "part_1.liquid"), "Part 1 content");
+      fs.unlinkSync(part1LiquidPath);
+
+      const configWithDeepPath = { ...configContent, text_parts: { part_1: "text_parts/section/subsection/part_1.liquid" } };
+      fs.writeFileSync(configPath, JSON.stringify(configWithDeepPath));
+
+      const result = ReconciliationText.read(handle);
+
+      expect(result.text_parts).toEqual([{ name: "part_1", content: "Part 1 content" }]);
+    });
+
+    it("should only include parts listed in the config", () => {
+      // Extra file on disk not in config is ignored
+      fs.writeFileSync(path.join(templateDir, "text_parts", "extra_part.liquid"), "Extra content");
+
+      const result = ReconciliationText.read(handle);
+
+      expect(result.text_parts).toEqual([{ name: "part_1", content: "Part 1 content" }]);
+    });
+
+    it("should throw when a text part in config is missing from disk", () => {
+      fs.unlinkSync(part1LiquidPath);
+
+      expect(() => ReconciliationText.read(handle)).toThrow();
     });
   });
 });
