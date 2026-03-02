@@ -275,6 +275,34 @@ describe("ReconciliationText", () => {
       expect(oldPartLiquidContent).toBe(existingPartContent);
     });
 
+    it("should preserve subfolder paths in config and write part files to subfolder on re-import", async () => {
+      templateUtils.missingLiquidCode.mockReturnValue(false);
+      templateUtils.checkValidName.mockReturnValue(true);
+      templateUtils.filterParts.mockReturnValue(textParts);
+
+      const existingConfigWithSubfolder = {
+        ...existingConfig,
+        text_parts: { part_1: "text_parts/tables/part_1.liquid" },
+      };
+      const subfolderPath = path.join(expectedFolderPath, "text_parts", "tables");
+      const partInSubfolderPath = path.join(subfolderPath, "part_1.liquid");
+
+      fs.mkdirSync(path.join(tempDir, "reconciliation_texts"));
+      fs.mkdirSync(path.join(tempDir, "reconciliation_texts", "example_handle"));
+      fs.mkdirSync(path.join(tempDir, "reconciliation_texts", "example_handle", "text_parts"));
+      fs.mkdirSync(subfolderPath);
+      fs.writeFileSync(configPath, JSON.stringify(existingConfigWithSubfolder));
+      fs.writeFileSync(partInSubfolderPath, "Old content in subfolder");
+
+      await ReconciliationText.save("firm", 100, template);
+
+      const configSaved = JSON.parse(await fsPromises.readFile(configPath, "utf-8"));
+      expect(configSaved.text_parts.part_1).toBe("text_parts/tables/part_1.liquid");
+
+      const partContent = await fsPromises.readFile(partInSubfolderPath, "utf-8");
+      expect(partContent).toBe(textParts.part_1);
+    });
+
     it("should save template with all locale names", async () => {
       templateUtils.missingLiquidCode.mockReturnValue(false);
       templateUtils.checkValidName.mockReturnValue(true);
