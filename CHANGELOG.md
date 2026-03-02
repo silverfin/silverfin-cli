@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.54.1] (02/03/2026)
+Update extension to support `update_at` and `_value` properties. 
+
 ## [1.54.0] (17/02/2026)
 Added `create-test` command support for account templates (fetches template data, period data, and custom data).
 
