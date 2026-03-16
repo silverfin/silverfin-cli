@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.55.0] (16/03/2026)
+Added `update-text-properties` command. It uploads custom text properties from a Liquid Test YAML file to a reconciliation in a company file. Usage: `silverfin update-text-properties -u <url> -t <test-name>`. Supports `--handle` for faster YAML file lookup and `--dry-run` to preview the payload without uploading.
+
 ## [1.54.0] (17/02/2026)
 Added `create-test` command support for account templates (fetches template data, period data, and custom data).
 
