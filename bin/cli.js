@@ -19,6 +19,8 @@ const { runCommandChecks } = require("../lib/cli/utils");
 const { CwdValidator } = require("../lib/cli/cwdValidator");
 const { AutoCompletions } = require("../lib/cli/autoCompletions");
 const fsUtils = require("../lib/utils/fsUtils");
+const textPropertyUtils = require("../lib/utils/textPropertyUtils");
+const liquidTestUtils = require("../lib/utils/liquidTestUtils");
 
 const firmIdDefault = cliUtils.loadDefaultFirmId();
 cliUtils.handleUncaughtErrors();
@@ -525,6 +527,43 @@ program
     const reconciledStatus = options.unreconciled ? false : true;
     const testName = options.test ? options.test : "test_name";
     liquidTestGenerator.testGenerator(options.url, testName, reconciledStatus);
+  });
+
+// Update Text Properties from Liquid Test data
+program
+  .command("update-text-properties")
+  .description("Upload custom text properties from a Liquid Test YAML file to a reconciliation in a company file")
+  .requiredOption("-u, --url <url>", "Specify the full Silverfin URL of the reconciliation in the company file (mandatory)")
+  .requiredOption("-t, --test <test-name>", "Specify the name of the test to use as data source (mandatory)")
+  .option("-h, --handle <handle>", "Specify the reconciliation handle to narrow down the YAML file search (optional)")
+  .option("--dry-run", "Only transform and display the properties without uploading (optional)", false)
+  .action(async (options) => {
+    // Parse URL to extract IDs
+    const urlData = liquidTestUtils.extractURL(options.url);
+    const { firmId, companyId, ledgerId: periodId, reconciliationId } = urlData;
+
+    // Find the test data in the YAML files
+    const testData = textPropertyUtils.findTestData(options.test, options.handle, reconciliationId, firmId);
+    consola.info(`Found test "${options.test}" in ${testData.handle}/tests/${testData.file}`);
+
+    // Transform custom properties to API format
+    const properties = textPropertyUtils.transformCustomToProperties(testData.custom);
+    consola.info(`Transformed ${properties.length} properties`);
+
+    if (options.dryRun) {
+      consola.info("Dry run — properties that would be uploaded:");
+      consola.log(JSON.stringify(properties, null, 2));
+      return;
+    }
+
+    // Upload to Silverfin
+    const response = await SF.updateReconciliationCustom(firmId, companyId, periodId, reconciliationId, properties);
+    if (response && response.status >= 200 && response.status < 300) {
+      consola.success("Text properties updated successfully");
+    } else {
+      consola.error("Failed to update text properties");
+      process.exit(1);
+    }
   });
 
 // Check Liquid Test dependencies for a reconciliation template
