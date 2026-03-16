@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.60.0] (10/09/2026)
+Added `update-text-properties` command. It uploads custom text properties from a Liquid Test YAML file to a reconciliation in a company file. Usage: `silverfin update-text-properties -u <url> -t <test-name>`. Supports `--handle` for faster YAML file lookup and `--dry-run` to preview the payload without uploading.
+
 ## [1.59.0] (19/08/2026)
 Add a workflow filter to the stats command: use `--workflow <handle>` for one workflow or `--workflow` on its own to report on every workflow in the workflows folder.
 - Workflow statistics cover the templates the workflow file lists which are stored in this repository, excluding shared parts. A listed template you have not imported is left out of the totals and named in a warning, instead of being counted and having a template folder created for it.
