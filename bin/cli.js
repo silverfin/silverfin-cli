@@ -540,29 +540,106 @@ program
   .action(async (options) => {
     // Parse URL to extract IDs
     const urlData = liquidTestUtils.extractURL(options.url);
-    const { firmId, companyId, ledgerId: periodId, reconciliationId } = urlData;
+    const { firmId, companyId } = urlData;
 
     // Find the test data in the YAML files
-    const testData = textPropertyUtils.findTestData(options.test, options.handle, reconciliationId, firmId);
+    const testData = textPropertyUtils.findTestData(options.test, options.handle);
     consola.info(`Found test "${options.test}" in ${testData.handle}/tests/${testData.file}`);
 
-    // Transform custom properties to API format
-    const properties = textPropertyUtils.transformCustomToProperties(testData.custom);
-    consola.info(`Transformed ${properties.length} properties`);
+    // Collect all updates to perform
+    const updates = [];
 
-    if (options.dryRun) {
-      consola.info("Dry run — properties that would be uploaded:");
-      consola.log(JSON.stringify(properties, null, 2));
+    // Company-level custom
+    if (testData.company?.custom) {
+      const properties = textPropertyUtils.transformCustomToProperties(testData.company.custom);
+      updates.push({ level: "company", properties, apply: () => SF.updateCompanyCustom(firmId, companyId, properties) });
+    }
+
+    // Fetch periods once if needed for resolving period dates
+    let periodsArray = null;
+
+    for (const [periodKey, periodEntry] of Object.entries(testData.periods)) {
+      // Resolve period date to period ID
+      if (!periodsArray) {
+        const periodsResponse = await SF.getPeriods(firmId, companyId);
+        periodsArray = periodsResponse?.data || [];
+      }
+      const period = periodsArray.find((p) => p.fiscal_year.end_date === periodKey);
+      if (!period) {
+        consola.warn(`Period "${periodKey}" not found in company — skipping`);
+        continue;
+      }
+      const targetPeriodId = period.id;
+
+      // Period-level custom
+      if (periodEntry.custom) {
+        const properties = textPropertyUtils.transformCustomToProperties(periodEntry.custom);
+        updates.push({ level: `period [${periodKey}]`, properties, apply: () => SF.updatePeriodCustom(firmId, companyId, targetPeriodId, properties) });
+      }
+
+      // Reconciliation-level custom
+      for (const [reconHandle, customData] of Object.entries(periodEntry.reconciliations)) {
+        const properties = textPropertyUtils.transformCustomToProperties(customData);
+        updates.push({
+          level: `reconciliation [${reconHandle}] in ${periodKey}`,
+          properties,
+          apply: async () => {
+            const recon = await SF.findReconciliationInWorkflows(firmId, reconHandle, companyId, targetPeriodId);
+            if (!recon) {
+              consola.error(`Reconciliation "${reconHandle}" not found in any workflow for period ${periodKey}`);
+              return null;
+            }
+            return SF.updateReconciliationCustom(firmId, companyId, targetPeriodId, recon.id, properties);
+          },
+        });
+      }
+
+      // Account-level custom
+      for (const [accountNumber, customData] of Object.entries(periodEntry.accounts)) {
+        const properties = textPropertyUtils.transformCustomToProperties(customData);
+        updates.push({
+          level: `account [${accountNumber}] in ${periodKey}`,
+          properties,
+          apply: async () => {
+            const account = await SF.findAccountByNumber(firmId, companyId, targetPeriodId, accountNumber);
+            if (!account) {
+              consola.error(`Account "${accountNumber}" not found for period ${periodKey}`);
+              return null;
+            }
+            return SF.updateAccountCustom(firmId, companyId, targetPeriodId, account.account.id, properties);
+          },
+        });
+      }
+    }
+
+    if (updates.length === 0) {
+      consola.warn("No custom properties found in this test");
       return;
     }
 
-    // Upload to Silverfin
-    const response = await SF.updateReconciliationCustom(firmId, companyId, periodId, reconciliationId, properties);
-    if (response && response.status >= 200 && response.status < 300) {
-      consola.success("Text properties updated successfully");
-    } else {
-      consola.error("Failed to update text properties");
-      process.exit(1);
+    consola.info(`Found ${updates.length} custom update(s) to apply`);
+
+    if (options.dryRun) {
+      for (const update of updates) {
+        consola.info(`[dry-run] ${update.level}: ${update.properties.length} properties`);
+        consola.log(JSON.stringify(update.properties, null, 2));
+      }
+      return;
+    }
+
+    // Apply all updates
+    for (const update of updates) {
+      consola.start(`Updating ${update.level} (${update.properties.length} properties)...`);
+      const response = await update.apply();
+      if (!response) continue;
+      // Handle both single response (reconciliation) and array of responses (company/period/account)
+      const responses = Array.isArray(response) ? response : [response];
+      const failed = responses.filter((r) => !r || r.status < 200 || r.status >= 300);
+      if (failed.length === 0) {
+        consola.success(`${update.level}: updated`);
+      } else {
+        consola.error(`${update.level}: ${failed.length}/${responses.length} failed`);
+      }
     }
   });
 
