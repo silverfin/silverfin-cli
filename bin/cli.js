@@ -602,11 +602,12 @@ program
           properties,
           apply: async () => {
             const account = await SF.findAccountByNumber(firmId, companyId, targetPeriodId, accountNumber);
-            if (!account) {
-              consola.error(`Account "${accountNumber}" not found for period ${periodKey}`);
+            const accountId = account?.account?.id;
+            if (!accountId) {
+              consola.error(`Account "${accountNumber}" could not be resolved for period ${periodKey}`);
               return null;
             }
-            return SF.updateAccountCustom(firmId, companyId, targetPeriodId, account.account.id, properties);
+            return SF.updateAccountCustom(firmId, companyId, targetPeriodId, accountId, properties);
           },
         });
       }
@@ -628,18 +629,26 @@ program
     }
 
     // Apply all updates
+    let hadFailures = false;
     for (const update of updates) {
       consola.start(`Updating ${update.level} (${update.properties.length} properties)...`);
       const response = await update.apply();
-      if (!response) continue;
+      if (!response) {
+        hadFailures = true;
+        continue;
+      }
       // Handle both single response (reconciliation) and array of responses (company/period/account)
       const responses = Array.isArray(response) ? response : [response];
       const failed = responses.filter((r) => !r || r.status < 200 || r.status >= 300);
       if (failed.length === 0) {
         consola.success(`${update.level}: updated`);
       } else {
+        hadFailures = true;
         consola.error(`${update.level}: ${failed.length}/${responses.length} failed`);
       }
+    }
+    if (hadFailures) {
+      process.exitCode = 1;
     }
   });
 
