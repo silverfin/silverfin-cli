@@ -184,12 +184,16 @@ async function publishReconciliationByHandle(
           kind: "exception",
           handle,
           message: `The path ${error.path} was not found, please ensure you've imported or created all required files`,
+          stack: error.stack,
+          rawError: error,
         });
       } else {
         deferredErrors.push({
           kind: "exception",
           handle,
           message: error.message || String(error),
+          stack: error.stack,
+          rawError: error,
         });
       }
       return false;
@@ -360,12 +364,24 @@ async function fetchExistingExportFiles(type, envId) {
   });
 }
 
-async function publishExportFileByName(type, envId, name, message = "updated through the Silverfin CLI") {
+async function publishExportFileByName(
+  type,
+  envId,
+  name,
+  message = "updated through the Silverfin CLI",
+  deferredErrors = null
+) {
+  const defer = Array.isArray(deferredErrors);
+
   try {
     const configPresent = fsUtils.configExists("exportFile", name);
 
     if (!configPresent) {
-      errorUtils.missingExportFileId(name);
+      if (defer) {
+        deferredErrors.push({ kind: "missing_id", name });
+      } else {
+        errorUtils.missingExportFileId(name);
+      }
       return false;
     }
 
@@ -373,7 +389,11 @@ async function publishExportFileByName(type, envId, name, message = "updated thr
     const templateId = fsUtils.getTemplateId(type, envId, templateConfig);
 
     if (!templateConfig || !templateId) {
-      errorUtils.missingExportFileId(name);
+      if (defer) {
+        deferredErrors.push({ kind: "missing_id", name });
+      } else {
+        errorUtils.missingExportFileId(name);
+      }
       return false;
     }
 
@@ -395,10 +415,34 @@ async function publishExportFileByName(type, envId, name, message = "updated thr
       consola.success(`Export file updated: ${response.data.name_nl}`);
       return true;
     } else {
-      consola.error(`Export file update failed: ${name}`);
+      if (defer) {
+        deferredErrors.push({ kind: "update_failed", name });
+      } else {
+        consola.error(`Export file update failed: ${name}`);
+      }
       return false;
     }
   } catch (error) {
+    if (defer) {
+      if (error.code === "ENOENT") {
+        deferredErrors.push({
+          kind: "exception",
+          name,
+          message: `The path ${error.path} was not found, please ensure you've imported or created all required files`,
+          stack: error.stack,
+          rawError: error,
+        });
+      } else {
+        deferredErrors.push({
+          kind: "exception",
+          name,
+          message: error.message || String(error),
+          stack: error.stack,
+          rawError: error,
+        });
+      }
+      return false;
+    }
     errorUtils.errorHandler(error);
   }
 }
@@ -439,10 +483,15 @@ async function publishExportFileById(type, envId, exportFileId, message = "Updat
 }
 
 async function publishAllExportFiles(type, envId, message = "updated through the Silverfin CLI") {
+  const deferredErrors = [];
   const templates = fsUtils.getAllTemplatesOfAType("exportFile");
   for (const name of templates) {
     if (!name) continue;
-    await publishExportFileByName(type, envId, name, message);
+    await publishExportFileByName(type, envId, name, message, deferredErrors);
+  }
+  errorUtils.printExportFileBatchErrorSummary(deferredErrors);
+  if (deferredErrors.length > 0) {
+    process.exitCode = 1;
   }
 }
 
