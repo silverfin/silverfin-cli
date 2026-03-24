@@ -1,0 +1,13 @@
+---
+description: 
+alwaysApply: true
+---
+
+# silverfin-cli — agent context
+
+Before non-trivial changes in this package:
+
+1. Follow **AGENTS.md** (repo root) — commands (`npm test`, `npm run lint`), entry points (`bin/cli.js`, `index.js`), public API stability, auth/error pointers.
+2. Use **docs/ARCHITECTURE.md** for the module map and how CLI vs `index.js` vs `lib/` connect.
+
+Coding style: match existing code; run **ESLint** and **Prettier** settings from the repo (`npm run lint`, `package.json` `prettier` field). Do not duplicate long style lists here.
