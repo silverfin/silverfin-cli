@@ -118,12 +118,24 @@ async function fetchExistingReconciliations(type, envId) {
   }
 }
 
-async function publishReconciliationByHandle(type, envId, handle, message = "Updated with the Silverfin CLI") {
+async function publishReconciliationByHandle(
+  type,
+  envId,
+  handle,
+  message = "Updated with the Silverfin CLI",
+  deferredErrors = null
+) {
+  const defer = Array.isArray(deferredErrors);
+
   try {
     const configPresent = fsUtils.configExists("reconciliationText", handle);
 
     if (!configPresent) {
-      errorUtils.missingReconciliationId(handle);
+      if (defer) {
+        deferredErrors.push({ kind: "missing_id", handle });
+      } else {
+        errorUtils.missingReconciliationId(handle);
+      }
       return false;
     }
 
@@ -131,7 +143,11 @@ async function publishReconciliationByHandle(type, envId, handle, message = "Upd
     const templateId = fsUtils.getTemplateId(type, envId, templateConfig);
 
     if (!templateId) {
-      errorUtils.missingReconciliationId(handle);
+      if (defer) {
+        deferredErrors.push({ kind: "missing_id", handle });
+      } else {
+        errorUtils.missingReconciliationId(handle);
+      }
       return false;
     }
 
@@ -154,10 +170,30 @@ async function publishReconciliationByHandle(type, envId, handle, message = "Upd
       consola.success(`Reconciliation updated: ${response.data.handle}`);
       return true;
     } else {
-      consola.error(`Reconciliation update failed: ${handle}`);
+      if (defer) {
+        deferredErrors.push({ kind: "update_failed", handle });
+      } else {
+        consola.error(`Reconciliation update failed: ${handle}`);
+      }
       return false;
     }
   } catch (error) {
+    if (defer) {
+      if (error.code === "ENOENT") {
+        deferredErrors.push({
+          kind: "exception",
+          handle,
+          message: `The path ${error.path} was not found, please ensure you've imported or created all required files`,
+        });
+      } else {
+        deferredErrors.push({
+          kind: "exception",
+          handle,
+          message: error.message || String(error),
+        });
+      }
+      return false;
+    }
     errorUtils.errorHandler(error);
   }
 }
@@ -199,10 +235,15 @@ async function publishReconciliationById(type, envId, reconciliationId, message 
 }
 
 async function publishAllReconciliations(type, envId, message = "updated through the Silverfin CLI") {
+  const deferredErrors = [];
   const templates = fsUtils.getAllTemplatesOfAType("reconciliationText");
   for (const handle of templates) {
     if (!handle) continue;
-    await publishReconciliationByHandle(type, envId, handle, message);
+    await publishReconciliationByHandle(type, envId, handle, message, deferredErrors);
+  }
+  errorUtils.printReconciliationBatchErrorSummary(deferredErrors);
+  if (deferredErrors.length > 0) {
+    process.exitCode = 1;
   }
 }
 
