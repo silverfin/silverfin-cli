@@ -814,18 +814,34 @@ async function fetchExistingSharedParts(type, envId) {
   }
 }
 
-async function publishSharedPartByName(type, envId, name, message = "Updated through the Silverfin CLI") {
+async function publishSharedPartByName(
+  type,
+  envId,
+  name,
+  message = "Updated through the Silverfin CLI",
+  deferredErrors = null
+) {
+  const defer = Array.isArray(deferredErrors);
+
   try {
     const configPresent = fsUtils.configExists("sharedPart", name);
     if (!configPresent) {
-      errorUtils.missingSharedPartId(name);
+      if (defer) {
+        deferredErrors.push({ kind: "missing_id", name });
+      } else {
+        errorUtils.missingSharedPartId(name);
+      }
       return false;
     }
     const templateConfig = fsUtils.readConfig("sharedPart", name);
     const templateId = fsUtils.getTemplateId(type, envId, templateConfig);
 
     if (!templateConfig || !templateId) {
-      errorUtils.missingSharedPartId(name);
+      if (defer) {
+        deferredErrors.push({ kind: "missing_id", name });
+      } else {
+        errorUtils.missingSharedPartId(name);
+      }
       return false;
     }
     consola.debug(`Updating shared part ${name}...`);
@@ -846,10 +862,34 @@ async function publishSharedPartByName(type, envId, name, message = "Updated thr
       consola.success(`Shared part updated: ${response.data.name}`);
       return true;
     } else {
-      consola.error(`Shared part update failed: ${name}`);
+      if (defer) {
+        deferredErrors.push({ kind: "update_failed", name });
+      } else {
+        consola.error(`Shared part update failed: ${name}`);
+      }
       return false;
     }
   } catch (error) {
+    if (defer) {
+      if (error.code === "ENOENT") {
+        deferredErrors.push({
+          kind: "exception",
+          name,
+          message: `The path ${error.path} was not found, please ensure you've imported or created all required files`,
+          stack: error.stack,
+          rawError: error,
+        });
+      } else {
+        deferredErrors.push({
+          kind: "exception",
+          name,
+          message: error.message || String(error),
+          stack: error.stack,
+          rawError: error,
+        });
+      }
+      return false;
+    }
     errorUtils.errorHandler(error);
   }
 }
@@ -890,10 +930,15 @@ async function publishSharedPartById(type, envId, sharedPartId, message = "Updat
 }
 
 async function publishAllSharedParts(type, envId, message = "updated through the Silverfin CLI") {
+  const deferredErrors = [];
   const templates = fsUtils.getAllTemplatesOfAType("sharedPart");
   for (const name of templates) {
     if (!name) continue;
-    await publishSharedPartByName(type, envId, name, message);
+    await publishSharedPartByName(type, envId, name, message, deferredErrors);
+  }
+  errorUtils.printSharedPartBatchErrorSummary(deferredErrors);
+  if (deferredErrors.length > 0) {
+    process.exitCode = 1;
   }
 }
 
