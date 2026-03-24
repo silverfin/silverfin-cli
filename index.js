@@ -600,12 +600,24 @@ async function fetchExistingAccountTemplates(type, envId) {
   });
 }
 
-async function publishAccountTemplateByName(type, envId, name, message = "updated through the Silverfin CLI") {
+async function publishAccountTemplateByName(
+  type,
+  envId,
+  name,
+  message = "updated through the Silverfin CLI",
+  deferredErrors = null
+) {
+  const defer = Array.isArray(deferredErrors);
+
   try {
     const configPresent = fsUtils.configExists("accountTemplate", name);
 
     if (!configPresent) {
-      errorUtils.missingAccountTemplateId(name);
+      if (defer) {
+        deferredErrors.push({ kind: "missing_id", name });
+      } else {
+        errorUtils.missingAccountTemplateId(name);
+      }
       return false;
     }
 
@@ -613,7 +625,11 @@ async function publishAccountTemplateByName(type, envId, name, message = "update
     const templateId = fsUtils.getTemplateId(type, envId, templateConfig);
 
     if (!templateConfig || !templateId) {
-      errorUtils.missingAccountTemplateId(name);
+      if (defer) {
+        deferredErrors.push({ kind: "missing_id", name });
+      } else {
+        errorUtils.missingAccountTemplateId(name);
+      }
       return false;
     }
 
@@ -641,10 +657,34 @@ async function publishAccountTemplateByName(type, envId, name, message = "update
       consola.success(`Account template updated: ${response.data.name_nl}`);
       return true;
     } else {
-      consola.error(`Account template update failed: ${name}`);
+      if (defer) {
+        deferredErrors.push({ kind: "update_failed", name });
+      } else {
+        consola.error(`Account template update failed: ${name}`);
+      }
       return false;
     }
   } catch (error) {
+    if (defer) {
+      if (error.code === "ENOENT") {
+        deferredErrors.push({
+          kind: "exception",
+          name,
+          message: `The path ${error.path} was not found, please ensure you've imported or created all required files`,
+          stack: error.stack,
+          rawError: error,
+        });
+      } else {
+        deferredErrors.push({
+          kind: "exception",
+          name,
+          message: error.message || String(error),
+          stack: error.stack,
+          rawError: error,
+        });
+      }
+      return false;
+    }
     errorUtils.errorHandler(error);
   }
 }
@@ -691,10 +731,15 @@ async function publishAccountTemplateById(type, envId, accountTemplateId, messag
 }
 
 async function publishAllAccountTemplates(type, envId, message = "updated through the Silverfin CLI") {
+  const deferredErrors = [];
   const templates = fsUtils.getAllTemplatesOfAType("accountTemplate");
   for (const name of templates) {
     if (!name) continue;
-    await publishAccountTemplateByName(type, envId, name, message);
+    await publishAccountTemplateByName(type, envId, name, message, deferredErrors);
+  }
+  errorUtils.printAccountTemplateBatchErrorSummary(deferredErrors);
+  if (deferredErrors.length > 0) {
+    process.exitCode = 1;
   }
 }
 
