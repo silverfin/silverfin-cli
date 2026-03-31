@@ -572,7 +572,12 @@ program
   .requiredOption("-s, --since <date>, Specify the date which is going to be used to filter the data from (format: YYYY-MM-DD) (mandatory)")
   .option("-w, --workflow [handle], Optionally filter test statistics by workflow (optional)")
   .action((options) => {
-    stats.generateOverview(options.since, options.workflow);
+    if (options.workflow) {
+      const workflowHandle = typeof options.workflow === "string" ? options.workflow : undefined;
+      stats.generateWorkflowOverview(options.since, workflowHandle);
+    } else {
+      stats.generateOverview(options.since);
+    }
   });
 
 // Set/Get FIRM ID
