@@ -19,6 +19,8 @@ const { runCommandChecks } = require("../lib/cli/utils");
 const { CwdValidator } = require("../lib/cli/cwdValidator");
 const { AutoCompletions } = require("../lib/cli/autoCompletions");
 const fsUtils = require("../lib/utils/fsUtils");
+const textPropertyUtils = require("../lib/utils/textPropertyUtils");
+const liquidTestUtils = require("../lib/utils/liquidTestUtils");
 
 const firmIdDefault = cliUtils.loadDefaultFirmId();
 cliUtils.handleUncaughtErrors();
@@ -525,6 +527,129 @@ program
     const reconciledStatus = options.unreconciled ? false : true;
     const testName = options.test ? options.test : "test_name";
     liquidTestGenerator.testGenerator(options.url, testName, reconciledStatus);
+  });
+
+// Update Text Properties from Liquid Test data
+program
+  .command("update-text-properties")
+  .description("Upload custom text properties from a Liquid Test YAML file to a reconciliation in a company file")
+  .requiredOption("-u, --url <url>", "Specify the full Silverfin URL of the reconciliation in the company file (mandatory)")
+  .requiredOption("-t, --test <test-name>", "Specify the name of the test to use as data source (mandatory)")
+  .option("-h, --handle <handle>", "Specify the reconciliation handle to narrow down the YAML file search (optional)")
+  .option("--dry-run", "Only transform and display the properties without uploading (optional)", false)
+  .action(async (options) => {
+    // Parse URL to extract IDs
+    const urlData = liquidTestUtils.extractURL(options.url);
+    const { firmId, companyId } = urlData;
+
+    // Find the test data in the YAML files
+    const testData = textPropertyUtils.findTestData(options.test, options.handle);
+    consola.info(`Found test "${options.test}" in ${testData.handle}/tests/${testData.file}`);
+
+    // Collect all updates to perform
+    const updates = [];
+
+    // Company-level custom
+    if (testData.company?.custom) {
+      const properties = textPropertyUtils.transformCustomToProperties(testData.company.custom);
+      updates.push({ level: "company", properties, apply: () => SF.updateCompanyCustom(firmId, companyId, properties) });
+    }
+
+    // Fetch periods once if needed for resolving period dates
+    let periodsArray = null;
+
+    for (const [periodKey, periodEntry] of Object.entries(testData.periods)) {
+      // Resolve period date to period ID
+      if (!periodsArray) {
+        const periodsResponse = await SF.getPeriods(firmId, companyId);
+        periodsArray = periodsResponse?.data || [];
+      }
+      const period = periodsArray.find((p) => p.fiscal_year.end_date === periodKey);
+      if (!period) {
+        consola.warn(`Period "${periodKey}" not found in company — skipping`);
+        continue;
+      }
+      const targetPeriodId = period.id;
+
+      // Period-level custom
+      if (periodEntry.custom) {
+        const properties = textPropertyUtils.transformCustomToProperties(periodEntry.custom);
+        updates.push({ level: `period [${periodKey}]`, properties, apply: () => SF.updatePeriodCustom(firmId, companyId, targetPeriodId, properties) });
+      }
+
+      // Reconciliation-level custom
+      for (const [reconHandle, customData] of Object.entries(periodEntry.reconciliations)) {
+        const properties = textPropertyUtils.transformCustomToProperties(customData);
+        updates.push({
+          level: `reconciliation [${reconHandle}] in ${periodKey}`,
+          properties,
+          apply: async () => {
+            const recon = await SF.findReconciliationInWorkflows(firmId, reconHandle, companyId, targetPeriodId);
+            if (!recon) {
+              consola.error(`Reconciliation "${reconHandle}" not found in any workflow for period ${periodKey}`);
+              return null;
+            }
+            return SF.updateReconciliationCustom(firmId, companyId, targetPeriodId, recon.id, properties);
+          },
+        });
+      }
+
+      // Account-level custom
+      for (const [accountNumber, customData] of Object.entries(periodEntry.accounts)) {
+        const properties = textPropertyUtils.transformCustomToProperties(customData);
+        updates.push({
+          level: `account [${accountNumber}] in ${periodKey}`,
+          properties,
+          apply: async () => {
+            const account = await SF.findAccountByNumber(firmId, companyId, targetPeriodId, accountNumber);
+            const accountId = account?.account?.id;
+            if (!accountId) {
+              consola.error(`Account "${accountNumber}" could not be resolved for period ${periodKey}`);
+              return null;
+            }
+            return SF.updateAccountCustom(firmId, companyId, targetPeriodId, accountId, properties);
+          },
+        });
+      }
+    }
+
+    if (updates.length === 0) {
+      consola.warn("No custom properties found in this test");
+      return;
+    }
+
+    consola.info(`Found ${updates.length} custom update(s) to apply`);
+
+    if (options.dryRun) {
+      for (const update of updates) {
+        consola.info(`[dry-run] ${update.level}: ${update.properties.length} properties`);
+        consola.log(JSON.stringify(update.properties, null, 2));
+      }
+      return;
+    }
+
+    // Apply all updates
+    let hadFailures = false;
+    for (const update of updates) {
+      consola.start(`Updating ${update.level} (${update.properties.length} properties)...`);
+      const response = await update.apply();
+      if (!response) {
+        hadFailures = true;
+        continue;
+      }
+      // Handle both single response (reconciliation) and array of responses (company/period/account)
+      const responses = Array.isArray(response) ? response : [response];
+      const failed = responses.filter((r) => !r || r.status < 200 || r.status >= 300);
+      if (failed.length === 0) {
+        consola.success(`${update.level}: updated`);
+      } else {
+        hadFailures = true;
+        consola.error(`${update.level}: ${failed.length}/${responses.length} failed`);
+      }
+    }
+    if (hadFailures) {
+      process.exitCode = 1;
+    }
   });
 
 // Check Liquid Test dependencies for a reconciliation template
