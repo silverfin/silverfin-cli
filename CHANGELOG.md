@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.54.2] (13/05/2026)
+Fix error reporting in `silverfin authorize`, `refresh-token`, and the partner-key refresh: previously some failures (notably network-layer errors with no HTTP response) crashed with `Cannot read properties of undefined (reading 'status')` or exited silently — they now print the underlying error so the cause is visible.
+
 ## [1.54.1] (14/04/2026)
 Increase the waiting time for the test runs to avoid timeout errors.
 
