@@ -10,23 +10,25 @@ jest.mock("../../../lib/utils/apiUtils", () => ({
   checkRequiredEnvVariables: jest.fn(() => true),
 }));
 
+// Load shared fixtures
+const apiResponse = require("../../../fixtures/api-responses/shared-parts/single.json");
+const existingConfigFixture = require("../../../fixtures/market-repo/shared_parts/shared_part_2/config.json");
+
 describe("SharedPart", () => {
   describe("save", () => {
-    const template = {
-      id: 808080,
-      name: "example_shared_part_name",
-      text: "example_shared_part_name.liquid",
-      used_in: [],
-      externally_managed: true,
-    };
-    const name = template.name;
+    // API response fixture (shared_part_1), but override used_in to [] for simplicity
+    // (used_in processing requires filesystem/API lookups tested separately)
+    const template = { ...apiResponse, used_in: [] };
+    const name = template.name; // "shared_part_1"
+
+    // Expected config written after save("firm", 100, template)
     const configToWrite = {
-      id: { 100: 808080 },
+      id: { 100: template.id },
       partner_id: {},
-      name: "example_shared_part_name",
-      text: "example_shared_part_name.liquid",
+      name: template.name,
+      text: `${template.name}.liquid`,
       used_in: [],
-      externally_managed: true,
+      externally_managed: template.externally_managed,
     };
 
     const repoRoot = path.resolve(__dirname, "../../..");
@@ -54,7 +56,7 @@ describe("SharedPart", () => {
       templateUtils.checkValidName.mockReturnValue(false);
       const result = await SharedPart.save("firm", 100, template);
       expect(result).toBe(false);
-      expect(templateUtils.checkValidName).toHaveBeenCalledWith("example_shared_part_name", "sharedPart");
+      expect(templateUtils.checkValidName).toHaveBeenCalledWith(template.name, "sharedPart");
     });
 
     it("should create the necessary files and store template's relevant details", async () => {

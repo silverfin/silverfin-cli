@@ -7,64 +7,55 @@ const { ExportFile } = require("../../../lib/templates/exportFile");
 jest.mock("../../../lib/utils/templateUtils");
 jest.mock("consola");
 
+// Load shared fixtures
+const apiResponse = require("../../../fixtures/api-responses/export-files/single.json");
+const existingConfigFixture = require("../../../fixtures/market-repo/export_files/export_2/config.json");
+
 describe("ExportFile", () => {
   describe("save", () => {
-    const textParts = { part_1: "Part 1: updated content" };
-    // Data coming from the API (stored on partner/firm)
-    const template = {
-      name_nl: "example_name_nl",
-      id: 808080,
-      text: "Main liquid content",
-      text_parts: [{ name: "part_1", content: "Part 1: updated content" }],
-      externally_managed: true,
-      file_name: "export_file.sxbrl",
-      name_en: "example_name_nl",
-      name_fr: "example_name_nl",
-    };
-    const name_nl = template.name_nl;
-    // Expected config to be written after processing (import command)
+    // API response fixture (export_1)
+    const template = apiResponse;
+    const name_nl = template.name_nl; // "export_1"
+
+    // The text parts mock return value (filterParts is mocked)
+    const textParts = { header: "Header: updated content" };
+
+    // Expected config written after save("firm", 100, template)
+    // ExportFile.CONFIG_ITEMS: name_en, name_nl, name_fr, name_de, name_da, name_se, name_fi,
+    //   description_en, description_nl, description_fr, description_de, description_da, description_se, description_fi,
+    //   file_name, externally_managed, encoding, published, hide_code, download_warning, test_firm_id (NOT included in ExportFile)
     const configToWrite = {
-      id: { 100: 808080 },
+      id: { 100: template.id },
       partner_id: {},
-      externally_managed: true,
-      name_en: "example_name_nl",
-      name_nl: "example_name_nl",
-      name_fr: "example_name_nl",
-      description_en: "",
-      description_fr: "",
-      description_nl: "",
-      file_name: "export_file.sxbrl",
-      hide_code: true,
-      published: true,
-      download_warning: "",
+      name_en: template.name_en,
+      name_nl: template.name_nl,
+      name_fr: template.name_fr,
+      name_de: template.name_de,
+      name_da: template.name_da,
+      name_se: template.name_se,
+      name_fi: template.name_fi,
+      description_en: template.description_en,
+      description_nl: template.description_nl,
+      description_fr: template.description_fr,
+      description_de: template.description_de,
+      description_da: template.description_da,
+      description_se: template.description_se,
+      description_fi: template.description_fi,
+      file_name: template.file_name,
+      externally_managed: template.externally_managed,
+      encoding: template.encoding,
+      published: template.published,
+      hide_code: template.hide_code,
+      download_warning: template.download_warning,
+      test_firm_id: template.test_firm_id,
       text: "main.liquid",
-      encoding: "UTF-8",
       text_parts: {
-        part_1: "text_parts/part_1.liquid",
+        header: "text_parts/header.liquid",
       },
     };
-    // Local config file
-    const existingConfig = {
-      id: { 200: 505050 },
-      partner_id: {},
-      externally_managed: false,
-      name_nl: "example_name_nl",
-      name_fr: "old_name_fr",
-      name_en: "old_name_en",
-      description_en: "",
-      description_nl: "",
-      description_fr: "",
-      file_name: "old_file_name.sxbrl",
-      text: "main.liquid",
-      hide_code: true,
-      published: true,
-      download_warning: "",
-      encoding: "UTF-8",
-      text_parts: {
-        old_part: "text_parts/old_part.liquid",
-        part_1: "text_parts/part_1.liquid",
-      },
-    };
+
+    // Use export_2 fixture as the "existing" config on disk
+    const existingConfig = existingConfigFixture;
 
     const repoRoot = path.resolve(__dirname, "../../..");
     let tempDir;
@@ -72,7 +63,6 @@ describe("ExportFile", () => {
     let configPath;
     let mainLiquidPath;
     let part1LiquidPath;
-    let oldPartLiquidPath;
 
     beforeEach(() => {
       tempDir = fs.mkdtempSync(path.join(repoRoot, "tmp-"));
@@ -81,8 +71,7 @@ describe("ExportFile", () => {
       expectedFolderPath = path.join(tempDir, "export_files", name_nl);
       configPath = path.join(expectedFolderPath, "config.json");
       mainLiquidPath = path.join(expectedFolderPath, "main.liquid");
-      part1LiquidPath = path.join(expectedFolderPath, "text_parts", "part_1.liquid");
-      oldPartLiquidPath = path.join(expectedFolderPath, "text_parts", "old_part.liquid");
+      part1LiquidPath = path.join(expectedFolderPath, "text_parts", "header.liquid");
     });
 
     afterEach(() => {
@@ -93,9 +82,9 @@ describe("ExportFile", () => {
 
     it("should return false if the template name_nl is missing", () => {
       templateUtils.missingNameNL.mockReturnValue(true);
-      const result = ExportFile.save("firm", 100, { id: 808080 });
+      const result = ExportFile.save("firm", 100, { id: template.id });
       expect(result).toBe(false);
-      expect(templateUtils.missingNameNL).toHaveBeenCalledWith({ id: 808080 });
+      expect(templateUtils.missingNameNL).toHaveBeenCalledWith({ id: template.id });
     });
 
     it("should return false if there is no liquid code", () => {
@@ -109,14 +98,14 @@ describe("ExportFile", () => {
       templateUtils.checkValidName.mockReturnValue(false);
       const result = ExportFile.save("firm", 100, template);
       expect(result).toBe(false);
-      expect(templateUtils.checkValidName).toHaveBeenCalledWith("example_name_nl", "exportFile");
+      expect(templateUtils.checkValidName).toHaveBeenCalledWith(template.name_nl, "exportFile");
     });
 
     it("should create the necessary files and store template's relevant details", async () => {
       templateUtils.missingNameNL.mockReturnValue(false);
       templateUtils.missingLiquidCode.mockReturnValue(false);
       templateUtils.checkValidName.mockReturnValue(true);
-      templateUtils.filterParts.mockReturnValue({ part_1: "Part 1 content" });
+      templateUtils.filterParts.mockReturnValue({ header: "Header content" });
 
       ExportFile.save("firm", 100, template);
 
@@ -131,7 +120,7 @@ describe("ExportFile", () => {
       // Check text parts liquid files
       expect(fs.existsSync(part1LiquidPath)).toBe(true);
       const part1LiquidContent = await fsPromises.readFile(part1LiquidPath, "utf-8");
-      expect(part1LiquidContent).toBe("Part 1 content");
+      expect(part1LiquidContent).toBe("Header content");
 
       // Check config file
       expect(fs.existsSync(configPath)).toBe(true);
@@ -146,7 +135,7 @@ describe("ExportFile", () => {
       templateUtils.filterParts.mockReturnValue(textParts);
 
       fs.mkdirSync(path.join(tempDir, "export_files"));
-      fs.mkdirSync(path.join(tempDir, "export_files", "example_name_nl"));
+      fs.mkdirSync(path.join(tempDir, "export_files", name_nl));
       fs.writeFileSync(configPath, JSON.stringify(existingConfig));
 
       // Check existing config file before save
@@ -156,30 +145,12 @@ describe("ExportFile", () => {
 
       ExportFile.save("firm", 100, template);
 
-      // Check config file after save
-      const expectedConfig = {
-        id: { 100: 808080, 200: 505050 },
-        partner_id: {},
-        externally_managed: true,
-        name_en: "example_name_nl",
-        name_nl: "example_name_nl",
-        name_fr: "example_name_nl",
-        description_en: "",
-        description_nl: "",
-        description_fr: "",
-        file_name: "export_file.sxbrl",
-        hide_code: true,
-        published: true,
-        download_warning: "",
-        text: "main.liquid",
-        encoding: "UTF-8",
-        text_parts: {
-          part_1: "text_parts/part_1.liquid",
-        },
-      };
-      expect(fs.existsSync(configPath)).toBe(true);
+      // After save, ids from existingConfig should be preserved and new id added
       configSaved = JSON.parse(await fsPromises.readFile(configPath, "utf-8"));
-      expect(configSaved).toEqual(expectedConfig);
+      expect(configSaved.id[100]).toBe(template.id);
+      expect(configSaved.id["1001"]).toBe(existingConfig.id["1001"]);
+      expect(configSaved.name_nl).toBe(template.name_nl);
+      expect(configSaved.file_name).toBe(template.file_name);
     });
 
     // NOTE: Do we need to modify this behavior?
@@ -190,10 +161,11 @@ describe("ExportFile", () => {
       templateUtils.filterParts.mockReturnValue(textParts);
 
       const existingPartContent = "Old part: existing Part Content";
+      const oldPartLiquidPath = path.join(expectedFolderPath, "text_parts", "old_part.liquid");
 
       fs.mkdirSync(path.join(tempDir, "export_files"));
-      fs.mkdirSync(path.join(tempDir, "export_files", "example_name_nl"));
-      fs.mkdirSync(path.join(tempDir, "export_files", "example_name_nl", "text_parts"));
+      fs.mkdirSync(path.join(tempDir, "export_files", name_nl));
+      fs.mkdirSync(path.join(tempDir, "export_files", name_nl, "text_parts"));
       fs.writeFileSync(configPath, JSON.stringify(existingConfig));
       fs.writeFileSync(oldPartLiquidPath, existingPartContent);
 

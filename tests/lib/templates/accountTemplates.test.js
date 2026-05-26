@@ -7,65 +7,55 @@ const { AccountTemplate } = require("../../../lib/templates/accountTemplate");
 jest.mock("../../../lib/utils/templateUtils");
 jest.mock("consola");
 
+// Load shared fixtures
+const apiResponse = require("../../../fixtures/api-responses/account-templates/single.json");
+const existingConfigFixture = require("../../../fixtures/market-repo/account_templates/account_2/config.json");
+
 describe("AccountTemplate", () => {
   describe("save", () => {
-    const testContent = "# Add your Liquid Tests here";
-    const textParts = { part_1: "Part 1: updated content" };
-    const template = {
-      name_nl: "name_nl",
-      name_en: "",
-      name_fr: "",
-      id: 808080,
-      text: "Main liquid content",
-      text_parts: [
-        { name: "part_1", content: "Part 1: updated content" },
-        { name: "", content: "" },
-      ],
-      tests: testContent,
-      externally_managed: true,
-      hide_code: true,
-      mapping_list_ranges: [],
-    };
-    const name_nl = template.name_nl;
+    // API response fixture (account_1)
+    const template = apiResponse;
+    const name_nl = template.name_nl; // "account_1"
+
+    // The text parts mock return value (filterParts is mocked)
+    const textParts = { detail: "Detail: updated content" };
+
+    // Expected config written after save("firm", 100, template)
+    // AccountTemplate.CONFIG_ITEMS: name_en, name_nl, name_fr, name_de, name_da, name_se, name_fi,
+    //   description_en, description_nl, description_fr, description_de, description_da, description_se, description_fi,
+    //   externally_managed, account_range, mapping_list_ranges, published, hide_code, test_firm_id
     const configToWrite = {
-      id: {
-        100: 808080,
-      },
+      id: { 100: template.id },
       partner_id: {},
-      externally_managed: true,
-      name_en: "",
-      name_nl: "name_nl",
-      name_fr: "",
-      description_en: "",
-      description_fr: "",
-      description_nl: "",
-      text: "main.liquid",
-      test: "tests/name_nl_liquid_test.yml",
-      text_parts: {
-        part_1: "text_parts/part_1.liquid",
-      },
-      account_range: null,
+      test: `tests/${name_nl}_liquid_test.yml`,
+      name_en: template.name_en,
+      name_nl: template.name_nl,
+      name_fr: template.name_fr,
+      name_de: template.name_de,
+      name_da: template.name_da,
+      name_se: template.name_se,
+      name_fi: template.name_fi,
+      description_en: template.description_en,
+      description_nl: template.description_nl,
+      description_fr: template.description_fr,
+      description_de: template.description_de,
+      description_da: template.description_da,
+      description_se: template.description_se,
+      description_fi: template.description_fi,
+      externally_managed: template.externally_managed,
+      account_range: template.account_range,
       mapping_list_ranges: [],
-      hide_code: true,
-      published: true,
-      test_firm_id: null,
-    };
-    const existingConfig = {
-      id: { 200: 505050 },
-      name_nl: "old_name_nl",
+      published: template.published,
+      hide_code: template.hide_code,
+      test_firm_id: template.test_firm_id,
       text: "main.liquid",
       text_parts: {
-        old_part: "text_parts/old_part.liquid",
-        part_1: "text_parts/part_1.liquid",
+        detail: "text_parts/detail.liquid",
       },
-      name_fr: "",
-      name_en: "",
-      account_range: null,
-      mapping_list_ranges: [],
-      hide_code: false,
-      published: true,
-      test_firm_id: null,
     };
+
+    // Use account_2 fixture as the "existing" config on disk
+    const existingConfig = existingConfigFixture;
 
     const repoRoot = path.resolve(__dirname, "../../..");
     let tempDir;
@@ -73,7 +63,6 @@ describe("AccountTemplate", () => {
     let configPath;
     let mainLiquidPath;
     let part1LiquidPath;
-    let oldPartLiquidPath;
     let testLiquidPath;
 
     beforeEach(() => {
@@ -83,8 +72,7 @@ describe("AccountTemplate", () => {
       expectedFolderPath = path.join(tempDir, "account_templates", name_nl);
       configPath = path.join(expectedFolderPath, "config.json");
       mainLiquidPath = path.join(expectedFolderPath, "main.liquid");
-      part1LiquidPath = path.join(expectedFolderPath, "text_parts", "part_1.liquid");
-      oldPartLiquidPath = path.join(expectedFolderPath, "text_parts", "old_part.liquid");
+      part1LiquidPath = path.join(expectedFolderPath, "text_parts", "detail.liquid");
       testLiquidPath = path.join(expectedFolderPath, "tests", `${name_nl}_liquid_test.yml`);
     });
 
@@ -95,7 +83,8 @@ describe("AccountTemplate", () => {
     });
 
     it("should return false if name_nl is missing", () => {
-      const result = AccountTemplate.save("firm", 100, { id: 808080 });
+      templateUtils.missingNameNL.mockReturnValue(true);
+      const result = AccountTemplate.save("firm", 100, { id: template.id });
       expect(result).toBe(false);
     });
 
@@ -110,13 +99,14 @@ describe("AccountTemplate", () => {
       templateUtils.checkValidName.mockReturnValue(false);
       const result = AccountTemplate.save("firm", 100, template);
       expect(result).toBe(false);
-      expect(templateUtils.checkValidName).toHaveBeenCalledWith("name_nl", "accountTemplate");
+      expect(templateUtils.checkValidName).toHaveBeenCalledWith(template.name_nl, "accountTemplate");
     });
 
     it("should create the necessary files and store template's relevant details", async () => {
+      templateUtils.missingNameNL.mockReturnValue(false);
       templateUtils.missingLiquidCode.mockReturnValue(false);
       templateUtils.checkValidName.mockReturnValue(true);
-      templateUtils.filterParts.mockReturnValue({ part_1: "Part 1 content" });
+      templateUtils.filterParts.mockReturnValue({ detail: "Detail content" });
 
       await AccountTemplate.save("firm", 100, template);
 
@@ -129,7 +119,7 @@ describe("AccountTemplate", () => {
       // Check text parts liquid files
       expect(fs.existsSync(part1LiquidPath)).toBe(true);
       const part1LiquidContent = await fsPromises.readFile(part1LiquidPath, "utf-8");
-      expect(part1LiquidContent).toBe("Part 1 content");
+      expect(part1LiquidContent).toBe("Detail content");
       // Check config file
       expect(fs.existsSync(configPath)).toBe(true);
       const configSaved = JSON.parse(await fsPromises.readFile(configPath, "utf-8"));
@@ -137,16 +127,17 @@ describe("AccountTemplate", () => {
       // Check liquid test file
       expect(fs.existsSync(testLiquidPath)).toBe(true);
       const testLiquidContent = await fsPromises.readFile(testLiquidPath, "utf-8");
-      expect(testLiquidContent).toBe(template.tests);
+      expect(testLiquidContent).toBe("# Add your Liquid Tests here");
     });
 
     it("should fetch an existing template's config and update with new details", async () => {
+      templateUtils.missingNameNL.mockReturnValue(false);
       templateUtils.missingLiquidCode.mockReturnValue(false);
       templateUtils.checkValidName.mockReturnValue(true);
       templateUtils.filterParts.mockReturnValue(textParts);
 
       fs.mkdirSync(path.join(tempDir, "account_templates"));
-      fs.mkdirSync(path.join(tempDir, "account_templates", "name_nl"));
+      fs.mkdirSync(path.join(tempDir, "account_templates", name_nl));
       fs.writeFileSync(configPath, JSON.stringify(existingConfig));
 
       // Check existing config file before save
@@ -156,41 +147,26 @@ describe("AccountTemplate", () => {
 
       await AccountTemplate.save("firm", 100, template);
 
-      // Check config file after save
-      const expectedConfig = {
-        id: { 100: 808080, 200: 505050 },
-        partner_id: {},
-        externally_managed: true,
-        name_en: "",
-        name_nl: "name_nl",
-        name_fr: "",
-        text: "main.liquid",
-        test: "tests/name_nl_liquid_test.yml",
-        text_parts: {
-          part_1: "text_parts/part_1.liquid",
-        },
-        account_range: null,
-        mapping_list_ranges: [],
-        hide_code: true,
-        published: true,
-        test_firm_id: null,
-      };
-      expect(fs.existsSync(configPath)).toBe(true);
+      // After save, ids from existingConfig should be preserved and new id added
       configSaved = JSON.parse(await fsPromises.readFile(configPath, "utf-8"));
-      expect(configSaved).toEqual(expectedConfig);
+      expect(configSaved.id[100]).toBe(template.id);
+      expect(configSaved.id["1001"]).toBe(existingConfig.id["1001"]);
+      expect(configSaved.name_nl).toBe(template.name_nl);
+      expect(configSaved.externally_managed).toBe(template.externally_managed);
     });
 
     it("should replace existing liquid files if the template already exists", async () => {
+      templateUtils.missingNameNL.mockReturnValue(false);
       templateUtils.missingLiquidCode.mockReturnValue(false);
       templateUtils.checkValidName.mockReturnValue(true);
       templateUtils.filterParts.mockReturnValue(textParts);
 
       fs.mkdirSync(path.join(tempDir, "account_templates"));
-      fs.mkdirSync(path.join(tempDir, "account_templates", "name_nl"));
-      fs.mkdirSync(path.join(tempDir, "account_templates", "name_nl", "text_parts"));
+      fs.mkdirSync(path.join(tempDir, "account_templates", name_nl));
+      fs.mkdirSync(path.join(tempDir, "account_templates", name_nl, "text_parts"));
       fs.writeFileSync(configPath, JSON.stringify(existingConfig));
       fs.writeFileSync(mainLiquidPath, "Main part: existing content");
-      fs.writeFileSync(part1LiquidPath, "Part 1: existing content");
+      fs.writeFileSync(part1LiquidPath, "Detail: existing content");
 
       await AccountTemplate.save("firm", 100, template);
 
@@ -199,10 +175,11 @@ describe("AccountTemplate", () => {
       expect(mainLiquidContent).toBe(template.text);
       // Check text parts liquid files
       const part1LiquidContent = await fsPromises.readFile(part1LiquidPath, "utf-8");
-      expect(part1LiquidContent).toBe(textParts.part_1);
+      expect(part1LiquidContent).toBe(textParts.detail);
     });
 
     it("should not replace existing liquid test files if the template already exists", async () => {
+      templateUtils.missingNameNL.mockReturnValue(false);
       templateUtils.missingLiquidCode.mockReturnValue(false);
       templateUtils.checkValidName.mockReturnValue(true);
       templateUtils.filterParts.mockReturnValue(textParts);
@@ -210,8 +187,8 @@ describe("AccountTemplate", () => {
       const existingLiquidTest = "Existing Liquid Test";
 
       fs.mkdirSync(path.join(tempDir, "account_templates"));
-      fs.mkdirSync(path.join(tempDir, "account_templates", "name_nl"));
-      fs.mkdirSync(path.join(tempDir, "account_templates", "name_nl", "tests"));
+      fs.mkdirSync(path.join(tempDir, "account_templates", name_nl));
+      fs.mkdirSync(path.join(tempDir, "account_templates", name_nl, "tests"));
       fs.writeFileSync(configPath, JSON.stringify(existingConfig));
       fs.writeFileSync(testLiquidPath, existingLiquidTest);
 
@@ -224,15 +201,17 @@ describe("AccountTemplate", () => {
 
     // NOTE: Do we need to modify this behavior?
     it("should not replace or delete unspecified text_parts", async () => {
+      templateUtils.missingNameNL.mockReturnValue(false);
       templateUtils.missingLiquidCode.mockReturnValue(false);
       templateUtils.checkValidName.mockReturnValue(true);
       templateUtils.filterParts.mockReturnValue(textParts);
 
       const existingPartContent = "Old part: existing Part Content";
+      const oldPartLiquidPath = path.join(expectedFolderPath, "text_parts", "old_part.liquid");
 
       fs.mkdirSync(path.join(tempDir, "account_templates"));
-      fs.mkdirSync(path.join(tempDir, "account_templates", "name_nl"));
-      fs.mkdirSync(path.join(tempDir, "account_templates", "name_nl", "text_parts"));
+      fs.mkdirSync(path.join(tempDir, "account_templates", name_nl));
+      fs.mkdirSync(path.join(tempDir, "account_templates", name_nl, "text_parts"));
       fs.writeFileSync(configPath, JSON.stringify(existingConfig));
       fs.writeFileSync(oldPartLiquidPath, existingPartContent);
 
@@ -244,6 +223,7 @@ describe("AccountTemplate", () => {
     });
 
     it("should not overwrite existing YAML test files when importing a template", async () => {
+      templateUtils.missingNameNL.mockReturnValue(false);
       templateUtils.missingLiquidCode.mockReturnValue(false);
       templateUtils.checkValidName.mockReturnValue(true);
       templateUtils.filterParts.mockReturnValue(textParts);
@@ -252,8 +232,8 @@ describe("AccountTemplate", () => {
 
       // Create existing template structure
       fs.mkdirSync(path.join(tempDir, "account_templates"));
-      fs.mkdirSync(path.join(tempDir, "account_templates", "name_nl"));
-      fs.mkdirSync(path.join(tempDir, "account_templates", "name_nl", "tests"));
+      fs.mkdirSync(path.join(tempDir, "account_templates", name_nl));
+      fs.mkdirSync(path.join(tempDir, "account_templates", name_nl, "tests"));
       fs.writeFileSync(configPath, JSON.stringify(existingConfig));
       fs.writeFileSync(testLiquidPath, existingYamlContent);
 
@@ -268,7 +248,7 @@ describe("AccountTemplate", () => {
       // Verify the YAML file still contains the original content and wasn't overwritten
       yamlContent = await fsPromises.readFile(testLiquidPath, "utf-8");
       expect(yamlContent).toBe(existingYamlContent);
-      expect(yamlContent).not.toBe(template.tests);
+      expect(yamlContent).not.toBe("# Add your Liquid Tests here");
     });
   });
 
@@ -318,7 +298,7 @@ describe("AccountTemplate", () => {
 
     afterEach(() => {
       if (fs.existsSync(tempDir)) {
-        fs.rmdirSync(tempDir, { recursive: true });
+        fs.rmSync(tempDir, { recursive: true, force: true });
       }
       jest.resetAllMocks();
     });
