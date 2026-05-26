@@ -10,9 +10,10 @@ const SF = require("../../../lib/api/sfApi");
 const consola = require("consola");
 const toolkit = require("../../../index");
 
+const originalCwd = path.resolve(__dirname, "../../..");
+
 describe("import-reconciliation", () => {
   let tempDir;
-  let originalCwd;
   let originalExit;
 
   beforeEach(async () => {
@@ -20,7 +21,6 @@ describe("import-reconciliation", () => {
 
     // Create temporary directory and change to it
     tempDir = await fsPromises.mkdtemp(path.join(__dirname, "temp-"));
-    originalCwd = process.cwd();
     process.chdir(tempDir);
 
     originalExit = process.exit;

@@ -297,6 +297,7 @@ describe("AccountTemplate", () => {
     });
 
     afterEach(() => {
+      process.chdir(path.resolve(__dirname, "../../.."));
       if (fs.existsSync(tempDir)) {
         fs.rmSync(tempDir, { recursive: true, force: true });
       }
