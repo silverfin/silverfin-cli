@@ -1095,9 +1095,6 @@ describe("Toolkit", () => {
       const mockFirmDetails = { name: "Test Firm" };
       SF.getFirmDetails.mockResolvedValue(mockFirmDetails);
 
-      // firmCredentials is not mocked in the main setup — need to handle it
-      const { firmCredentials } = require("../../lib/api/firmCredentials");
-
       await toolkit.updateFirmName(100);
 
       expect(SF.getFirmDetails).toHaveBeenCalledWith(100);

@@ -149,7 +149,7 @@ describe("ReconciliationText", () => {
 
       // Check existing config file before save
       expect(fs.existsSync(configPath)).toBe(true);
-      let configSaved = JSON.parse(await fsPromises.readFile(configPath, "utf-8"));
+      const configSaved = JSON.parse(await fsPromises.readFile(configPath, "utf-8"));
       expect(configSaved).toEqual(existingConfig);
 
       await ReconciliationText.save("firm", 100, template);

@@ -12,7 +12,6 @@ jest.mock("../../../lib/utils/apiUtils", () => ({
 
 // Load shared fixtures
 const apiResponse = require("../../../fixtures/api-responses/shared-parts/single.json");
-const existingConfigFixture = require("../../../fixtures/market-repo/shared_parts/shared_part_2/config.json");
 
 describe("SharedPart", () => {
   describe("save", () => {

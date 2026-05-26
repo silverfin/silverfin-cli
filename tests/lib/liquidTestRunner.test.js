@@ -61,7 +61,7 @@ function makeFailedTests() {
   };
 }
 
-function setupFsUtilsMocks(handle = "reconciliation_text_1", templateType = "reconciliationText") {
+function setupFsUtilsMocks(handle = "reconciliation_text_1", _templateType = "reconciliationText") {
   fsUtils.configExists.mockReturnValue(true);
   fsUtils.readConfig.mockReturnValue({
     test: `tests/${handle}_liquid_test.yml`,
