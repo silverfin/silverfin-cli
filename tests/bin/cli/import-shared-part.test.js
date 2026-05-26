@@ -93,19 +93,17 @@ describe("import-shared-part", () => {
 
     it("should log error and exit when shared part not found by name", async () => {
       SF.findSharedPartByName.mockResolvedValue(null);
-      // readSharedPartById may be called with undefined after process.exit mock allows continuation
-      SF.readSharedPartById.mockResolvedValue({ data: null });
+      process.exit.mockImplementation((code) => {
+        throw new Error(`EXIT_${code}`);
+      });
 
-      // The function logs error and calls process.exit(1). Since exit is mocked,
-      // execution continues and may throw — we catch it to check the assertions.
-      try {
-        await toolkit.fetchSharedPartByName("firm", "1001", "nonexistent_part");
-      } catch (e) {
-        // expected when process.exit is mocked and code continues accessing null.id
-      }
+      await expect(
+        toolkit.fetchSharedPartByName("firm", "1001", "nonexistent_part"),
+      ).rejects.toThrow("EXIT_1");
 
       expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("wasn't found"));
       expect(process.exit).toHaveBeenCalledWith(1);
+      expect(SF.readSharedPartById).not.toHaveBeenCalled();
     });
   });
 });

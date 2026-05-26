@@ -10,7 +10,7 @@ npm test -- --testPathPattern=tests/lib/toolkit.test.js  # run a single file
 
 ## Structure
 
-```
+```text
 tests/
 ├── TESTS.md                         # this file
 ├── bin/
@@ -65,7 +65,7 @@ tests/
 
 Test fixtures live under `fixtures/` and are shared across all test files:
 
-```
+```text
 fixtures/
 ├── api-responses/                   # JSON shapes returned by the Silverfin API
 │   ├── reconciliation-texts/

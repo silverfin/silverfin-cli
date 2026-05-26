@@ -107,7 +107,7 @@ describe("templateUtils", () => {
       expect(consola.warn).toHaveBeenCalled();
     });
 
-    it("should return false for empty string (reconciliationText)", () => {
+    it("should return true for empty string (reconciliationText)", () => {
       const result = templateUtils.checkValidName("", "reconciliationText");
       // Empty string passes /^[a-zA-Z0-9_]*$/ (matches empty string)
       expect(result).toBe(true);
