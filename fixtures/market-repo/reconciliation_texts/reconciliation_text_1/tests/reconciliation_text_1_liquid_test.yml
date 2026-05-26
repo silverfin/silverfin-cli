@@ -1,0 +1,25 @@
+test_basic: &test_basic
+  name: Basic balance test
+  context: period
+  data:
+    period:
+      accounts:
+        "100":
+          value: 1000
+          debit: 1500
+          credit: 500
+  expectation: |
+    Balance: 1,000.00
+
+test_zero_balance:
+  <<: *test_basic
+  name: Zero balance test
+  data:
+    period:
+      accounts:
+        "100":
+          value: 0
+          debit: 0
+          credit: 0
+  expectation: |
+    Balance: 0.00

@@ -1,12 +1,5 @@
 {
-  "id": {
-    "1001": 8801,
-    "1002": 9901
-  },
-  "partner_id": {
-    "25": 8901,
-    "26": 9801
-  },
+  "id": 8801,
   "handle": "reconciliation_text_1",
   "name_en": "Reconciliation Text 1",
   "name_nl": "Afstemming Tekst 1",
@@ -34,10 +27,16 @@
   "use_full_width": false,
   "downloadable_as_docx": false,
   "test_firm_id": null,
-  "text": "main.liquid",
-  "text_parts": {
-    "part_1": "text_parts/part_1.liquid",
-    "part_2": "text_parts/part_2.liquid"
-  },
-  "test": "tests/reconciliation_text_1_liquid_test.yml"
+  "text": "{% comment %}reconciliation_text_1 - main{% endcomment %}\n{% assign balance = period.accounts[\"100\"].value %}\nBalance: {{ balance | number_to_currency }}",
+  "text_parts": [
+    {
+      "name": "part_1",
+      "content": "{% comment %}reconciliation_text_1 - part_1{% endcomment %}\nDebit: {{ period.accounts[\"100\"].debit | number_to_currency }}"
+    },
+    {
+      "name": "part_2",
+      "content": "{% comment %}reconciliation_text_1 - part_2{% endcomment %}\nCredit: {{ period.accounts[\"100\"].credit | number_to_currency }}"
+    }
+  ],
+  "tests": "test_basic:\n  name: Basic balance test\n  expectation: |\n    Balance: 1,000.00\n"
 }

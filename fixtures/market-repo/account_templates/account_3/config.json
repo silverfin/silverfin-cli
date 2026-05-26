@@ -1,0 +1,29 @@
+{
+  "id": {
+    "1001": 1103
+  },
+  "partner_id": {},
+  "test": "tests/account_3_liquid_test.yml",
+  "name_en": "Account Template 3 (Externally Managed)",
+  "name_nl": "account_3",
+  "name_fr": "",
+  "name_de": "",
+  "name_da": "",
+  "name_se": "",
+  "name_fi": "",
+  "description_en": "An externally managed account template",
+  "description_nl": "Een extern beheerd rekening sjabloon",
+  "description_fr": "",
+  "description_de": "",
+  "description_da": "",
+  "description_se": "",
+  "description_fi": "",
+  "externally_managed": true,
+  "account_range": "200-299",
+  "mapping_list_ranges": [],
+  "published": true,
+  "hide_code": true,
+  "test_firm_id": 1001,
+  "text": "main.liquid",
+  "text_parts": {}
+}

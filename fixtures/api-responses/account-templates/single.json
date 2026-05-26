@@ -1,13 +1,5 @@
 {
-  "id": {
-    "1001": 1101,
-    "1002": 1201
-  },
-  "partner_id": {
-    "25": 1301,
-    "26": 1401
-  },
-  "test": "tests/account_1_liquid_test.yml",
+  "id": 1101,
   "name_en": "Account Template 1",
   "name_nl": "account_1",
   "name_fr": "Modèle de Compte 1",
@@ -24,19 +16,15 @@
   "description_fi": "",
   "externally_managed": false,
   "account_range": "280,282",
-  "mapping_list_ranges": [
-    {
-      "account_mapping_list_id": 8957,
-      "account_range": "280,282,284",
-      "type": "firm",
-      "env_id": "1001"
-    }
-  ],
+  "mapping_list_ranges": [],
   "published": true,
   "hide_code": false,
   "test_firm_id": null,
-  "text": "main.liquid",
-  "text_parts": {
-    "detail": "text_parts/detail.liquid"
-  }
+  "text": "{% comment %}account_1 - main{% endcomment %}\nTotal: {{ period.accounts[\"280\"].value | number_to_currency }}",
+  "text_parts": [
+    {
+      "name": "detail",
+      "content": "{% comment %}account_1 - detail part{% endcomment %}\nAccount 280: {{ period.accounts[\"280\"].value | number_to_currency }}"
+    }
+  ]
 }

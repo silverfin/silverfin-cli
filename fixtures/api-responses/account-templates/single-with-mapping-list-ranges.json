@@ -1,13 +1,5 @@
 {
-  "id": {
-    "1001": 1101,
-    "1002": 1201
-  },
-  "partner_id": {
-    "25": 1301,
-    "26": 1401
-  },
-  "test": "tests/account_1_liquid_test.yml",
+  "id": 1101,
   "name_en": "Account Template 1",
   "name_nl": "account_1",
   "name_fr": "Modèle de Compte 1",
@@ -15,8 +7,8 @@
   "name_da": "",
   "name_se": "",
   "name_fi": "",
-  "description_en": "Account template with mapping list ranges and text parts",
-  "description_nl": "Rekening sjabloon met mapping lijst bereiken en tekstdelen",
+  "description_en": "Account template with mapping list ranges",
+  "description_nl": "Rekening sjabloon met mapping lijst bereiken",
   "description_fr": "",
   "description_de": "",
   "description_da": "",
@@ -35,8 +27,6 @@
   "published": true,
   "hide_code": false,
   "test_firm_id": null,
-  "text": "main.liquid",
-  "text_parts": {
-    "detail": "text_parts/detail.liquid"
-  }
+  "text": "{% comment %}account_1 - main{% endcomment %}\nTotal: {{ period.accounts[\"280\"].value | number_to_currency }}",
+  "text_parts": []
 }

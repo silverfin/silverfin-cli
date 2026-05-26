@@ -1,11 +1,5 @@
 {
-  "id": {
-    "1001": 2201,
-    "1002": 2301
-  },
-  "partner_id": {
-    "25": 2401
-  },
+  "id": 2201,
   "name_en": "Export File 1",
   "name_nl": "export_1",
   "name_fr": "Fichier d'Export 1",
@@ -27,8 +21,11 @@
   "hide_code": false,
   "download_warning": null,
   "test_firm_id": null,
-  "text": "main.liquid",
-  "text_parts": {
-    "header": "text_parts/header.liquid"
-  }
+  "text": "{% comment %}export_1 - main{% endcomment %}\nRevenue: {{ period.accounts[\"700\"].value | number_to_currency }}",
+  "text_parts": [
+    {
+      "name": "header",
+      "content": "{% comment %}export_1 - header part{% endcomment %}\nExport Report"
+    }
+  ]
 }

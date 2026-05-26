@@ -1,0 +1,5 @@
+{% comment %}reconciliation_text_1 - main{% endcomment %}
+{% assign balance = period.accounts["100"].value %}
+{% include "shared_part_1" %}
+
+Balance: {{ balance | number_to_currency }}

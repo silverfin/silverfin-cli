@@ -1,11 +1,5 @@
 {
-  "id": {
-    "1001": 8803,
-    "1002": 9903
-  },
-  "partner_id": {
-    "25": 8903
-  },
+  "id": 8803,
   "handle": "reconciliation_text_3",
   "name_en": "Reconciliation Text 3 (Externally Managed)",
   "name_nl": "Afstemming Tekst 3 (Extern Beheerd)",
@@ -33,7 +27,7 @@
   "use_full_width": true,
   "downloadable_as_docx": true,
   "test_firm_id": 1001,
-  "text": "main.liquid",
-  "text_parts": {},
-  "test": "tests/reconciliation_text_3_liquid_test.yml"
+  "text": "{% comment %}reconciliation_text_3 - externally managed{% endcomment %}\nTotal: {{ period.accounts[\"200\"].value | number_to_currency }}",
+  "text_parts": [],
+  "tests": null
 }
