@@ -20,11 +20,11 @@
   "published": true,
   "hide_code": false,
   "test_firm_id": null,
-  "text": "{% comment %}account_1 - main{% endcomment %}\nTotal: {{ period.accounts[\"280\"].value | number_to_currency }}",
+  "text": "{% comment %}account_1 - main{% endcomment %}\nTotal: {{ period.accounts[\"280\"].value | currency }}",
   "text_parts": [
     {
       "name": "detail",
-      "content": "{% comment %}account_1 - detail part{% endcomment %}\nAccount 280: {{ period.accounts[\"280\"].value | number_to_currency }}"
+      "content": "{% comment %}account_1 - detail part{% endcomment %}\nAccount 280: {{ period.accounts[\"280\"].value | currency }}"
     }
   ]
 }

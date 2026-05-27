@@ -21,7 +21,7 @@
   "hide_code": false,
   "download_warning": null,
   "test_firm_id": null,
-  "text": "{% comment %}export_1 - main{% endcomment %}\nRevenue: {{ period.accounts[\"700\"].value | number_to_currency }}",
+  "text": "{% comment %}export_1 - main{% endcomment %}\nRevenue: {{ period.accounts[\"700\"].value | currency }}",
   "text_parts": [
     {
       "name": "header",

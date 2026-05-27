@@ -1,3 +1,5 @@
 {% comment %}account_1 - main{% endcomment %}
 {% assign total = period.accounts["280"].value | plus: period.accounts["282"].value %}
-Total: {{ total | number_to_currency }}
+Total: {{ total | currency }}
+
+{% include 'detail' %}

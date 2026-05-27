@@ -27,7 +27,7 @@
   "use_full_width": true,
   "downloadable_as_docx": true,
   "test_firm_id": 1001,
-  "text": "{% comment %}reconciliation_text_3 - externally managed{% endcomment %}\nTotal: {{ period.accounts[\"200\"].value | number_to_currency }}",
+  "text": "{% comment %}reconciliation_text_3 - externally managed{% endcomment %}\nTotal: {{ period.accounts[\"200\"].value | currency }}",
   "text_parts": [],
   "tests": null
 }

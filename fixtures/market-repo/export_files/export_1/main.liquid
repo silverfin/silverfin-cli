@@ -1,3 +1,4 @@
 {% comment %}export_1 - main{% endcomment %}
+{% include 'header' %}
 {% assign revenue = period.accounts["700"].value %}
-Revenue: {{ revenue | number_to_currency }}
+Revenue: {{ revenue | currency }}

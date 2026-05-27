@@ -27,15 +27,15 @@
   "use_full_width": false,
   "downloadable_as_docx": false,
   "test_firm_id": null,
-  "text": "{% comment %}reconciliation_text_1 - main{% endcomment %}\n{% assign balance = period.accounts[\"100\"].value %}\nBalance: {{ balance | number_to_currency }}",
+  "text": "{% comment %}reconciliation_text_1 - main{% endcomment %}\n{% assign balance = period.accounts[\"100\"].value %}\nBalance: {{ balance | currency }}",
   "text_parts": [
     {
       "name": "part_1",
-      "content": "{% comment %}reconciliation_text_1 - part_1{% endcomment %}\nDebit: {{ period.accounts[\"100\"].debit | number_to_currency }}"
+      "content": "{% comment %}reconciliation_text_1 - part_1{% endcomment %}\nDebit: {{ period.accounts[\"100\"].debit | currency }}"
     },
     {
       "name": "part_2",
-      "content": "{% comment %}reconciliation_text_1 - part_2{% endcomment %}\nCredit: {{ period.accounts[\"100\"].credit | number_to_currency }}"
+      "content": "{% comment %}reconciliation_text_1 - part_2{% endcomment %}\nCredit: {{ period.accounts[\"100\"].credit | currency }}"
     }
   ],
   "tests": "test_basic:\n  name: Basic balance test\n  expectation: |\n    Balance: 1,000.00\n"
