@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.55.0] (27/05/2026)
+Added an error summary at the end of the `update-reconciliation --all`, `update-shared-part --all`, `update-export-file --all`, and `update-account-template --all` commands.
+
 ## [1.54.2] (13/05/2026)
 Fix error reporting in `silverfin authorize`, `refresh-token`, and the partner-key refresh: previously some failures (notably network-layer errors with no HTTP response) crashed with `Cannot read properties of undefined (reading 'status')` or exited silently — they now print the underlying error so the cause is visible.
 
