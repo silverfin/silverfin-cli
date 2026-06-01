@@ -16,6 +16,12 @@ jest.mock("../../../lib/api/silverfinAuthorizer", () => ({
   },
 }));
 
+jest.mock("../../../lib/api/axiosFactory", () => ({
+  AxiosFactory: {
+    createInstance: jest.fn(),
+  },
+}));
+
 jest.mock("consola");
 
 // Load API response fixtures
@@ -28,8 +34,10 @@ const exportFileList = require("../../../fixtures/api-responses/export-files/lis
 const sharedPartSingle = require("../../../fixtures/api-responses/shared-parts/single.json");
 const sharedPartList = require("../../../fixtures/api-responses/shared-parts/list.json");
 
+const SF = require("../../../lib/api/sfApi");
+const { AxiosFactory } = require("../../../lib/api/axiosFactory");
+
 describe("sfApi", () => {
-  let SF;
   let axiosMock;
   let axiosInstance;
 
@@ -37,26 +45,13 @@ describe("sfApi", () => {
     // Create a real axios instance to be returned by AxiosFactory.createInstance
     axiosInstance = axios.create({ baseURL: "https://test.getsilverfin.com/api/v4/f/100" });
     axiosMock = new AxiosMockAdapter(axiosInstance);
-
-    // Mock AxiosFactory to always return our controlled instance
-    jest.mock("../../../lib/api/axiosFactory", () => ({
-      AxiosFactory: {
-        createInstance: jest.fn(),
-      },
-    }));
-
-    const { AxiosFactory } = require("../../../lib/api/axiosFactory");
     AxiosFactory.createInstance.mockReturnValue(axiosInstance);
-
-    SF = require("../../../lib/api/sfApi");
   });
 
   beforeEach(() => {
     jest.clearAllMocks();
     axiosMock.reset();
-
     // Ensure AxiosFactory still returns our instance after clearAllMocks
-    const { AxiosFactory } = require("../../../lib/api/axiosFactory");
     AxiosFactory.createInstance.mockReturnValue(axiosInstance);
   });
 

@@ -1,6 +1,7 @@
 const fs = require("fs");
 const fsPromises = require("fs").promises;
 const path = require("path");
+const os = require("os");
 
 // Only mock API calls and console, let filesystem operations run normally
 jest.mock("consola");
@@ -20,7 +21,7 @@ describe("import-reconciliation", () => {
     jest.clearAllMocks();
 
     // Create temporary directory and change to it
-    tempDir = await fsPromises.mkdtemp(path.join(__dirname, "temp-"));
+    tempDir = await fsPromises.mkdtemp(path.join(os.tmpdir(), "sf-cli-test-"));
     process.chdir(tempDir);
 
     originalExit = process.exit;
@@ -35,14 +36,7 @@ describe("import-reconciliation", () => {
   afterEach(async () => {
     process.chdir(originalCwd);
     process.exit = originalExit;
-
-    // Clean up temp directory
-    try {
-      await fsPromises.rm(tempDir, { recursive: true, force: true });
-    } catch (error) {
-      console.error("Failed to clean up temp directory:", error);
-      process.exit(1);
-    }
+    await fsPromises.rm(tempDir, { recursive: true, force: true });
   });
 
   describe("import reconciliation by id", () => {
