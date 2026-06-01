@@ -59,6 +59,11 @@ describe("ExportFileInstanceGenerator", () => {
   // ─── generateAndOpenFile ──────────────────────────────────────────────────
 
   describe("generateAndOpenFile", () => {
+    afterEach(() => {
+      jest.useRealTimers();
+      jest.clearAllTimers();
+    });
+
     it("should log error and return false when createExportFileInstance returns no id", async () => {
       SF.createExportFileInstance = jest.fn().mockResolvedValue(null);
 

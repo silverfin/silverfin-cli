@@ -120,7 +120,7 @@ describe("SharedPart", () => {
     it("should create the liquid file if it doesn't exist", async () => {
       await fsPromises.unlink(mainLiquidPath);
 
-      SharedPart.read(name);
+      await SharedPart.read(name);
 
       expect(fs.existsSync(mainLiquidPath)).toBe(true);
       const content = await fsPromises.readFile(mainLiquidPath, "utf-8");
