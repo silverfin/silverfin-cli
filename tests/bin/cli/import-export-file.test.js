@@ -9,6 +9,7 @@ jest.mock("../../../lib/api/sfApi");
 const SF = require("../../../lib/api/sfApi");
 const consola = require("consola");
 const toolkit = require("../../../index");
+const exportFileFixture = require("../../../fixtures/api-responses/export-files/single.json");
 
 describe("import-export-file", () => {
   let tempDir;
@@ -41,14 +42,14 @@ describe("import-export-file", () => {
   describe("fetchExportFileById", () => {
     it("should import export file and create necessary files", async () => {
       const mockApiResponse = {
-        id: 2201,
+        id: exportFileFixture.id,
         name: "export_1",
-        name_nl: "export_1",
-        name_en: "Export File 1",
-        text: "{% comment %}main export content{% endcomment %}",
-        text_parts: [{ name: "header", content: "Header liquid content" }],
-        externally_managed: false,
-        published: true,
+        name_nl: exportFileFixture.name_nl,
+        name_en: exportFileFixture.name_en,
+        text: exportFileFixture.text,
+        text_parts: exportFileFixture.text_parts,
+        externally_managed: exportFileFixture.externally_managed,
+        published: exportFileFixture.published,
       };
 
       SF.readExportFileById.mockResolvedValue(mockApiResponse);
@@ -75,17 +76,7 @@ describe("import-export-file", () => {
 
   describe("fetchExportFileByName", () => {
     it("should import export file when found by name", async () => {
-      const mockApiResponse = {
-        id: 2201,
-        name_nl: "export_1",
-        name_en: "Export File 1",
-        text: "{% assign x = 1 %}",
-        text_parts: [],
-        externally_managed: false,
-        published: true,
-      };
-
-      SF.findExportFileByName.mockResolvedValue(mockApiResponse);
+      SF.findExportFileByName.mockResolvedValue(exportFileFixture);
 
       await toolkit.fetchExportFileByName("firm", "1001", "export_1");
 

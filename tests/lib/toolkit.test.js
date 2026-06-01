@@ -92,7 +92,7 @@ describe("Toolkit", () => {
       });
     });
 
-    it("should return false when template reading fails", async () => {
+    it("should return undefined when template reading returns null", async () => {
       fsUtils.findHandleByID.mockReturnValue(mockHandle);
       ReconciliationText.read.mockResolvedValue(null);
 
@@ -187,7 +187,7 @@ describe("Toolkit", () => {
       expect(result).toBe(false);
     });
 
-    it("should return false when template reading fails", async () => {
+    it("should return undefined when template reading returns null", async () => {
       fsUtils.findHandleByID.mockReturnValue(mockHandle);
       ExportFile.read.mockResolvedValue(null);
 
@@ -315,7 +315,7 @@ describe("Toolkit", () => {
       });
     });
 
-    it("should return false when template reading fails", async () => {
+    it("should return undefined when template reading returns null", async () => {
       fsUtils.findHandleByID.mockReturnValue(mockHandle);
       AccountTemplate.read.mockResolvedValue(null);
 
@@ -411,7 +411,7 @@ describe("Toolkit", () => {
       expect(result).toBe(false);
     });
 
-    it("should return false when template reading fails", async () => {
+    it("should return undefined when template reading returns null", async () => {
       fsUtils.findHandleByID.mockReturnValue(mockHandle);
       SharedPart.read.mockResolvedValue(null);
 
@@ -1085,6 +1085,453 @@ describe("Toolkit", () => {
 
       expect(fsUtils.getAllTemplatesOfAType).toHaveBeenCalledWith("reconciliationText");
       expect(SF.findReconciliationTextByHandle).toHaveBeenCalled();
+    });
+  });
+
+  // ─── fetchExistingExportFiles ─────────────────────────────────────────────
+
+  describe("fetchExistingExportFiles", () => {
+    const mockType = "firm";
+    const mockEnvId = "100";
+
+    it("should warn when no local templates exist", async () => {
+      fsUtils.getAllTemplatesOfAType.mockReturnValue(null);
+
+      await toolkit.fetchExistingExportFiles(mockType, mockEnvId);
+
+      expect(consola.warn).toHaveBeenCalled();
+    });
+
+    it("should call fetchExportFileById for each template with an id", async () => {
+      fsUtils.getAllTemplatesOfAType.mockReturnValue(["export_1"]);
+      fsUtils.readConfig.mockReturnValue({ id: { 100: 2201 }, partner_id: {} });
+      fsUtils.getTemplateId.mockReturnValue(2201);
+      SF.readExportFileById.mockResolvedValue({ id: 2201, name_nl: "export_1", text: "liquid" });
+      ExportFile.save.mockReturnValue(true);
+
+      await toolkit.fetchExistingExportFiles(mockType, mockEnvId);
+
+      expect(SF.readExportFileById).toHaveBeenCalled();
+    });
+  });
+
+  // ─── publishAllExportFiles ────────────────────────────────────────────────
+
+  describe("publishAllExportFiles", () => {
+    it("should call publishExportFileByName for each template", async () => {
+      fsUtils.getAllTemplatesOfAType.mockReturnValue(["export_1", "export_2"]);
+      fsUtils.configExists.mockReturnValue(true);
+      fsUtils.readConfig.mockReturnValue({ id: { 100: 2201 }, partner_id: {} });
+      fsUtils.getTemplateId.mockReturnValue(2201);
+      ExportFile.read.mockResolvedValue({ name_nl: "export_1", text: "liquid" });
+      SF.updateExportFile.mockResolvedValue({ data: { name_nl: "export_1" } });
+
+      await toolkit.publishAllExportFiles("firm", "100");
+
+      expect(fsUtils.getAllTemplatesOfAType).toHaveBeenCalledWith("exportFile");
+    });
+  });
+
+  // ─── newAllExportFiles ────────────────────────────────────────────────────
+
+  describe("newAllExportFiles", () => {
+    it("should call newExportFile for each local template", async () => {
+      fsUtils.getAllTemplatesOfAType.mockReturnValue(["export_1"]);
+      SF.findExportFileByName.mockResolvedValue(null);
+      ExportFile.read.mockResolvedValue({ name_nl: "export_1", text: "liquid" });
+      SF.createExportFile.mockResolvedValue({ status: 201, data: { id: 999, name_nl: "export_1" } });
+
+      await toolkit.newAllExportFiles("firm", "100");
+
+      expect(fsUtils.getAllTemplatesOfAType).toHaveBeenCalledWith("exportFile");
+    });
+  });
+
+  // ─── fetchExistingAccountTemplates ───────────────────────────────────────
+
+  describe("fetchExistingAccountTemplates", () => {
+    const mockType = "firm";
+    const mockEnvId = "100";
+
+    it("should warn when no local templates exist", async () => {
+      fsUtils.getAllTemplatesOfAType.mockReturnValue(null);
+
+      await toolkit.fetchExistingAccountTemplates(mockType, mockEnvId);
+
+      expect(consola.warn).toHaveBeenCalled();
+    });
+
+    it("should call fetchAccountTemplateById for each template with an id", async () => {
+      fsUtils.getAllTemplatesOfAType.mockReturnValue(["account_1"]);
+      fsUtils.readConfig.mockReturnValue({ id: { 100: 1101 }, partner_id: {} });
+      fsUtils.getTemplateId.mockReturnValue(1101);
+      SF.readAccountTemplateById.mockResolvedValue({ id: 1101, name_nl: "account_1", text: "liquid" });
+      AccountTemplate.save.mockReturnValue(true);
+
+      await toolkit.fetchExistingAccountTemplates(mockType, mockEnvId);
+
+      expect(SF.readAccountTemplateById).toHaveBeenCalled();
+    });
+  });
+
+  // ─── publishAllAccountTemplates ───────────────────────────────────────────
+
+  describe("publishAllAccountTemplates", () => {
+    it("should call publishAccountTemplateByName for each template", async () => {
+      fsUtils.getAllTemplatesOfAType.mockReturnValue(["account_1"]);
+      fsUtils.configExists.mockReturnValue(true);
+      fsUtils.readConfig.mockReturnValue({ id: { 100: 1101 }, partner_id: {} });
+      fsUtils.getTemplateId.mockReturnValue(1101);
+      AccountTemplate.read.mockResolvedValue({ name_nl: "account_1", text: "liquid", mapping_list_ranges: [] });
+      SF.updateAccountTemplate.mockResolvedValue({ data: { name_nl: "account_1" } });
+
+      await toolkit.publishAllAccountTemplates("firm", "100");
+
+      expect(fsUtils.getAllTemplatesOfAType).toHaveBeenCalledWith("accountTemplate");
+    });
+  });
+
+  // ─── newAllAccountTemplates ───────────────────────────────────────────────
+
+  describe("newAllAccountTemplates", () => {
+    it("should call newAccountTemplate for each local template", async () => {
+      fsUtils.getAllTemplatesOfAType.mockReturnValue(["account_1"]);
+      SF.findAccountTemplateByName.mockResolvedValue(null);
+      AccountTemplate.read.mockResolvedValue({ name_nl: "account_1", text: "liquid", mapping_list_ranges: [] });
+      SF.createAccountTemplate.mockResolvedValue({ status: 201, data: { id: 999, name_nl: "account_1" } });
+
+      await toolkit.newAllAccountTemplates("firm", "100");
+
+      expect(fsUtils.getAllTemplatesOfAType).toHaveBeenCalledWith("accountTemplate");
+    });
+  });
+
+  // ─── fetchExistingSharedParts ─────────────────────────────────────────────
+
+  describe("fetchExistingSharedParts", () => {
+    const mockType = "firm";
+    const mockEnvId = "100";
+
+    it("should call fetchSharedPartById for each template with an id", async () => {
+      fsUtils.getAllTemplatesOfAType.mockReturnValue(["shared_part_1"]);
+      fsUtils.configExists.mockReturnValue(true);
+      fsUtils.readConfig.mockReturnValue({ id: { 100: 5601 }, partner_id: {} });
+      fsUtils.getTemplateId.mockReturnValue(5601);
+      SF.readSharedPartById.mockResolvedValue({ data: { id: 5601, name: "shared_part_1", text: "liquid", used_in: [] } });
+      SharedPart.save.mockResolvedValue(true);
+
+      await toolkit.fetchExistingSharedParts(mockType, mockEnvId);
+
+      expect(SF.readSharedPartById).toHaveBeenCalled();
+    });
+
+    it("should return early when no local templates exist", async () => {
+      fsUtils.getAllTemplatesOfAType.mockReturnValue(null);
+
+      await toolkit.fetchExistingSharedParts(mockType, mockEnvId);
+
+      expect(SF.readSharedPartById).not.toHaveBeenCalled();
+    });
+  });
+
+  // ─── publishAllSharedParts ────────────────────────────────────────────────
+
+  describe("publishAllSharedParts", () => {
+    it("should call publishSharedPartByName for each template", async () => {
+      fsUtils.getAllTemplatesOfAType.mockReturnValue(["shared_part_1"]);
+      fsUtils.configExists.mockReturnValue(true);
+      fsUtils.readConfig.mockReturnValue({ id: { 100: 5601 }, partner_id: {} });
+      fsUtils.getTemplateId.mockReturnValue(5601);
+      SharedPart.read.mockResolvedValue({ name: "shared_part_1", text: "liquid" });
+      SF.updateSharedPart.mockResolvedValue({ data: { name: "shared_part_1" } });
+
+      await toolkit.publishAllSharedParts("firm", "100");
+
+      expect(fsUtils.getAllTemplatesOfAType).toHaveBeenCalledWith("sharedPart");
+    });
+  });
+
+  // ─── newAllSharedParts ────────────────────────────────────────────────────
+
+  describe("newAllSharedParts", () => {
+    it("should call newSharedPart for each local template", async () => {
+      fsUtils.getAllTemplatesOfAType.mockReturnValue(["shared_part_1"]);
+      SF.findSharedPartByName.mockResolvedValue(null);
+      SharedPart.read.mockResolvedValue({ name: "shared_part_1", text: "liquid" });
+      SF.createSharedPart.mockResolvedValue({ status: 201, data: { id: 999, name: "shared_part_1" } });
+
+      await toolkit.newAllSharedParts("firm", "100");
+
+      expect(fsUtils.getAllTemplatesOfAType).toHaveBeenCalledWith("sharedPart");
+    });
+  });
+
+  // ─── addSharedPart ────────────────────────────────────────────────────────
+
+  describe("addSharedPart", () => {
+    const mockType = "firm";
+    const mockEnvId = "100";
+    const mockSharedPartName = "shared_part_1";
+    const mockTemplateHandle = "test_reconciliation";
+    const mockTemplateType = "reconciliationText";
+
+    const mockTemplateConfig = { id: { 100: 8801 }, partner_id: {} };
+    const mockSharedPartConfig = { id: { 100: 5601 }, partner_id: {}, name: mockSharedPartName, used_in: [] };
+
+    it("should add shared part to a reconciliationText and return updated config", async () => {
+      fsUtils.readConfig
+        .mockResolvedValueOnce(mockTemplateConfig)
+        .mockResolvedValueOnce(mockSharedPartConfig);
+      fsUtils.getTemplateId.mockReturnValue(8801);
+      SF.addSharedPartToReconciliation.mockResolvedValue({ status: 201 });
+      fsUtils.writeConfig.mockReturnValue(undefined);
+
+      const result = await toolkit.addSharedPart(mockType, mockEnvId, mockSharedPartName, mockTemplateHandle, mockTemplateType);
+
+      expect(SF.addSharedPartToReconciliation).toHaveBeenCalledWith(mockType, mockEnvId, 5601, 8801);
+      expect(fsUtils.writeConfig).toHaveBeenCalledTimes(2);
+      expect(consola.success).toHaveBeenCalled();
+      expect(result).toBeTruthy();
+    });
+
+    it("should add shared part to an exportFile", async () => {
+      const exportTemplateConfig = { id: { 100: 2201 }, partner_id: {} };
+      fsUtils.readConfig
+        .mockResolvedValueOnce(exportTemplateConfig)
+        .mockResolvedValueOnce(mockSharedPartConfig);
+      fsUtils.getTemplateId.mockReturnValue(2201);
+      SF.addSharedPartToExportFile.mockResolvedValue({ status: 201 });
+      fsUtils.writeConfig.mockReturnValue(undefined);
+
+      const result = await toolkit.addSharedPart(mockType, mockEnvId, mockSharedPartName, mockTemplateHandle, "exportFile");
+
+      expect(SF.addSharedPartToExportFile).toHaveBeenCalledWith(mockType, mockEnvId, 5601, 2201);
+      expect(result).toBeTruthy();
+    });
+
+    it("should add shared part to an accountTemplate", async () => {
+      const accountTemplateConfig = { id: { 100: 1101 }, partner_id: {} };
+      fsUtils.readConfig
+        .mockResolvedValueOnce(accountTemplateConfig)
+        .mockResolvedValueOnce(mockSharedPartConfig);
+      fsUtils.getTemplateId.mockReturnValue(1101);
+      SF.addSharedPartToAccountTemplate.mockResolvedValue({ status: 201 });
+      fsUtils.writeConfig.mockReturnValue(undefined);
+
+      const result = await toolkit.addSharedPart(mockType, mockEnvId, mockSharedPartName, mockTemplateHandle, "accountTemplate");
+
+      expect(SF.addSharedPartToAccountTemplate).toHaveBeenCalledWith(mockType, mockEnvId, 5601, 1101);
+      expect(result).toBeTruthy();
+    });
+
+    it("should return false when template config has no id and getTemplateId lookup fails", async () => {
+      const configWithNoId = { id: {}, partner_id: {} };
+      const spConfig = { id: { 100: 5601 }, partner_id: {}, name: mockSharedPartName, used_in: [] };
+      fsUtils.readConfig.mockResolvedValueOnce(configWithNoId).mockResolvedValueOnce(spConfig);
+      fsUtils.getTemplateId.mockReturnValue(undefined);
+      SF.findReconciliationTextByHandle.mockResolvedValue(null);
+
+      const result = await toolkit.addSharedPart(mockType, mockEnvId, mockSharedPartName, mockTemplateHandle, mockTemplateType);
+
+      expect(result).toBe(false);
+    });
+
+    it("should return false when shared part config has no id and lookup fails", async () => {
+      const spConfigNoId = { id: {}, partner_id: {}, name: mockSharedPartName, used_in: [] };
+      fsUtils.readConfig.mockResolvedValueOnce(mockTemplateConfig).mockResolvedValueOnce(spConfigNoId);
+      // First getTemplateId returns 8801 (for template), second shared part id is undefined
+      fsUtils.getTemplateId.mockReturnValue(8801);
+      SF.findSharedPartByName.mockResolvedValue(null);
+
+      const result = await toolkit.addSharedPart(mockType, mockEnvId, mockSharedPartName, mockTemplateHandle, mockTemplateType);
+
+      expect(result).toBe(false);
+    });
+
+    it("should warn and return false when API response indicates failure", async () => {
+      fsUtils.readConfig
+        .mockResolvedValueOnce(mockTemplateConfig)
+        .mockResolvedValueOnce(mockSharedPartConfig);
+      fsUtils.getTemplateId.mockReturnValue(8801);
+      SF.addSharedPartToReconciliation.mockResolvedValue(null);
+
+      const result = await toolkit.addSharedPart(mockType, mockEnvId, mockSharedPartName, mockTemplateHandle, mockTemplateType);
+
+      expect(consola.warn).toHaveBeenCalledWith(expect.stringContaining("failed"));
+      expect(result).toBe(false);
+    });
+
+    it("should handle exceptions gracefully", async () => {
+      const mockError = new Error("Test error");
+      fsUtils.readConfig.mockRejectedValue(mockError);
+
+      const result = await toolkit.addSharedPart(mockType, mockEnvId, mockSharedPartName, mockTemplateHandle, mockTemplateType);
+
+      expect(errorUtils.errorHandler).toHaveBeenCalledWith(mockError);
+      expect(result).toBe(false);
+    });
+  });
+
+  // ─── removeSharedPart ─────────────────────────────────────────────────────
+
+  describe("removeSharedPart", () => {
+    const mockType = "firm";
+    const mockEnvId = "100";
+    const mockSharedPartHandle = "shared_part_1";
+    const mockTemplateHandle = "test_reconciliation";
+    const mockTemplateType = "reconciliationText";
+
+    const mockTemplateConfig = { id: { 100: 8801 }, partner_id: {} };
+    const mockSharedPartConfig = {
+      id: { 100: 5601 },
+      partner_id: {},
+      name: mockSharedPartHandle,
+      used_in: [{ id: { 100: 8801 }, partner_id: {}, type: mockTemplateType, handle: mockTemplateHandle }],
+    };
+
+    it("should remove shared part from reconciliationText", async () => {
+      fsUtils.readConfig
+        .mockReturnValueOnce(mockTemplateConfig)
+        .mockReturnValueOnce(mockSharedPartConfig);
+      fsUtils.getTemplateId.mockReturnValue(8801);
+      SF.removeSharedPartFromReconciliation.mockResolvedValue({ status: 200 });
+      fsUtils.writeConfig.mockReturnValue(undefined);
+
+      await toolkit.removeSharedPart(mockType, mockEnvId, mockSharedPartHandle, mockTemplateHandle, mockTemplateType);
+
+      expect(SF.removeSharedPartFromReconciliation).toHaveBeenCalledWith(mockType, mockEnvId, 5601, 8801);
+      expect(consola.debug).toHaveBeenCalled();
+    });
+
+    it("should return false when template id not found in config", async () => {
+      const configNoId = { id: {}, partner_id: {} };
+      fsUtils.readConfig
+        .mockReturnValueOnce(configNoId)
+        .mockReturnValueOnce(mockSharedPartConfig);
+      fsUtils.getTemplateId.mockReturnValue(undefined);
+
+      const result = await toolkit.removeSharedPart(mockType, mockEnvId, mockSharedPartHandle, mockTemplateHandle, mockTemplateType);
+
+      expect(consola.warn).toHaveBeenCalled();
+      expect(result).toBe(false);
+    });
+
+    it("should return false when shared part id not found in config", async () => {
+      const spConfigNoId = { id: {}, partner_id: {}, name: mockSharedPartHandle, used_in: [] };
+      fsUtils.readConfig
+        .mockReturnValueOnce(mockTemplateConfig)
+        .mockReturnValueOnce(spConfigNoId);
+      fsUtils.getTemplateId.mockReturnValue(8801);
+
+      const result = await toolkit.removeSharedPart(mockType, mockEnvId, mockSharedPartHandle, mockTemplateHandle, mockTemplateType);
+
+      expect(consola.warn).toHaveBeenCalled();
+      expect(result).toBe(false);
+    });
+
+    it("should handle exceptions gracefully", async () => {
+      const mockError = new Error("Test error");
+      fsUtils.readConfig.mockImplementation(() => {
+        throw mockError;
+      });
+
+      await toolkit.removeSharedPart(mockType, mockEnvId, mockSharedPartHandle, mockTemplateHandle, mockTemplateType);
+
+      expect(errorUtils.errorHandler).toHaveBeenCalledWith(mockError);
+    });
+  });
+
+  // ─── addAllSharedParts ────────────────────────────────────────────────────
+
+  describe("addAllSharedParts", () => {
+    const mockType = "firm";
+    const mockEnvId = "100";
+
+    it("should skip shared part with no used_in array", async () => {
+      fsUtils.getAllTemplatesOfAType.mockReturnValue(["shared_part_1"]);
+      fsUtils.readConfig.mockResolvedValue({ id: { 100: 5601 }, partner_id: {}, name: "shared_part_1" });
+
+      await toolkit.addAllSharedParts(mockType, mockEnvId);
+
+      expect(consola.warn).toHaveBeenCalledWith(expect.stringContaining("has no used_in"));
+    });
+
+    it("should skip shared part with no id for this env", async () => {
+      fsUtils.getAllTemplatesOfAType.mockReturnValue(["shared_part_1"]);
+      fsUtils.readConfig.mockResolvedValue({ id: {}, partner_id: {}, name: "shared_part_1", used_in: [] });
+
+      await toolkit.addAllSharedParts(mockType, mockEnvId);
+
+      expect(consola.warn).toHaveBeenCalledWith(expect.stringContaining("has no id associated"));
+    });
+
+    it("should skip template not found locally", async () => {
+      const spConfig = {
+        id: { 100: 5601 },
+        partner_id: {},
+        name: "shared_part_1",
+        used_in: [{ id: { 100: 8801 }, partner_id: {}, type: "reconciliationText", handle: "test_recon" }],
+      };
+      fsUtils.getAllTemplatesOfAType.mockReturnValue(["shared_part_1"]);
+      fsUtils.readConfig.mockResolvedValue(spConfig);
+      SF.readSharedPartById.mockResolvedValue({ data: { used_in: [] } });
+      fsUtils.configExists.mockReturnValue(false);
+
+      // Mock SharedPart.checkTemplateType to return the template unchanged
+      const { SharedPart: MockedSharedPart } = require("../../lib/templates/sharedPart");
+      MockedSharedPart.checkTemplateType = jest.fn((t) => t);
+
+      await toolkit.addAllSharedParts(mockType, mockEnvId);
+
+      expect(consola.warn).toHaveBeenCalledWith(expect.stringContaining("not found in local repository"));
+    });
+
+    it("should skip already-linked template when force=false", async () => {
+      const spConfig = {
+        id: { 100: 5601 },
+        partner_id: {},
+        name: "shared_part_1",
+        used_in: [{ id: { 100: 8801 }, partner_id: {}, type: "reconciliationText", handle: "test_recon" }],
+      };
+      fsUtils.getAllTemplatesOfAType.mockReturnValue(["shared_part_1"]);
+      fsUtils.readConfig.mockResolvedValue(spConfig);
+      // Already linked: same id and type
+      SF.readSharedPartById.mockResolvedValue({ data: { used_in: [{ id: 8801, type: "reconciliationText" }] } });
+      fsUtils.configExists.mockReturnValue(true);
+
+      const { SharedPart: MockedSharedPart } = require("../../lib/templates/sharedPart");
+      MockedSharedPart.checkTemplateType = jest.fn((t) => t);
+
+      await toolkit.addAllSharedParts(mockType, mockEnvId, false);
+
+      expect(consola.info).toHaveBeenCalledWith(expect.stringContaining("already has this shared part"));
+    });
+
+    it("should call addSharedPart when force=true even if already linked", async () => {
+      const spConfig = {
+        id: { 100: 5601 },
+        partner_id: {},
+        name: "shared_part_1",
+        used_in: [{ id: { 100: 8801 }, partner_id: {}, type: "reconciliationText", handle: "test_recon" }],
+      };
+      fsUtils.getAllTemplatesOfAType.mockReturnValue(["shared_part_1"]);
+      // For the outer loop readConfig call
+      fsUtils.readConfig
+        .mockResolvedValueOnce(spConfig)
+        // For addSharedPart internal calls
+        .mockResolvedValue({ id: { 100: 8801 }, partner_id: {} });
+      fsUtils.getTemplateId.mockReturnValue(8801);
+      SF.readSharedPartById.mockResolvedValue({ data: { used_in: [{ id: 8801, type: "reconciliationText" }] } });
+      fsUtils.configExists.mockReturnValue(true);
+      SF.addSharedPartToReconciliation.mockResolvedValue({ status: 201 });
+      fsUtils.writeConfig.mockReturnValue(undefined);
+
+      const { SharedPart: MockedSharedPart } = require("../../lib/templates/sharedPart");
+      MockedSharedPart.checkTemplateType = jest.fn((t) => t);
+
+      await toolkit.addAllSharedParts(mockType, mockEnvId, true);
+
+      expect(SF.addSharedPartToReconciliation).toHaveBeenCalled();
     });
   });
 

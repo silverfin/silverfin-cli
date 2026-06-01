@@ -392,4 +392,199 @@ describe("sfApi", () => {
       expect(result).toBeNull();
     });
   });
+
+  // ─── Shared Part linking — Reconciliation ────────────────────────────────
+
+  describe("addSharedPartToReconciliation", () => {
+    it("should POST to reconciliations/:id/shared_parts and return 201", async () => {
+      const reconciliationId = reconciliationSingle.id;
+      const sharedPartId = sharedPartSingle.id;
+      axiosMock.onPost(`reconciliations/${reconciliationId}/shared_parts/${sharedPartId}`).reply(201, {});
+
+      const result = await SF.addSharedPartToReconciliation("firm", 100, sharedPartId, reconciliationId);
+
+      expect(result.status).toBe(201);
+    });
+  });
+
+  describe("removeSharedPartFromReconciliation", () => {
+    it("should DELETE reconciliations/:id/shared_parts/:spId and return 200", async () => {
+      const reconciliationId = reconciliationSingle.id;
+      const sharedPartId = sharedPartSingle.id;
+      axiosMock.onDelete(`reconciliations/${reconciliationId}/shared_parts/${sharedPartId}`).reply(200, {});
+
+      const result = await SF.removeSharedPartFromReconciliation("firm", 100, sharedPartId, reconciliationId);
+
+      expect(result.status).toBe(200);
+    });
+  });
+
+  // ─── Shared Part linking — Export File ───────────────────────────────────
+
+  describe("addSharedPartToExportFile", () => {
+    it("should POST to export_files/:id/shared_parts and return 201", async () => {
+      const exportFileId = exportFileSingle.id;
+      const sharedPartId = sharedPartSingle.id;
+      axiosMock.onPost(`export_files/${exportFileId}/shared_parts/${sharedPartId}`).reply(201, {});
+
+      const result = await SF.addSharedPartToExportFile("firm", 100, sharedPartId, exportFileId);
+
+      expect(result.status).toBe(201);
+    });
+  });
+
+  describe("removeSharedPartFromExportFile", () => {
+    it("should DELETE export_files/:id/shared_parts/:spId and return 200", async () => {
+      const exportFileId = exportFileSingle.id;
+      const sharedPartId = sharedPartSingle.id;
+      axiosMock.onDelete(`export_files/${exportFileId}/shared_parts/${sharedPartId}`).reply(200, {});
+
+      const result = await SF.removeSharedPartFromExportFile("firm", 100, sharedPartId, exportFileId);
+
+      expect(result.status).toBe(200);
+    });
+  });
+
+  // ─── Shared Part linking — Account Template ──────────────────────────────
+
+  describe("addSharedPartToAccountTemplate", () => {
+    it("should POST to account_templates/:id/shared_parts and return 201", async () => {
+      const accountTemplateId = accountTemplateSingle.id;
+      const sharedPartId = sharedPartSingle.id;
+      axiosMock.onPost(`account_templates/${accountTemplateId}/shared_parts/${sharedPartId}`).reply(201, {});
+
+      const result = await SF.addSharedPartToAccountTemplate("firm", 100, sharedPartId, accountTemplateId);
+
+      expect(result.status).toBe(201);
+    });
+  });
+
+  describe("removeSharedPartFromAccountTemplate", () => {
+    it("should DELETE account_templates/:id/shared_parts/:spId and return 200", async () => {
+      const accountTemplateId = accountTemplateSingle.id;
+      const sharedPartId = sharedPartSingle.id;
+      axiosMock.onDelete(`account_templates/${accountTemplateId}/shared_parts/${sharedPartId}`).reply(200, {});
+
+      const result = await SF.removeSharedPartFromAccountTemplate("firm", 100, sharedPartId, accountTemplateId);
+
+      expect(result.status).toBe(200);
+    });
+  });
+
+  // ─── Test runs ────────────────────────────────────────────────────────────
+
+  describe("createTestRun", () => {
+    it("should POST to reconciliations/test for reconciliationText and return 201 with data", async () => {
+      const testRunId = 42;
+      axiosMock.onPost("reconciliations/test").reply(201, testRunId);
+
+      const result = await SF.createTestRun(100, { text: "liquid" }, "reconciliationText");
+
+      expect(result.status).toBe(201);
+      expect(result.data).toBe(testRunId);
+    });
+
+    it("should POST to account_templates/test for accountTemplate and return 201 with data", async () => {
+      const testRunId = 55;
+      axiosMock.onPost("account_templates/test").reply(201, testRunId);
+
+      const result = await SF.createTestRun(100, { text: "liquid" }, "accountTemplate");
+
+      expect(result.status).toBe(201);
+      expect(result.data).toBe(testRunId);
+    });
+  });
+
+  describe("readTestRun", () => {
+    it("should GET reconciliations/test_runs/:id for reconciliationText and return data", async () => {
+      const testRunId = 42;
+      const testRunResult = { status: "completed", tests: {} };
+      axiosMock.onGet(`reconciliations/test_runs/${testRunId}`).reply(200, testRunResult);
+
+      const result = await SF.readTestRun(100, testRunId, "reconciliationText");
+
+      expect(result.data).toEqual(testRunResult);
+    });
+
+    it("should GET account_templates/test_runs/:id for accountTemplate and return data", async () => {
+      const testRunId = 55;
+      const testRunResult = { status: "completed", tests: {} };
+      axiosMock.onGet(`account_templates/test_runs/${testRunId}`).reply(200, testRunResult);
+
+      const result = await SF.readTestRun(100, testRunId, "accountTemplate");
+
+      expect(result.data).toEqual(testRunResult);
+    });
+  });
+
+  // ─── verifyLiquid ─────────────────────────────────────────────────────────
+
+  describe("verifyLiquid", () => {
+    it("should POST to reconciliations/verify_liquid and return response", async () => {
+      const payload = JSON.stringify({ liquid: "{% assign x = 1 %}" });
+      axiosMock.onPost("reconciliations/verify_liquid").reply(200, { errors: [] });
+
+      const result = await SF.verifyLiquid(100, payload);
+
+      expect(result.status).toBe(200);
+      expect(result.data).toEqual({ errors: [] });
+    });
+  });
+
+  // ─── getFirmDetails ───────────────────────────────────────────────────────
+
+  describe("getFirmDetails", () => {
+    it("should GET /user/firm and return firm data", async () => {
+      const firmData = { id: 100, name: "Test Firm" };
+      axiosMock.onGet("/user/firm").reply(200, firmData);
+
+      const result = await SF.getFirmDetails(100);
+
+      expect(result).toEqual(firmData);
+    });
+  });
+
+  // ─── Export file instances ────────────────────────────────────────────────
+
+  describe("createExportFileInstance", () => {
+    it("should POST to /companies/:companyId/periods/:periodId/export_file_instances and return data", async () => {
+      const companyId = 200;
+      const periodId = 300;
+      const exportFileId = 400;
+      const instanceData = { id: 999, state: "pending" };
+      axiosMock.onPost(`/companies/${companyId}/periods/${periodId}/export_file_instances`).reply(201, instanceData);
+
+      const result = await SF.createExportFileInstance(100, companyId, periodId, exportFileId);
+
+      expect(result).toEqual(instanceData);
+    });
+  });
+
+  describe("getExportFileInstance", () => {
+    it("should GET /companies/:companyId/periods/:periodId/export_file_instances/:instanceId and return data", async () => {
+      const companyId = 200;
+      const periodId = 300;
+      const instanceId = 999;
+      const instanceData = { id: instanceId, state: "created", content_url: "https://example.com/file.xlsx" };
+      axiosMock.onGet(`/companies/${companyId}/periods/${periodId}/export_file_instances/${instanceId}`).reply(200, instanceData);
+
+      const result = await SF.getExportFileInstance(100, companyId, periodId, instanceId);
+
+      expect(result).toEqual(instanceData);
+    });
+  });
+
+  // ─── getPeriods ───────────────────────────────────────────────────────────
+
+  describe("getPeriods", () => {
+    it("should GET /companies/:companyId/periods and return response", async () => {
+      const companyId = 200;
+      const periodsData = [{ id: 1, end_date: "2023-12-31" }, { id: 2, end_date: "2022-12-31" }];
+      axiosMock.onGet(`/companies/${companyId}/periods`).reply(200, periodsData);
+
+      const result = await SF.getPeriods(100, companyId);
+
+      expect(result.data).toEqual(periodsData);
+    });
+  });
 });

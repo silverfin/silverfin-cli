@@ -147,6 +147,7 @@ describe("runTests", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.useFakeTimers();
 
     tempDir = fs.mkdtempSync(path.join(require("os").tmpdir(), "lt-test-"));
     originalCwd = process.cwd();
@@ -156,6 +157,7 @@ describe("runTests", () => {
   afterEach(() => {
     process.chdir(originalCwd);
     fs.rmSync(tempDir, { recursive: true, force: true });
+    jest.useRealTimers();
   });
 
   it("should exit with error for invalid templateType", async () => {
@@ -207,7 +209,9 @@ describe("runTests", () => {
       data: makeTestRun("completed", makePassedTests()),
     });
 
-    const result = await runTests(1001, "reconciliationText", handle, "", false, "none");
+    const promise = runTests(1001, "reconciliationText", handle, "", false, "none");
+    await jest.runAllTimersAsync();
+    const result = await promise;
 
     expect(SF.createTestRun).toHaveBeenCalled();
     expect(SF.readTestRun).toHaveBeenCalledWith(1001, testRunId, "reconciliationText");
@@ -250,7 +254,9 @@ describe("runTests", () => {
       data: makeTestRun("completed", makePassedTests()),
     });
 
-    const result = await runTests(1001, "accountTemplate", handle, "", false, "none");
+    const promise = runTests(1001, "accountTemplate", handle, "", false, "none");
+    await jest.runAllTimersAsync();
+    const result = await promise;
 
     expect(result.testRun.status).toBe("completed");
   });
@@ -265,6 +271,7 @@ describe("runTestsWithOutput", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.useFakeTimers();
     tempDir = fs.mkdtempSync(path.join(require("os").tmpdir(), "lt-output-test-"));
     originalCwd = process.cwd();
     process.chdir(tempDir);
@@ -275,6 +282,7 @@ describe("runTestsWithOutput", () => {
     process.chdir(originalCwd);
     fs.rmSync(tempDir, { recursive: true, force: true });
     mockExit.mockRestore();
+    jest.useRealTimers();
   });
 
   it("should exit with error for invalid templateType", async () => {
@@ -298,7 +306,9 @@ describe("runTestsWithOutput", () => {
       data: makeTestRun("completed", makePassedTests()),
     });
 
-    await runTestsWithOutput(1001, "reconciliationText", handle);
+    const promise = runTestsWithOutput(1001, "reconciliationText", handle);
+    await jest.runAllTimersAsync();
+    await promise;
 
     expect(consola.success).toHaveBeenCalledWith(expect.stringContaining("ALL TESTS HAVE PASSED"));
   });
@@ -318,7 +328,9 @@ describe("runTestsWithOutput", () => {
       data: makeTestRun("completed", makeFailedTests()),
     });
 
-    await runTestsWithOutput(1001, "reconciliationText", handle);
+    const promise = runTestsWithOutput(1001, "reconciliationText", handle);
+    await jest.runAllTimersAsync();
+    await promise;
 
     expect(consola.log).toHaveBeenCalledWith(expect.stringContaining("FAILED"));
   });
@@ -338,7 +350,9 @@ describe("runTestsWithOutput", () => {
       data: makeTestRun("internal_error"),
     });
 
-    await runTestsWithOutput(1001, "reconciliationText", handle);
+    const promise = runTestsWithOutput(1001, "reconciliationText", handle);
+    await jest.runAllTimersAsync();
+    await promise;
 
     expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("Internal error"));
   });
@@ -353,6 +367,7 @@ describe("runTestsStatusOnly", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.useFakeTimers();
     tempDir = fs.mkdtempSync(path.join(require("os").tmpdir(), "lt-status-test-"));
     originalCwd = process.cwd();
     process.chdir(tempDir);
@@ -363,6 +378,7 @@ describe("runTestsStatusOnly", () => {
     process.chdir(originalCwd);
     fs.rmSync(tempDir, { recursive: true, force: true });
     mockExit.mockRestore();
+    jest.useRealTimers();
   });
 
   it("should exit for invalid templateType", async () => {
@@ -386,7 +402,9 @@ describe("runTestsStatusOnly", () => {
       data: makeTestRun("completed", makePassedTests()),
     });
 
-    const overallStatus = await runTestsStatusOnly(1001, "reconciliationText", [handle]);
+    const promise = runTestsStatusOnly(1001, "reconciliationText", [handle]);
+    await jest.runAllTimersAsync();
+    const overallStatus = await promise;
 
     expect(overallStatus).toBe("PASSED");
     expect(consola.log).toHaveBeenCalledWith(expect.stringContaining("PASSED"));
@@ -407,7 +425,9 @@ describe("runTestsStatusOnly", () => {
       data: makeTestRun("completed", makeFailedTests()),
     });
 
-    const overallStatus = await runTestsStatusOnly(1001, "reconciliationText", [handle]);
+    const promise = runTestsStatusOnly(1001, "reconciliationText", [handle]);
+    await jest.runAllTimersAsync();
+    const overallStatus = await promise;
 
     expect(overallStatus).toBe("FAILED");
     expect(consola.log).toHaveBeenCalledWith(expect.stringContaining("FAILED"));
@@ -451,7 +471,9 @@ describe("runTestsStatusOnly", () => {
       return Promise.resolve({ data: makeTestRun("completed", tests) });
     });
 
-    const overallStatus = await runTestsStatusOnly(1001, "reconciliationText", [handlePass, handleFail]);
+    const promise = runTestsStatusOnly(1001, "reconciliationText", [handlePass, handleFail]);
+    await jest.runAllTimersAsync();
+    const overallStatus = await promise;
 
     expect(overallStatus).toBe("FAILED");
   });

@@ -9,6 +9,7 @@ jest.mock("../../../lib/api/sfApi");
 const SF = require("../../../lib/api/sfApi");
 const consola = require("consola");
 const toolkit = require("../../../index");
+const sharedPartFixture = require("../../../fixtures/api-responses/shared-parts/single.json");
 
 describe("import-shared-part", () => {
   let tempDir;
@@ -40,15 +41,7 @@ describe("import-shared-part", () => {
 
   describe("fetchSharedPartById", () => {
     it("should import shared part and create necessary files", async () => {
-      const mockApiResponse = {
-        id: 5601,
-        name: "shared_part_1",
-        text: "{% comment %}shared_part_1 content{% endcomment %}",
-        externally_managed: true,
-        used_in: [],
-      };
-
-      SF.readSharedPartById.mockResolvedValue({ data: mockApiResponse });
+      SF.readSharedPartById.mockResolvedValue({ data: sharedPartFixture });
 
       await toolkit.fetchSharedPartById("firm", "1001", 5601);
 
@@ -72,17 +65,10 @@ describe("import-shared-part", () => {
 
   describe("fetchSharedPartByName", () => {
     it("should import shared part when found by name", async () => {
-      const listEntry = { id: 5601, name: "shared_part_1" };
-      const fullResponse = {
-        id: 5601,
-        name: "shared_part_1",
-        text: "{% comment %}shared_part_1{% endcomment %}",
-        externally_managed: true,
-        used_in: [],
-      };
+      const listEntry = { id: sharedPartFixture.id, name: sharedPartFixture.name };
 
       SF.findSharedPartByName.mockResolvedValue(listEntry);
-      SF.readSharedPartById.mockResolvedValue({ data: fullResponse });
+      SF.readSharedPartById.mockResolvedValue({ data: sharedPartFixture });
 
       await toolkit.fetchSharedPartByName("firm", "1001", "shared_part_1");
 

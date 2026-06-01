@@ -14,6 +14,7 @@ npm test -- --testPathPattern=tests/lib/toolkit.test.js  # run a single file
 tests/
 ├── TESTS.md                         # this file
 ├── bin/
+│   ├── cli.test.js                  # Commander wiring tests (argument parsing)
 │   └── cli/                         # E2E command tests (real FS + mocked API)
 │       ├── import-reconciliation.test.js
 │       ├── update-reconciliation.test.js
@@ -38,9 +39,9 @@ tests/
     │   ├── sfApi.test.js            # HTTP-level API tests with axios-mock-adapter
     │   └── silverfinAuthorizer.test.js
     ├── cli/
-    │   ├── changelogReader.spec.js
-    │   ├── cliUpdater.spec.js
-    │   ├── cwdValidator.spec.js
+    │   ├── changelogReader.test.js
+    │   ├── cliUpdater.test.js
+    │   ├── cwdValidator.test.js
     │   └── utils.test.js
     ├── templates/
     │   ├── reconciliationTexts.test.js
@@ -60,6 +61,8 @@ tests/
     ├── liquidTestRunner.test.js
     └── toolkit.test.js
 ```
+
+**Note on `tests/bin/cli/` naming:** Files in this directory are named after CLI commands (`import-reconciliation`, `update-shared-part`, etc.) but call toolkit functions in `index.js` directly — they do not invoke `bin/cli.js`. They are integration-style tests with a real filesystem and mocked API. For tests that exercise Commander argument parsing and subcommand registration, see `tests/bin/cli.test.js`.
 
 ## Fixtures
 
@@ -128,6 +131,26 @@ that error-path code that calls `process.exit(1)` does not terminate the runner.
 ---
 
 ## Test Catalogue
+
+### `tests/bin/cli.test.js`
+Source: `bin/cli.js` (Commander program)
+
+| Test | Description |
+|---|---|
+| silverfin --help output contains import-reconciliation | Verifies the `import-reconciliation` subcommand is registered in the Commander program. |
+| silverfin --help output contains update-reconciliation | Verifies the `update-reconciliation` subcommand is registered. |
+| silverfin --help output contains import-shared-part | Verifies the `import-shared-part` subcommand is registered. |
+| silverfin --help output contains import-export-file | Verifies the `import-export-file` subcommand is registered. |
+| silverfin --help output contains import-account-template | Verifies the `import-account-template` subcommand is registered. |
+| silverfin import-reconciliation --help output contains --handle option | Verifies `--handle` is declared for the import-reconciliation command. |
+| silverfin import-reconciliation --help output contains --id option | Verifies `--id` is declared. |
+| silverfin import-reconciliation --help output contains --all option | Verifies `--all` is declared. |
+| silverfin import-reconciliation --help output contains --existing option | Verifies `--existing` is declared. |
+| silverfin update-reconciliation --help output contains --handle option | Verifies `--handle` is declared for the update-reconciliation command. |
+| silverfin update-reconciliation --help output contains --id option | Verifies `--id` is declared. |
+| silverfin update-reconciliation --help output contains --all option | Verifies `--all` is declared. |
+
+---
 
 ### `tests/bin/cli/create-account-template.test.js`
 Source: `index.js` → `lib/templates/accountTemplate.js`
@@ -418,7 +441,7 @@ Source: `lib/api/silverfinAuthorizer.js`
 
 ---
 
-### `tests/lib/cli/changelogReader.spec.js`
+### `tests/lib/cli/changelogReader.test.js`
 Source: `lib/cli/changelogReader.js`
 
 | Function | Test | Description |
@@ -438,7 +461,7 @@ Source: `lib/cli/changelogReader.js`
 
 ---
 
-### `tests/lib/cli/cliUpdater.spec.js`
+### `tests/lib/cli/cliUpdater.test.js`
 Source: `lib/cli/cliUpdater.js`
 
 | Function | Test | Description |
@@ -451,7 +474,7 @@ Source: `lib/cli/cliUpdater.js`
 
 ---
 
-### `tests/lib/cli/cwdValidator.spec.js`
+### `tests/lib/cli/cwdValidator.test.js`
 Source: `lib/cli/cwdValidator.js`
 
 | Function | Test | Description |

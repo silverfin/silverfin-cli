@@ -9,6 +9,7 @@ jest.mock("../../../lib/api/sfApi");
 const SF = require("../../../lib/api/sfApi");
 const consola = require("consola");
 const toolkit = require("../../../index");
+const accountTemplateFixture = require("../../../fixtures/api-responses/account-templates/single.json");
 
 describe("import-account-template", () => {
   let tempDir;
@@ -40,19 +41,7 @@ describe("import-account-template", () => {
 
   describe("fetchAccountTemplateById", () => {
     it("should import account template and create necessary files", async () => {
-      const mockApiResponse = {
-        id: 1101,
-        name_nl: "account_1",
-        name_en: "Account Template 1",
-        text: "{% comment %}account template content{% endcomment %}",
-        text_parts: [{ name: "detail", content: "Detail liquid content" }],
-        externally_managed: false,
-        published: true,
-        account_range: "280,282",
-        mapping_list_ranges: [],
-      };
-
-      SF.readAccountTemplateById.mockResolvedValue(mockApiResponse);
+      SF.readAccountTemplateById.mockResolvedValue(accountTemplateFixture);
 
       await toolkit.fetchAccountTemplateById("firm", "1001", 1101);
 
@@ -76,19 +65,7 @@ describe("import-account-template", () => {
 
   describe("fetchAccountTemplateByName", () => {
     it("should import account template when found by name", async () => {
-      const mockApiResponse = {
-        id: 1101,
-        name_nl: "account_1",
-        name_en: "Account Template 1",
-        text: "{% assign x = 1 %}",
-        text_parts: [],
-        externally_managed: false,
-        published: true,
-        account_range: "280,282",
-        mapping_list_ranges: [],
-      };
-
-      SF.findAccountTemplateByName.mockResolvedValue(mockApiResponse);
+      SF.findAccountTemplateByName.mockResolvedValue(accountTemplateFixture);
 
       await toolkit.fetchAccountTemplateByName("firm", "1001", "account_1");
 
