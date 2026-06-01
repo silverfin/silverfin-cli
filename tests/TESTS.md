@@ -946,3 +946,19 @@ Source: `index.js` (toolkit)
 | `getAllTemplatesId` | should call getTemplateId for each template of the type | Verifies that `getAllTemplatesOfAType` is iterated over and `findReconciliationTextByHandle` is called for each handle. |
 | `updateFirmName` | should store firm name and return true when firm found | Verifies that the firm name is fetched and an info message with the firm details is logged. |
 | `updateFirmName` | should warn and return false when firm not found | Verifies that a warning is logged and `false` is returned when the firm is not found. |
+
+---
+
+## Known inconsistencies (tracked for follow-up PRs)
+
+These issues were identified during test development and code review. None affect test correctness today but should be addressed to improve maintainability and reliability.
+
+| # | Location | Issue | Impact |
+|---|---|---|---|
+| 1 | `tests/lib/utils/fsUtils.test.js` vs `tests/bin/cli/**` | **Inconsistent temp dir location.** `fsUtils.test.js` creates temp dirs inside the repo root (`path.join(repoRoot, "tmp-")`), while all E2E tests use `os.tmpdir()`. Both are covered by `.gitignore`, but the inconsistency is confusing. Standardise on `os.tmpdir()`. | Low |
+| 2 | `jest.config.js` | **No coverage thresholds.** Jest collects no coverage data and has no `coverageThreshold` configured. Coverage can silently regress across PRs. Add a `collectCoverageFrom` glob and a baseline `coverageThreshold` (e.g. 70 % statements/branches). | Medium |
+| 3 | `lib/api/sfApi.js` | **Module-load-time side effect.** `sfApi.js` calls `apiUtils.checkRequiredEnvVariables()` at the top level when the module is first `require()`d. Tests must mock `apiUtils` before importing `sfApi`, which creates a fragile import order dependency. The call should be deferred to the first API method invocation instead. | Medium |
+| 4 | `index.js` (`fetchAllXxx` functions) | **No pagination depth guard.** `fetchAllReconciliations`, `fetchAllExportFiles`, and `fetchAllAccountTemplates` recurse on the next page without a maximum-depth limit. A misbehaving API could trigger unbounded recursion. Tests currently only cover the single-page happy path and an empty-first-page error; deep-pagination and depth-guard scenarios are untested. | Medium |
+| 5 | Multiple test files | **Inconsistent `errorUtils` import.** Some test files mock `errorUtils` via `jest.mock("../../lib/utils/errorUtils")` while others import it without mocking. This inconsistency can cause unexpected cross-test pollution if `errorUtils` has side effects. Standardise on explicit mocking in all test files that exercise code paths using `errorUtils`. | Low |
+| 6 | `tests/bin/cli/**` | **Mixed `fs` / `fs.promises` API in test setup.** E2E test files use both `const fs = require("fs")` (sync reads) and `const fsPromises = require("fs").promises` (async writes). Use `require("fs/promises")` (or `require("fs").promises` consistently) for all async operations, and keep sync `fs` only where sync access is intentional. | Low |
+| 7 | All test files | **Inconsistent `consola` import style.** 13 files use `const consola = require("consola")` (auto-mocked default export) while 3 files use `const { consola } = require("consola")` (named destructure). Both work with Jest's current auto-mock, but the inconsistency is fragile — a future consola version or mock change could silently break one form. Standardise on the destructured named-export form used by `liquidTestRunner.test.js` and `exportFileInstanceGenerator.test.js`. | Low |

@@ -68,7 +68,7 @@ describe("Toolkit", () => {
 
       const result = await toolkit.publishReconciliationById(mockType, mockEnvId, mockReconciliationId, mockMessage);
 
-      expect(require("consola").error).toHaveBeenCalledWith(`No template found with reconciliation ID: ${mockReconciliationId} in ${mockType} ${mockEnvId}`);
+      expect(consola.error).toHaveBeenCalledWith(`No template found with reconciliation ID: ${mockReconciliationId} in ${mockType} ${mockEnvId}`);
       expect(result).toBe(false);
     });
 
@@ -110,7 +110,7 @@ describe("Toolkit", () => {
 
       const result = await toolkit.publishReconciliationById(mockType, mockEnvId, mockReconciliationId, mockMessage);
 
-      expect(require("consola").error).toHaveBeenCalledWith(`Reconciliation update failed for ID: ${mockReconciliationId} in ${mockType} ${mockEnvId}`);
+      expect(consola.error).toHaveBeenCalledWith(`Reconciliation update failed for ID: ${mockReconciliationId} in ${mockType} ${mockEnvId}`);
       expect(result).toBe(false);
     });
 
