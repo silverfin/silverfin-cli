@@ -10,6 +10,11 @@
         "id": 8801,
         "type": "reconciliationText",
         "handle": "reconciliation_text_1"
+      },
+      {
+        "id": 8802,
+        "type": "reconciliationText",
+        "handle": "reconciliation_text_2"
       }
     ]
   },

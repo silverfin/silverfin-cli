@@ -219,7 +219,7 @@ describe("runTests", () => {
     expect(result.testRun.tests).toEqual(makePassedTests());
   });
 
-  it("should log info and return false when YAML file is empty (single line)", async () => {
+  it("should log info and return undefined when YAML file is empty (single line)", async () => {
     const handle = "reconciliation_text_1";
     setupFsUtilsMocks(handle);
 
