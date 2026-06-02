@@ -1,5 +1,6 @@
 const fs = require("fs");
 const fsPromises = require("fs").promises;
+const os = require("os");
 const path = require("path");
 const templateUtils = require("../../../lib/utils/templateUtils");
 const { AccountTemplate } = require("../../../lib/templates/accountTemplate");
@@ -66,7 +67,7 @@ describe("AccountTemplate", () => {
     let testLiquidPath;
 
     beforeEach(() => {
-      tempDir = fs.mkdtempSync(path.join(repoRoot, "tmp-"));
+      tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "sf-cli-test-"));
       process.chdir(tempDir);
 
       expectedFolderPath = path.join(tempDir, "account_templates", name_nl);

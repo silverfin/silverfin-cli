@@ -1,5 +1,6 @@
 const fs = require("fs");
 const fsPromises = require("fs").promises;
+const os = require("os");
 const path = require("path");
 const templateUtils = require("../../../lib/utils/templateUtils");
 const { ExportFile } = require("../../../lib/templates/exportFile");
@@ -65,7 +66,7 @@ describe("ExportFile", () => {
     let part1LiquidPath;
 
     beforeEach(() => {
-      tempDir = fs.mkdtempSync(path.join(repoRoot, "tmp-"));
+      tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "sf-cli-test-"));
       process.chdir(tempDir);
 
       expectedFolderPath = path.join(tempDir, "export_files", name_nl);

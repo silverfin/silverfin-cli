@@ -1,5 +1,6 @@
 const fs = require("fs");
 const fsPromises = require("fs").promises;
+const os = require("os");
 const path = require("path");
 const templateUtils = require("../../../lib/utils/templateUtils");
 const { SharedPart } = require("../../../lib/templates/sharedPart");
@@ -37,7 +38,7 @@ describe("SharedPart", () => {
     let configPath;
 
     beforeEach(() => {
-      tempDir = fs.mkdtempSync(path.join(repoRoot, "tmp-"));
+      tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "sf-cli-test-"));
       process.chdir(tempDir);
 
       expectedFolderPath = path.join(tempDir, "shared_parts", name);
@@ -94,7 +95,7 @@ describe("SharedPart", () => {
     };
 
     beforeEach(() => {
-      tempDir = fs.mkdtempSync(path.join(repoRoot, "tmp-"));
+      tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "sf-cli-test-"));
       process.chdir(tempDir);
 
       expectedFolderPath = path.join(tempDir, "shared_parts", name);

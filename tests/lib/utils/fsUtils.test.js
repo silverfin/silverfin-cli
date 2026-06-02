@@ -1,10 +1,9 @@
 const fs = require("fs");
+const os = require("os");
 const path = require("path");
 const fsUtils = require("../../../lib/utils/fsUtils");
 
 jest.mock("consola");
-
-const repoRoot = path.resolve(__dirname, "../../..");
 
 describe("fsUtils", () => {
   let tempDir;
@@ -13,7 +12,7 @@ describe("fsUtils", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     originalCwd = process.cwd();
-    tempDir = fs.mkdtempSync(path.join(repoRoot, "tmp-"));
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "sf-cli-test-"));
     process.chdir(tempDir);
   });
 
