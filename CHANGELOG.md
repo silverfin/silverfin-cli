@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.55.1] (03/06/2026)
+Increase test coverage.
+
 ## [1.55.0] (27/05/2026)
 Added an error summary at the end of the `update-reconciliation --all`, `update-shared-part --all`, `update-export-file --all`, and `update-account-template --all` commands.
 
