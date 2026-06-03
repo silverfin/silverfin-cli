@@ -12,6 +12,7 @@ const toolkit = require("../../../index");
 
 describe("get-account-template-id", () => {
   let tempDir;
+  let originalCwd;
 
   let originalExit;
 
@@ -20,6 +21,7 @@ describe("get-account-template-id", () => {
 
     tempDir = await fsPromises.mkdtemp(path.join(os.tmpdir(), "sf-cli-test-"));
 
+    originalCwd = process.cwd();
     process.chdir(tempDir);
 
     originalExit = process.exit;
@@ -33,7 +35,7 @@ describe("get-account-template-id", () => {
   });
 
   afterEach(async () => {
-    process.chdir(path.resolve(__dirname, "../../.."));
+    process.chdir(originalCwd);
     process.exit = originalExit;
     await fsPromises.rm(tempDir, { recursive: true, force: true });
   });

@@ -11,17 +11,17 @@ const SF = require("../../../lib/api/sfApi");
 const consola = require("consola");
 const toolkit = require("../../../index");
 
-const originalCwd = path.resolve(__dirname, "../../..");
-
 describe("import-reconciliation", () => {
   let tempDir;
   let originalExit;
+  let originalCwd;
 
   beforeEach(async () => {
     jest.clearAllMocks();
 
     // Create temporary directory and change to it
     tempDir = await fsPromises.mkdtemp(path.join(os.tmpdir(), "sf-cli-test-"));
+    originalCwd = process.cwd();
     process.chdir(tempDir);
 
     originalExit = process.exit;

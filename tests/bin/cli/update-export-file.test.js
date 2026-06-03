@@ -11,6 +11,7 @@ const toolkit = require("../../../index");
 
 describe("update-export-file", () => {
   let tempDir;
+  let originalCwd;
 
   let originalExit;
 
@@ -19,6 +20,7 @@ describe("update-export-file", () => {
 
     tempDir = await fsPromises.mkdtemp(path.join(os.tmpdir(), "sf-cli-test-"));
 
+    originalCwd = process.cwd();
     process.chdir(tempDir);
 
     originalExit = process.exit;
@@ -32,7 +34,7 @@ describe("update-export-file", () => {
   });
 
   afterEach(async () => {
-    process.chdir(path.resolve(__dirname, "../../.."));
+    process.chdir(originalCwd);
     process.exit = originalExit;
     await fsPromises.rm(tempDir, { recursive: true, force: true });
   });
