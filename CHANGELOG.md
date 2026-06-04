@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.56.0] (04/06/2026)
+Allow subfolders in template directories.
+
 ## [1.55.2] (04/06/2026)
 Update dependencies to fix security vulnerabilities.
 
