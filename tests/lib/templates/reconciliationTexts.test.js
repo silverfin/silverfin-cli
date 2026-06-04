@@ -247,8 +247,8 @@ describe("ReconciliationText", () => {
       const partInSubfolderPath = path.join(subfolderPath, "part_1.liquid");
 
       fs.mkdirSync(path.join(tempDir, "reconciliation_texts"));
-      fs.mkdirSync(path.join(tempDir, "reconciliation_texts", "example_handle"));
-      fs.mkdirSync(path.join(tempDir, "reconciliation_texts", "example_handle", "text_parts"));
+      fs.mkdirSync(path.join(tempDir, "reconciliation_texts", handle));
+      fs.mkdirSync(path.join(tempDir, "reconciliation_texts", handle, "text_parts"));
       fs.mkdirSync(subfolderPath);
       fs.writeFileSync(configPath, JSON.stringify(existingConfigWithSubfolder));
       fs.writeFileSync(partInSubfolderPath, "Old content in subfolder");
