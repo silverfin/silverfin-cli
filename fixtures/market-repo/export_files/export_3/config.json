@@ -1,0 +1,29 @@
+{
+  "id": {
+    "1001": 2203
+  },
+  "partner_id": {},
+  "name_en": "Export File 3 (Externally Managed)",
+  "name_nl": "export_3",
+  "name_fr": "",
+  "name_de": "",
+  "name_da": "",
+  "name_se": "",
+  "name_fi": "",
+  "description_en": "An externally managed export file",
+  "description_nl": "Een extern beheerd exportbestand",
+  "description_fr": "",
+  "description_de": "",
+  "description_da": "",
+  "description_se": "",
+  "description_fi": "",
+  "file_name": "export_3.sxbrl",
+  "externally_managed": true,
+  "encoding": "UTF-8",
+  "published": true,
+  "hide_code": true,
+  "download_warning": "This file contains sensitive data",
+  "test_firm_id": 1001,
+  "text": "main.liquid",
+  "text_parts": {}
+}

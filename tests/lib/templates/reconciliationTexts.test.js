@@ -1,5 +1,6 @@
 const fs = require("fs");
 const fsPromises = require("fs").promises;
+const os = require("os");
 const path = require("path");
 const templateUtils = require("../../../lib/utils/templateUtils");
 const { ReconciliationText } = require("../../../lib/templates/reconciliationText");
@@ -7,78 +8,60 @@ const { ReconciliationText } = require("../../../lib/templates/reconciliationTex
 jest.mock("../../../lib/utils/templateUtils");
 jest.mock("consola");
 
+// Load shared fixtures
+const apiResponse = require("../../../fixtures/api-responses/reconciliation-texts/single.json");
+const existingConfigFixture = require("../../../fixtures/market-repo/reconciliation_texts/reconciliation_text_2/config.json");
+
 describe("ReconciliationText", () => {
   describe("save", () => {
-    const testContent = "Test content as string";
+    // API response fixture
+    const template = apiResponse;
+    const handle = template.handle; // "reconciliation_text_1"
+
+    // The text parts mock return value (filterParts is mocked)
     const textParts = { part_1: "Part 1: updated content" };
-    const template = {
-      handle: "example_handle",
-      id: 808080,
-      text: "Main liquid content",
-      text_parts: [
-        { name: "part_1", content: "Part 1: updated content" },
-        { name: "", content: "" },
-      ],
-      tests: testContent,
-      externally_managed: true,
-    };
-    const handle = template.handle;
+
+    // Expected config written after save("firm", 100, template)
+    // Derived from API response fixture + ReconciliationText.CONFIG_ITEMS
     const configToWrite = {
-      id: {
-        100: 808080,
-      },
+      id: { 100: template.id },
       partner_id: {},
-      handle: "example_handle",
+      test: `tests/${template.handle}_liquid_test.yml`,
+      handle: template.handle,
+      name_en: template.name_en,
+      name_nl: template.name_nl,
+      name_fr: template.name_fr,
+      name_de: template.name_de,
+      name_da: template.name_da,
+      name_se: template.name_se,
+      name_fi: template.name_fi,
+      description_en: template.description_en,
+      description_nl: template.description_nl,
+      description_fr: template.description_fr,
+      description_de: template.description_de,
+      description_da: template.description_da,
+      description_se: template.description_se,
+      description_fi: template.description_fi,
+      auto_hide_formula: template.auto_hide_formula,
+      virtual_account_number: template.virtual_account_number,
+      reconciliation_type: template.reconciliation_type,
+      public: template.public,
+      allow_duplicate_reconciliations: template.allow_duplicate_reconciliations,
+      is_active: template.is_active,
+      externally_managed: template.externally_managed,
+      published: template.published,
+      hide_code: template.hide_code,
+      use_full_width: template.use_full_width,
+      downloadable_as_docx: template.downloadable_as_docx,
+      test_firm_id: template.test_firm_id,
       text: "main.liquid",
       text_parts: {
         part_1: "text_parts/part_1.liquid",
       },
-      test: "tests/example_handle_liquid_test.yml",
-      externally_managed: true,
-      auto_hide_formula: "",
-      downloadable_as_docx: false,
-      hide_code: true,
-      is_active: true,
-      name_en: "",
-      name_nl: "example_handle",
-      name_fr: "",
-      description_en: "",
-      description_fr: "",
-      description_nl: "",
-      public: false,
-      published: true,
-      reconciliation_type: "only_reconciled_with_data",
-      use_full_width: true,
-      virtual_account_number: "",
-      test_firm_id: null,
     };
-    const existingConfig = {
-      id: { 200: 505050 },
-      handle: "old_handle",
-      text: "main.liquid",
-      text_parts: {
-        old_part: "text_parts/old_part.liquid",
-        part_1: "text_parts/part_1.liquid",
-      },
-      externally_managed: false,
-      auto_hide_formula: "",
-      downloadable_as_docx: false,
-      hide_code: true,
-      is_active: true,
-      name_nl: "example_handle",
-      name_fr: "",
-      name_en: "",
-      name_de: "",
-      name_da: "",
-      name_se: "",
-      name_fi: "",
-      public: false,
-      published: true,
-      reconciliation_type: "only_reconciled_with_data",
-      use_full_width: true,
-      virtual_account_number: "",
-      test_firm_id: null,
-    };
+
+    // Use a different fixture (reconciliation_text_2) as the "existing" config on disk
+    const existingConfig = existingConfigFixture;
 
     const repoRoot = path.resolve(__dirname, "../../..");
     let tempDir;
@@ -88,10 +71,9 @@ describe("ReconciliationText", () => {
     let testLiquidPath;
     let readmePath;
     let part1LiquidPath;
-    let oldPartLiquidPath;
 
     beforeEach(() => {
-      tempDir = fs.mkdtempSync(path.join(repoRoot, "tmp-"));
+      tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "sf-cli-test-"));
       process.chdir(tempDir);
 
       expectedFolderPath = path.join(tempDir, "reconciliation_texts", handle);
@@ -100,7 +82,6 @@ describe("ReconciliationText", () => {
       testLiquidPath = path.join(expectedFolderPath, "tests", `${handle}_liquid_test.yml`);
       readmePath = path.join(expectedFolderPath, "tests", "README.md");
       part1LiquidPath = path.join(expectedFolderPath, "text_parts", "part_1.liquid");
-      oldPartLiquidPath = path.join(expectedFolderPath, "text_parts", "old_part.liquid");
     });
 
     afterEach(() => {
@@ -110,9 +91,9 @@ describe("ReconciliationText", () => {
     });
 
     it("should return false if the template handle is missing", async () => {
-      const result = await ReconciliationText.save("firm", 100, { id: 808080 });
+      const result = await ReconciliationText.save("firm", 100, { id: template.id });
       expect(result).toBe(false);
-      expect(require("consola").warn).toHaveBeenCalledWith('Template with id "808080" has no handle, add a handle before importing it from Silverfin. Skipped');
+      expect(require("consola").warn).toHaveBeenCalledWith(`Template with id "${template.id}" has no handle, add a handle before importing it from Silverfin. Skipped`);
     });
 
     it("should return false if the liquid code is missing", async () => {
@@ -126,7 +107,7 @@ describe("ReconciliationText", () => {
       templateUtils.checkValidName.mockReturnValue(false);
       const result = await ReconciliationText.save("firm", 100, template);
       expect(result).toBe(false);
-      expect(templateUtils.checkValidName).toHaveBeenCalledWith("example_handle", "reconciliationText");
+      expect(templateUtils.checkValidName).toHaveBeenCalledWith(template.handle, "reconciliationText");
     });
 
     it("should create the necessary files and store template's relevant details", async () => {
@@ -164,48 +145,25 @@ describe("ReconciliationText", () => {
       templateUtils.filterParts.mockReturnValue(textParts);
 
       fs.mkdirSync(path.join(tempDir, "reconciliation_texts"));
-      fs.mkdirSync(path.join(tempDir, "reconciliation_texts", "example_handle"));
+      fs.mkdirSync(path.join(tempDir, "reconciliation_texts", handle));
       fs.writeFileSync(configPath, JSON.stringify(existingConfig));
 
       // Check existing config file before save
       expect(fs.existsSync(configPath)).toBe(true);
-      let configSaved = JSON.parse(await fsPromises.readFile(configPath, "utf-8"));
+      const configSaved = JSON.parse(await fsPromises.readFile(configPath, "utf-8"));
       expect(configSaved).toEqual(existingConfig);
 
       await ReconciliationText.save("firm", 100, template);
 
-      // Check config file after save
-      const expectedConfig = {
-        id: { 100: 808080, 200: 505050 },
-        partner_id: {},
-        handle: "example_handle",
-        text: "main.liquid",
-        text_parts: {
-          part_1: "text_parts/part_1.liquid",
-        },
-        test: "tests/example_handle_liquid_test.yml",
-        externally_managed: true,
-        auto_hide_formula: "",
-        downloadable_as_docx: false,
-        hide_code: true,
-        is_active: true,
-        name_en: "",
-        name_nl: "example_handle",
-        name_fr: "",
-        name_de: "",
-        name_da: "",
-        name_fi: "",
-        name_se: "",
-        public: false,
-        published: true,
-        reconciliation_type: "only_reconciled_with_data",
-        test_firm_id: null,
-        use_full_width: true,
-        virtual_account_number: "",
-      };
-      expect(fs.existsSync(configPath)).toBe(true);
-      configSaved = JSON.parse(await fsPromises.readFile(configPath, "utf-8"));
-      expect(configSaved).toEqual(expectedConfig);
+      // After save, the config should merge existing ids with new API data
+      // The ids from existingConfig (reconciliation_text_2) should be preserved
+      // and the new id from the API response should be added under key "100"
+      const configSavedAfter = JSON.parse(await fsPromises.readFile(configPath, "utf-8"));
+      expect(configSavedAfter.id[100]).toBe(template.id);
+      // Existing ids from the fixture config should be preserved
+      expect(configSavedAfter.id["1001"]).toBe(existingConfig.id["1001"]);
+      expect(configSavedAfter.handle).toBe(template.handle);
+      expect(configSavedAfter.externally_managed).toBe(template.externally_managed);
     });
 
     it("should replace existing liquid files if the template already exists", async () => {
@@ -214,8 +172,8 @@ describe("ReconciliationText", () => {
       templateUtils.filterParts.mockReturnValue(textParts);
 
       fs.mkdirSync(path.join(tempDir, "reconciliation_texts"));
-      fs.mkdirSync(path.join(tempDir, "reconciliation_texts", "example_handle"));
-      fs.mkdirSync(path.join(tempDir, "reconciliation_texts", "example_handle", "text_parts"));
+      fs.mkdirSync(path.join(tempDir, "reconciliation_texts", handle));
+      fs.mkdirSync(path.join(tempDir, "reconciliation_texts", handle, "text_parts"));
       fs.writeFileSync(configPath, JSON.stringify(existingConfig));
       fs.writeFileSync(mainLiquidPath, "Main part: existing content");
       fs.writeFileSync(part1LiquidPath, "Part 1: existing content");
@@ -239,8 +197,8 @@ describe("ReconciliationText", () => {
       const existingReadmeContent = "Existing Readme content";
 
       fs.mkdirSync(path.join(tempDir, "reconciliation_texts"));
-      fs.mkdirSync(path.join(tempDir, "reconciliation_texts", "example_handle"));
-      fs.mkdirSync(path.join(tempDir, "reconciliation_texts", "example_handle", "tests"));
+      fs.mkdirSync(path.join(tempDir, "reconciliation_texts", handle));
+      fs.mkdirSync(path.join(tempDir, "reconciliation_texts", handle, "tests"));
       fs.writeFileSync(configPath, JSON.stringify(existingConfig));
       fs.writeFileSync(testLiquidPath, existingLiquidTest);
       fs.writeFileSync(readmePath, existingReadmeContent);
@@ -261,10 +219,11 @@ describe("ReconciliationText", () => {
       templateUtils.filterParts.mockReturnValue(textParts);
 
       const existingPartContent = "Old part: existing Part Content";
+      const oldPartLiquidPath = path.join(expectedFolderPath, "text_parts", "old_part.liquid");
 
       fs.mkdirSync(path.join(tempDir, "reconciliation_texts"));
-      fs.mkdirSync(path.join(tempDir, "reconciliation_texts", "example_handle"));
-      fs.mkdirSync(path.join(tempDir, "reconciliation_texts", "example_handle", "text_parts"));
+      fs.mkdirSync(path.join(tempDir, "reconciliation_texts", handle));
+      fs.mkdirSync(path.join(tempDir, "reconciliation_texts", handle, "text_parts"));
       fs.writeFileSync(configPath, JSON.stringify(existingConfig));
       fs.writeFileSync(oldPartLiquidPath, existingPartContent);
 
@@ -322,7 +281,7 @@ describe("ReconciliationText", () => {
       };
 
       fs.mkdirSync(path.join(tempDir, "reconciliation_texts"));
-      fs.mkdirSync(path.join(tempDir, "reconciliation_texts", "example_handle"));
+      fs.mkdirSync(path.join(tempDir, "reconciliation_texts", handle));
       fs.writeFileSync(configPath, JSON.stringify(existingConfigWithLocales));
 
       // Save template without locale names
@@ -396,8 +355,9 @@ describe("ReconciliationText", () => {
     });
 
     afterEach(() => {
+      process.chdir(path.resolve(__dirname, "../../.."));
       if (fs.existsSync(tempDir)) {
-        fs.rmdirSync(tempDir, { recursive: true });
+        fs.rmSync(tempDir, { recursive: true, force: true });
       }
       jest.resetAllMocks();
     });

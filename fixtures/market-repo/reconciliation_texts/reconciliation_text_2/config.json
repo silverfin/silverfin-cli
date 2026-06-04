@@ -1,3 +1,37 @@
 {
-  "reconciliation_type": "reconciliation_not_necessary"
+  "id": {
+    "1001": 8802,
+    "1002": 9902
+  },
+  "partner_id": {},
+  "handle": "reconciliation_text_2",
+  "name_en": "Reconciliation Text 2",
+  "name_nl": "Afstemming Tekst 2",
+  "name_fr": "",
+  "name_de": "",
+  "name_da": "",
+  "name_se": "",
+  "name_fi": "",
+  "description_en": "",
+  "description_nl": "",
+  "description_fr": "",
+  "description_de": "",
+  "description_da": "",
+  "description_se": "",
+  "description_fi": "",
+  "auto_hide_formula": "",
+  "virtual_account_number": "",
+  "reconciliation_type": "reconciliation_not_necessary",
+  "public": false,
+  "allow_duplicate_reconciliations": false,
+  "is_active": true,
+  "externally_managed": false,
+  "published": false,
+  "hide_code": false,
+  "use_full_width": false,
+  "downloadable_as_docx": false,
+  "test_firm_id": null,
+  "text": "main.liquid",
+  "text_parts": {},
+  "test": "tests/reconciliation_text_2_liquid_test.yml"
 }

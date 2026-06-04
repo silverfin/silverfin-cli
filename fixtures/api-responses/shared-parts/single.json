@@ -1,0 +1,19 @@
+{
+  "id": 5601,
+  "name": "shared_part_1",
+  "externally_managed": true,
+  "hide_code": false,
+  "text": "{% comment %}shared_part_1{% endcomment %}\nShared content.",
+  "used_in": [
+    {
+      "id": 8801,
+      "type": "reconciliationText",
+      "handle": "reconciliation_text_1"
+    },
+    {
+      "id": 8802,
+      "type": "reconciliationText",
+      "handle": "reconciliation_text_2"
+    }
+  ]
+}

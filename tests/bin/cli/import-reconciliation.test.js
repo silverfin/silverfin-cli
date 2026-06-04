@@ -1,6 +1,7 @@
 const fs = require("fs");
 const fsPromises = require("fs").promises;
 const path = require("path");
+const os = require("os");
 
 // Only mock API calls and console, let filesystem operations run normally
 jest.mock("consola");
@@ -12,14 +13,14 @@ const toolkit = require("../../../index");
 
 describe("import-reconciliation", () => {
   let tempDir;
-  let originalCwd;
   let originalExit;
+  let originalCwd;
 
   beforeEach(async () => {
     jest.clearAllMocks();
 
     // Create temporary directory and change to it
-    tempDir = await fsPromises.mkdtemp(path.join(__dirname, "temp-"));
+    tempDir = await fsPromises.mkdtemp(path.join(os.tmpdir(), "sf-cli-test-"));
     originalCwd = process.cwd();
     process.chdir(tempDir);
 
@@ -35,14 +36,7 @@ describe("import-reconciliation", () => {
   afterEach(async () => {
     process.chdir(originalCwd);
     process.exit = originalExit;
-
-    // Clean up temp directory
-    try {
-      await fsPromises.rm(tempDir, { recursive: true, force: true });
-    } catch (error) {
-      console.error("Failed to clean up temp directory:", error);
-      process.exit(1);
-    }
+    await fsPromises.rm(tempDir, { recursive: true, force: true });
   });
 
   describe("import reconciliation by id", () => {
@@ -159,9 +153,8 @@ describe("import-reconciliation", () => {
           const existingReconciliation = path.join(tempDir, "reconciliation_texts", "reconciliation_text_1");
           const targetReconciliation = path.join(tempDir, "reconciliation_texts", "existing_reconciliation");
 
-          if (fs.existsSync(existingReconciliation)) {
-            await fsPromises.rename(existingReconciliation, targetReconciliation);
-          }
+          expect(fs.existsSync(existingReconciliation)).toBe(true);
+          await fsPromises.rename(existingReconciliation, targetReconciliation);
 
           // Create initial files for the existing reconciliation
           await fsPromises.mkdir(path.join(targetReconciliation, "text_parts"), { recursive: true });
@@ -283,9 +276,8 @@ describe("import-reconciliation", () => {
           const existingReconciliation = path.join(tempDir, "reconciliation_texts", "reconciliation_text_2");
           const targetReconciliation = path.join(tempDir, "reconciliation_texts", "existing_partner_reconciliation");
 
-          if (fs.existsSync(existingReconciliation)) {
-            await fsPromises.rename(existingReconciliation, targetReconciliation);
-          }
+          expect(fs.existsSync(existingReconciliation)).toBe(true);
+          await fsPromises.rename(existingReconciliation, targetReconciliation);
 
           // Create initial files for the existing partner reconciliation
           await fsPromises.mkdir(path.join(targetReconciliation, "text_parts"), { recursive: true });
@@ -350,71 +342,70 @@ describe("import-reconciliation", () => {
         });
       });
 
-      describe("error handling", () => {
-        it("should handle reconciliation not found by ID", async () => {
-          // Mock API response with no data
-          SF.readReconciliationTextById.mockResolvedValue({ data: null });
-
-          await toolkit.fetchReconciliationById("firm", "1001", "99999");
-
-          expect(SF.readReconciliationTextById).toHaveBeenCalledWith("firm", "1001", "99999");
-          expect(consola.error).toHaveBeenCalledWith("Reconciliation with id 99999 wasn't found in firm 1001");
-          expect(process.exit).toHaveBeenCalledWith(1);
-
-          // Ensure no files were created
-          expect(fs.existsSync(path.join(tempDir, "reconciliation_texts"))).toBe(false);
-        });
-
-        it("should handle API error when fetching by ID", async () => {
-          // Mock API error
-          SF.readReconciliationTextById.mockRejectedValue(new Error("API Error"));
-
-          await toolkit.fetchReconciliationById("firm", "1001", "12345");
-
-          expect(SF.readReconciliationTextById).toHaveBeenCalledWith("firm", "1001", "12345");
-          expect(consola.error).toHaveBeenCalled();
-          expect(process.exit).toHaveBeenCalledWith(1);
-
-          // Ensure no files were created
-          expect(fs.existsSync(path.join(tempDir, "reconciliation_texts"))).toBe(false);
-        });
-      });
     });
 
-    describe("import reconciliation by handle", () => {
-      it("should find reconciliation by handle remotely when not local", async () => {
-        const mockApiResponse = {
-          id: 67890,
-          handle: "remote_reconciliation",
-          text: "{% comment %}Remote content{% endcomment %}",
-          text_parts: [],
-          tests: "remote_test:\n  data: {}\n  results: {}",
-          name_en: "Remote Reconciliation",
-          reconciliation_type: "can_be_reconciled_without_data",
-          published: true,
-        };
+    describe("error handling", () => {
+      it("should handle reconciliation not found by ID", async () => {
+        // Mock API response with no data
+        SF.readReconciliationTextById.mockResolvedValue({ data: null });
 
-        // Mock remote lookup and API response
-        SF.findReconciliationTextByHandle.mockResolvedValue({ id: "67890" });
-        SF.readReconciliationTextById.mockResolvedValue({ data: mockApiResponse });
+        await toolkit.fetchReconciliationById("firm", "1001", "99999");
 
-        // Call toolkit method directly - the async issue doesn't affect this test much
-        await toolkit.fetchReconciliationByHandle("firm", "1001", "remote_reconciliation");
+        expect(SF.readReconciliationTextById).toHaveBeenCalledWith("firm", "1001", "99999");
+        expect(consola.error).toHaveBeenCalledWith("Reconciliation with id 99999 wasn't found in firm 1001");
+        expect(process.exit).toHaveBeenCalledWith(1);
 
-        // Verify remote lookup was performed
-        expect(SF.findReconciliationTextByHandle).toHaveBeenCalledWith("firm", "1001", "remote_reconciliation");
-
-        // Verify API was called with found ID
-        expect(SF.readReconciliationTextById).toHaveBeenCalledWith("firm", "1001", "67890");
-
-        // Verify files were created
-        const reconciliationDir = path.join(tempDir, "reconciliation_texts", "remote_reconciliation");
-        if (fs.existsSync(path.join(reconciliationDir, "config.json"))) {
-          const config = JSON.parse(fs.readFileSync(path.join(reconciliationDir, "config.json"), "utf8"));
-          expect(config.id).toEqual({ 1001: 67890 });
-          expect(config.handle).toBe("remote_reconciliation");
-        }
+        // Ensure no files were created
+        expect(fs.existsSync(path.join(tempDir, "reconciliation_texts"))).toBe(false);
       });
+
+      it("should handle API error when fetching by ID", async () => {
+        // Mock API error
+        SF.readReconciliationTextById.mockRejectedValue(new Error("API Error"));
+
+        await toolkit.fetchReconciliationById("firm", "1001", "12345");
+
+        expect(SF.readReconciliationTextById).toHaveBeenCalledWith("firm", "1001", "12345");
+        expect(consola.error).toHaveBeenCalledWith(new Error("API Error"));
+        expect(process.exit).toHaveBeenCalledWith(1);
+
+        // Ensure no files were created
+        expect(fs.existsSync(path.join(tempDir, "reconciliation_texts"))).toBe(false);
+      });
+    });
+  });
+
+  describe("import reconciliation by handle", () => {
+    it("should find reconciliation by handle remotely when not local", async () => {
+      const mockApiResponse = {
+        id: 67890,
+        handle: "remote_reconciliation",
+        text: "{% comment %}Remote content{% endcomment %}",
+        text_parts: [],
+        tests: "remote_test:\n  data: {}\n  results: {}",
+        name_en: "Remote Reconciliation",
+        reconciliation_type: "can_be_reconciled_without_data",
+        published: true,
+      };
+
+      // Mock remote lookup and API response
+      SF.findReconciliationTextByHandle.mockResolvedValue({ id: "67890" });
+      SF.readReconciliationTextById.mockResolvedValue({ data: mockApiResponse });
+
+      await toolkit.fetchReconciliationByHandle("firm", "1001", "remote_reconciliation");
+
+      // Verify remote lookup was performed
+      expect(SF.findReconciliationTextByHandle).toHaveBeenCalledWith("firm", "1001", "remote_reconciliation");
+
+      // Verify API was called with found ID
+      expect(SF.readReconciliationTextById).toHaveBeenCalledWith("firm", "1001", "67890");
+
+      // Verify files were created
+      const reconciliationDir = path.join(tempDir, "reconciliation_texts", "remote_reconciliation");
+      expect(fs.existsSync(path.join(reconciliationDir, "config.json"))).toBe(true);
+      const config = JSON.parse(fs.readFileSync(path.join(reconciliationDir, "config.json"), "utf8"));
+      expect(config.id).toEqual({ 1001: 67890 });
+      expect(config.handle).toBe("remote_reconciliation");
     });
   });
 });

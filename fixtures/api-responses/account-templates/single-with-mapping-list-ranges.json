@@ -1,0 +1,32 @@
+{
+  "id": 1101,
+  "name_en": "Account Template 1",
+  "name_nl": "account_1",
+  "name_fr": "Modèle de Compte 1",
+  "name_de": "",
+  "name_da": "",
+  "name_se": "",
+  "name_fi": "",
+  "description_en": "Account template with mapping list ranges",
+  "description_nl": "Rekening sjabloon met mapping lijst bereiken",
+  "description_fr": "",
+  "description_de": "",
+  "description_da": "",
+  "description_se": "",
+  "description_fi": "",
+  "externally_managed": false,
+  "account_range": "280,282",
+  "mapping_list_ranges": [
+    {
+      "account_mapping_list_id": 8957,
+      "account_range": "280,282,284",
+      "type": "firm",
+      "env_id": "1001"
+    }
+  ],
+  "published": true,
+  "hide_code": false,
+  "test_firm_id": null,
+  "text": "{% comment %}account_1 - main{% endcomment %}\nTotal: {{ period.accounts[\"280\"].value | currency }}",
+  "text_parts": []
+}
