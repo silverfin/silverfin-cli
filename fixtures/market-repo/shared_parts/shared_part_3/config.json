@@ -7,8 +7,9 @@
     "25": 4503,
     "26": 7803
   },
-  "name": "shared_part_2",
-  "text": "shared_part_2.liquid",
+  "name": "shared_part_3",
+  "text": "shared_part_3.liquid",
   "used_in": [],
-  "externally_managed": true
+  "externally_managed": true,
+  "hide_code": true
 }

@@ -118,12 +118,24 @@ async function fetchExistingReconciliations(type, envId) {
   }
 }
 
-async function publishReconciliationByHandle(type, envId, handle, message = "Updated with the Silverfin CLI") {
+async function publishReconciliationByHandle(
+  type,
+  envId,
+  handle,
+  message = "Updated with the Silverfin CLI",
+  deferredErrors = null
+) {
+  const defer = Array.isArray(deferredErrors);
+
   try {
     const configPresent = fsUtils.configExists("reconciliationText", handle);
 
     if (!configPresent) {
-      errorUtils.missingReconciliationId(handle);
+      if (defer) {
+        deferredErrors.push({ kind: "missing_id", handle });
+      } else {
+        errorUtils.missingReconciliationId(handle);
+      }
       return false;
     }
 
@@ -131,7 +143,11 @@ async function publishReconciliationByHandle(type, envId, handle, message = "Upd
     const templateId = fsUtils.getTemplateId(type, envId, templateConfig);
 
     if (!templateId) {
-      errorUtils.missingReconciliationId(handle);
+      if (defer) {
+        deferredErrors.push({ kind: "missing_id", handle });
+      } else {
+        errorUtils.missingReconciliationId(handle);
+      }
       return false;
     }
 
@@ -154,10 +170,34 @@ async function publishReconciliationByHandle(type, envId, handle, message = "Upd
       consola.success(`Reconciliation updated: ${response.data.handle}`);
       return true;
     } else {
-      consola.error(`Reconciliation update failed: ${handle}`);
+      if (defer) {
+        deferredErrors.push({ kind: "update_failed", handle });
+      } else {
+        consola.error(`Reconciliation update failed: ${handle}`);
+      }
       return false;
     }
   } catch (error) {
+    if (defer) {
+      if (error.code === "ENOENT") {
+        deferredErrors.push({
+          kind: "exception",
+          handle,
+          message: `The path ${error.path} was not found, please ensure you've imported or created all required files`,
+          stack: error.stack,
+          rawError: error,
+        });
+      } else {
+        deferredErrors.push({
+          kind: "exception",
+          handle,
+          message: error.message || String(error),
+          stack: error.stack,
+          rawError: error,
+        });
+      }
+      return false;
+    }
     errorUtils.errorHandler(error);
   }
 }
@@ -199,10 +239,15 @@ async function publishReconciliationById(type, envId, reconciliationId, message 
 }
 
 async function publishAllReconciliations(type, envId, message = "updated through the Silverfin CLI") {
+  const deferredErrors = [];
   const templates = fsUtils.getAllTemplatesOfAType("reconciliationText");
   for (const handle of templates) {
     if (!handle) continue;
-    await publishReconciliationByHandle(type, envId, handle, message);
+    await publishReconciliationByHandle(type, envId, handle, message, deferredErrors);
+  }
+  errorUtils.printReconciliationBatchErrorSummary(deferredErrors);
+  if (deferredErrors.length > 0) {
+    process.exitCode = 1;
   }
 }
 
@@ -319,12 +364,24 @@ async function fetchExistingExportFiles(type, envId) {
   });
 }
 
-async function publishExportFileByName(type, envId, name, message = "updated through the Silverfin CLI") {
+async function publishExportFileByName(
+  type,
+  envId,
+  name,
+  message = "updated through the Silverfin CLI",
+  deferredErrors = null
+) {
+  const defer = Array.isArray(deferredErrors);
+
   try {
     const configPresent = fsUtils.configExists("exportFile", name);
 
     if (!configPresent) {
-      errorUtils.missingExportFileId(name);
+      if (defer) {
+        deferredErrors.push({ kind: "missing_id", name });
+      } else {
+        errorUtils.missingExportFileId(name);
+      }
       return false;
     }
 
@@ -332,7 +389,11 @@ async function publishExportFileByName(type, envId, name, message = "updated thr
     const templateId = fsUtils.getTemplateId(type, envId, templateConfig);
 
     if (!templateConfig || !templateId) {
-      errorUtils.missingExportFileId(name);
+      if (defer) {
+        deferredErrors.push({ kind: "missing_id", name });
+      } else {
+        errorUtils.missingExportFileId(name);
+      }
       return false;
     }
 
@@ -354,10 +415,34 @@ async function publishExportFileByName(type, envId, name, message = "updated thr
       consola.success(`Export file updated: ${response.data.name_nl}`);
       return true;
     } else {
-      consola.error(`Export file update failed: ${name}`);
+      if (defer) {
+        deferredErrors.push({ kind: "update_failed", name });
+      } else {
+        consola.error(`Export file update failed: ${name}`);
+      }
       return false;
     }
   } catch (error) {
+    if (defer) {
+      if (error.code === "ENOENT") {
+        deferredErrors.push({
+          kind: "exception",
+          name,
+          message: `The path ${error.path} was not found, please ensure you've imported or created all required files`,
+          stack: error.stack,
+          rawError: error,
+        });
+      } else {
+        deferredErrors.push({
+          kind: "exception",
+          name,
+          message: error.message || String(error),
+          stack: error.stack,
+          rawError: error,
+        });
+      }
+      return false;
+    }
     errorUtils.errorHandler(error);
   }
 }
@@ -398,10 +483,15 @@ async function publishExportFileById(type, envId, exportFileId, message = "Updat
 }
 
 async function publishAllExportFiles(type, envId, message = "updated through the Silverfin CLI") {
+  const deferredErrors = [];
   const templates = fsUtils.getAllTemplatesOfAType("exportFile");
   for (const name of templates) {
     if (!name) continue;
-    await publishExportFileByName(type, envId, name, message);
+    await publishExportFileByName(type, envId, name, message, deferredErrors);
+  }
+  errorUtils.printExportFileBatchErrorSummary(deferredErrors);
+  if (deferredErrors.length > 0) {
+    process.exitCode = 1;
   }
 }
 
@@ -510,12 +600,24 @@ async function fetchExistingAccountTemplates(type, envId) {
   });
 }
 
-async function publishAccountTemplateByName(type, envId, name, message = "updated through the Silverfin CLI") {
+async function publishAccountTemplateByName(
+  type,
+  envId,
+  name,
+  message = "updated through the Silverfin CLI",
+  deferredErrors = null
+) {
+  const defer = Array.isArray(deferredErrors);
+
   try {
     const configPresent = fsUtils.configExists("accountTemplate", name);
 
     if (!configPresent) {
-      errorUtils.missingAccountTemplateId(name);
+      if (defer) {
+        deferredErrors.push({ kind: "missing_id", name });
+      } else {
+        errorUtils.missingAccountTemplateId(name);
+      }
       return false;
     }
 
@@ -523,7 +625,11 @@ async function publishAccountTemplateByName(type, envId, name, message = "update
     const templateId = fsUtils.getTemplateId(type, envId, templateConfig);
 
     if (!templateConfig || !templateId) {
-      errorUtils.missingAccountTemplateId(name);
+      if (defer) {
+        deferredErrors.push({ kind: "missing_id", name });
+      } else {
+        errorUtils.missingAccountTemplateId(name);
+      }
       return false;
     }
 
@@ -551,10 +657,34 @@ async function publishAccountTemplateByName(type, envId, name, message = "update
       consola.success(`Account template updated: ${response.data.name_nl}`);
       return true;
     } else {
-      consola.error(`Account template update failed: ${name}`);
+      if (defer) {
+        deferredErrors.push({ kind: "update_failed", name });
+      } else {
+        consola.error(`Account template update failed: ${name}`);
+      }
       return false;
     }
   } catch (error) {
+    if (defer) {
+      if (error.code === "ENOENT") {
+        deferredErrors.push({
+          kind: "exception",
+          name,
+          message: `The path ${error.path} was not found, please ensure you've imported or created all required files`,
+          stack: error.stack,
+          rawError: error,
+        });
+      } else {
+        deferredErrors.push({
+          kind: "exception",
+          name,
+          message: error.message || String(error),
+          stack: error.stack,
+          rawError: error,
+        });
+      }
+      return false;
+    }
     errorUtils.errorHandler(error);
   }
 }
@@ -601,10 +731,15 @@ async function publishAccountTemplateById(type, envId, accountTemplateId, messag
 }
 
 async function publishAllAccountTemplates(type, envId, message = "updated through the Silverfin CLI") {
+  const deferredErrors = [];
   const templates = fsUtils.getAllTemplatesOfAType("accountTemplate");
   for (const name of templates) {
     if (!name) continue;
-    await publishAccountTemplateByName(type, envId, name, message);
+    await publishAccountTemplateByName(type, envId, name, message, deferredErrors);
+  }
+  errorUtils.printAccountTemplateBatchErrorSummary(deferredErrors);
+  if (deferredErrors.length > 0) {
+    process.exitCode = 1;
   }
 }
 
@@ -724,18 +859,34 @@ async function fetchExistingSharedParts(type, envId) {
   }
 }
 
-async function publishSharedPartByName(type, envId, name, message = "Updated through the Silverfin CLI") {
+async function publishSharedPartByName(
+  type,
+  envId,
+  name,
+  message = "Updated through the Silverfin CLI",
+  deferredErrors = null
+) {
+  const defer = Array.isArray(deferredErrors);
+
   try {
     const configPresent = fsUtils.configExists("sharedPart", name);
     if (!configPresent) {
-      errorUtils.missingSharedPartId(name);
+      if (defer) {
+        deferredErrors.push({ kind: "missing_id", name });
+      } else {
+        errorUtils.missingSharedPartId(name);
+      }
       return false;
     }
     const templateConfig = fsUtils.readConfig("sharedPart", name);
     const templateId = fsUtils.getTemplateId(type, envId, templateConfig);
 
     if (!templateConfig || !templateId) {
-      errorUtils.missingSharedPartId(name);
+      if (defer) {
+        deferredErrors.push({ kind: "missing_id", name });
+      } else {
+        errorUtils.missingSharedPartId(name);
+      }
       return false;
     }
     consola.debug(`Updating shared part ${name}...`);
@@ -756,10 +907,34 @@ async function publishSharedPartByName(type, envId, name, message = "Updated thr
       consola.success(`Shared part updated: ${response.data.name}`);
       return true;
     } else {
-      consola.error(`Shared part update failed: ${name}`);
+      if (defer) {
+        deferredErrors.push({ kind: "update_failed", name });
+      } else {
+        consola.error(`Shared part update failed: ${name}`);
+      }
       return false;
     }
   } catch (error) {
+    if (defer) {
+      if (error.code === "ENOENT") {
+        deferredErrors.push({
+          kind: "exception",
+          name,
+          message: `The path ${error.path} was not found, please ensure you've imported or created all required files`,
+          stack: error.stack,
+          rawError: error,
+        });
+      } else {
+        deferredErrors.push({
+          kind: "exception",
+          name,
+          message: error.message || String(error),
+          stack: error.stack,
+          rawError: error,
+        });
+      }
+      return false;
+    }
     errorUtils.errorHandler(error);
   }
 }
@@ -800,10 +975,15 @@ async function publishSharedPartById(type, envId, sharedPartId, message = "Updat
 }
 
 async function publishAllSharedParts(type, envId, message = "updated through the Silverfin CLI") {
+  const deferredErrors = [];
   const templates = fsUtils.getAllTemplatesOfAType("sharedPart");
   for (const name of templates) {
     if (!name) continue;
-    await publishSharedPartByName(type, envId, name, message);
+    await publishSharedPartByName(type, envId, name, message, deferredErrors);
+  }
+  errorUtils.printSharedPartBatchErrorSummary(deferredErrors);
+  if (deferredErrors.length > 0) {
+    process.exitCode = 1;
   }
 }
 

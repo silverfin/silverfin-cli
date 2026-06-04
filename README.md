@@ -268,3 +268,5 @@ silverfin development-mode --update-templates
 ## Contributing
 
 If you find any bug or you have any suggestion, please feel free to open an issue in this repository.
+
+See [`tests/TESTS.md`](tests/TESTS.md) for the full test catalogue, fixture guide, and instructions on how to run the test suite.

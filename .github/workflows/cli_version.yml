@@ -35,13 +35,13 @@ jobs:
 
       - name: Checkout current branch
         if: steps.check-skip.outputs.skip_version_check != 'true'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           path: current-branch
 
       - name: Checkout main branch
         if: steps.check-skip.outputs.skip_version_check != 'true'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           path: main-branch
           ref: main
