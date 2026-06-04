@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.55.2] (04/06/2026)
+Update dependencies to fix security vulnerabilities.
+
 ## [1.55.1] (03/06/2026)
 Increase test coverage.
 
