@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.56.1] (08/06/2026)
+Increase the waiting time for the test runs to avoid timeout errors.
+
 ## [1.56.0] (04/06/2026)
 Allow subfolders in template directories.
 
