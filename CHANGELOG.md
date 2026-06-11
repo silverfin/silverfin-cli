@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.56.1] (08/06/2026)
+Increase the waiting time for the test runs to avoid timeout errors.
+
+## [1.56.0] (04/06/2026)
+Allow subfolders in template directories.
+
+## [1.55.2] (04/06/2026)
+Update dependencies to fix security vulnerabilities.
+
+## [1.55.1] (03/06/2026)
+Increase test coverage.
+
+## [1.55.0] (27/05/2026)
+Added an error summary at the end of the `update-reconciliation --all`, `update-shared-part --all`, `update-export-file --all`, and `update-account-template --all` commands.
+
+## [1.54.2] (13/05/2026)
+Fix error reporting in `silverfin authorize`, `refresh-token`, and the partner-key refresh: previously some failures (notably network-layer errors with no HTTP response) crashed with `Cannot read properties of undefined (reading 'status')` or exited silently — they now print the underlying error so the cause is visible.
+
+## [1.54.1] (14/04/2026)
+Increase the waiting time for the test runs to avoid timeout errors.
+
 ## [1.54.0] (17/02/2026)
 Added `create-test` command support for account templates (fetches template data, period data, and custom data).
 

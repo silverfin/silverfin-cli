@@ -10,5 +10,6 @@
   "name": "shared_part_2",
   "text": "shared_part_2.liquid",
   "used_in": [],
-  "externally_managed": true
+  "externally_managed": false,
+  "hide_code": false
 }

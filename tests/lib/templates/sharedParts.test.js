@@ -1,5 +1,6 @@
 const fs = require("fs");
 const fsPromises = require("fs").promises;
+const os = require("os");
 const path = require("path");
 const templateUtils = require("../../../lib/utils/templateUtils");
 const { SharedPart } = require("../../../lib/templates/sharedPart");
@@ -10,23 +11,24 @@ jest.mock("../../../lib/utils/apiUtils", () => ({
   checkRequiredEnvVariables: jest.fn(() => true),
 }));
 
+// Load shared fixtures
+const apiResponse = require("../../../fixtures/api-responses/shared-parts/single.json");
+
 describe("SharedPart", () => {
   describe("save", () => {
-    const template = {
-      id: 808080,
-      name: "example_shared_part_name",
-      text: "example_shared_part_name.liquid",
-      used_in: [],
-      externally_managed: true,
-    };
-    const name = template.name;
+    // API response fixture (shared_part_1), but override used_in to [] for simplicity
+    // (used_in processing requires filesystem/API lookups tested separately)
+    const template = { ...apiResponse, used_in: [] };
+    const name = template.name; // "shared_part_1"
+
+    // Expected config written after save("firm", 100, template)
     const configToWrite = {
-      id: { 100: 808080 },
+      id: { 100: template.id },
       partner_id: {},
-      name: "example_shared_part_name",
-      text: "example_shared_part_name.liquid",
+      name: template.name,
+      text: `${template.name}.liquid`,
       used_in: [],
-      externally_managed: true,
+      externally_managed: template.externally_managed,
     };
 
     const repoRoot = path.resolve(__dirname, "../../..");
@@ -36,7 +38,7 @@ describe("SharedPart", () => {
     let configPath;
 
     beforeEach(() => {
-      tempDir = fs.mkdtempSync(path.join(repoRoot, "tmp-"));
+      tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "sf-cli-test-"));
       process.chdir(tempDir);
 
       expectedFolderPath = path.join(tempDir, "shared_parts", name);
@@ -54,7 +56,7 @@ describe("SharedPart", () => {
       templateUtils.checkValidName.mockReturnValue(false);
       const result = await SharedPart.save("firm", 100, template);
       expect(result).toBe(false);
-      expect(templateUtils.checkValidName).toHaveBeenCalledWith("example_shared_part_name", "sharedPart");
+      expect(templateUtils.checkValidName).toHaveBeenCalledWith(template.name, "sharedPart");
     });
 
     it("should create the necessary files and store template's relevant details", async () => {
@@ -93,7 +95,7 @@ describe("SharedPart", () => {
     };
 
     beforeEach(() => {
-      tempDir = fs.mkdtempSync(path.join(repoRoot, "tmp-"));
+      tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "sf-cli-test-"));
       process.chdir(tempDir);
 
       expectedFolderPath = path.join(tempDir, "shared_parts", name);
@@ -119,7 +121,7 @@ describe("SharedPart", () => {
     it("should create the liquid file if it doesn't exist", async () => {
       await fsPromises.unlink(mainLiquidPath);
 
-      SharedPart.read(name);
+      await SharedPart.read(name);
 
       expect(fs.existsSync(mainLiquidPath)).toBe(true);
       const content = await fsPromises.readFile(mainLiquidPath, "utf-8");

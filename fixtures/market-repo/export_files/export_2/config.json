@@ -1,0 +1,30 @@
+{
+  "id": {
+    "1001": 2202,
+    "1002": 2302
+  },
+  "partner_id": {},
+  "name_en": "Export File 2",
+  "name_nl": "export_2",
+  "name_fr": "",
+  "name_de": "",
+  "name_da": "",
+  "name_se": "",
+  "name_fi": "",
+  "description_en": "",
+  "description_nl": "",
+  "description_fr": "",
+  "description_de": "",
+  "description_da": "",
+  "description_se": "",
+  "description_fi": "",
+  "file_name": "export_2.csv",
+  "externally_managed": false,
+  "encoding": "UTF-8",
+  "published": false,
+  "hide_code": false,
+  "download_warning": null,
+  "test_firm_id": null,
+  "text": "main.liquid",
+  "text_parts": {}
+}

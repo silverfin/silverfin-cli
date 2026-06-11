@@ -1,0 +1,30 @@
+{
+  "id": 1101,
+  "name_en": "Account Template 1",
+  "name_nl": "account_1",
+  "name_fr": "Modèle de Compte 1",
+  "name_de": "",
+  "name_da": "",
+  "name_se": "",
+  "name_fi": "",
+  "description_en": "Account template with a detail text part",
+  "description_nl": "Rekening sjabloon met een detail tekstdeel",
+  "description_fr": "",
+  "description_de": "",
+  "description_da": "",
+  "description_se": "",
+  "description_fi": "",
+  "externally_managed": false,
+  "account_range": "280,282",
+  "mapping_list_ranges": [],
+  "published": true,
+  "hide_code": false,
+  "test_firm_id": null,
+  "text": "{% comment %}account_1 - main{% endcomment %}\nTotal: {{ period.accounts[\"280\"].value | currency }}",
+  "text_parts": [
+    {
+      "name": "detail",
+      "content": "{% comment %}account_1 - detail part{% endcomment %}\nAccount 280: {{ period.accounts[\"280\"].value | currency }}"
+    }
+  ]
+}
