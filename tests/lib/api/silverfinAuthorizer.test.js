@@ -76,7 +76,7 @@ describe("SilverfinAuthorizer", () => {
     mockAxiosInstance.post.mockResolvedValue(mockTokenResponse);
     mockAxiosInstance.get.mockResolvedValue(mockFirmResponse);
     AxiosFactory.createInstance.mockReturnValue(mockAxiosInstance);
-    AxiosFactory.createTokenInstanceForFirm.mockReturnValue(mockAxiosInstance);
+    AxiosFactory.createTokenInstanceForFirm.mockResolvedValue(mockAxiosInstance);
 
     // Mock process.exit
     exitSpy = jest.spyOn(process, "exit").mockImplementation((code) => {

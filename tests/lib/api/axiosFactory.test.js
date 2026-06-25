@@ -491,5 +491,23 @@ describe("AxiosFactory", () => {
 
       expect(axiosInstance.defaults.headers.Authorization).toBeUndefined();
     });
+
+    it("re-probes instead of caching a disabled gateway after an ambiguous (no-response) probe failure", async () => {
+      firmCredentials.getHost.mockReturnValue("https://flaky.staging.getsilverfin.com");
+
+      // First probe fails at the transport layer (no HTTP response): indeterminate, must not be cached.
+      axios.get.mockRejectedValueOnce(new Error("ETIMEDOUT"));
+      await expect(AxiosFactory.createTokenInstanceForFirm(50000)).rejects.toThrow("ETIMEDOUT");
+
+      // Next call re-probes (the cache was not poisoned) and finds the Basic gateway.
+      axios.get.mockResolvedValueOnce({
+        status: 401,
+        headers: { "www-authenticate": 'Basic realm="Staging"' },
+      });
+      const axiosInstance = await AxiosFactory.createTokenInstanceForFirm(50000);
+
+      expect(axios.get).toHaveBeenCalledTimes(2);
+      expect(axiosInstance.defaults.headers.Authorization).toBe("Basic test_basic_auth");
+    });
   });
 });

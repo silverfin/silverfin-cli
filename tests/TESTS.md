@@ -357,9 +357,12 @@ Source: `lib/api/axiosFactory.js`
 | `AxiosFactory.createInstance` (staging) | should raise an error if environment variable is not set | Verifies that using a staging host without `SF_BASIC_AUTH` set causes an error and process exit. |
 | `AxiosFactory.createInstance` (staging) | should use basic auth for firm instance in staging | Verifies that a staging firm instance uses a `Basic` `Authorization` header and passes the access token as a query parameter. |
 | `AxiosFactory.createInstance` (staging) | should use basic auth for partner instance in staging | Verifies that a staging partner instance uses a `Basic` `Authorization` header with credentials in query params. |
-| `AxiosFactory.createAuthInstanceForFirm` | should not thrown an error for missing tokens | Verifies that the auth instance is created successfully even when no tokens are stored, without logging errors or exiting. |
-| `AxiosFactory.createAuthInstanceForFirm` | should not attempt to refresh tokens | Verifies that a 401 response from an auth instance is rethrown as-is without triggering any token refresh. |
-| `AxiosFactory.createAuthInstanceForFirm` | should use basic auth for firm instance in staging | Verifies that the auth instance uses a `Basic` `Authorization` header when the host is a staging URL. |
+| `AxiosFactory.createTokenInstanceForFirm` | should not throw when there are no stored tokens | Verifies a token instance is created even when no tokens are stored, without logging errors or exiting. |
+| `AxiosFactory.createTokenInstanceForFirm` | should not attach a refresh interceptor | Verifies a 401 from a token instance is rethrown as-is without triggering a token refresh. |
+| `AxiosFactory.createTokenInstanceForFirm` | should NOT attach basic auth on production (and not probe for a gateway) | Verifies a production token instance has no Basic header and never probes for a gateway. |
+| `AxiosFactory.createTokenInstanceForFirm` | should attach basic auth on staging when the gateway requires it | Verifies a staging token instance gets a `Basic` header when the probe returns 401 with a `WWW-Authenticate: Basic` challenge. |
+| `AxiosFactory.createTokenInstanceForFirm` | should NOT attach basic auth on staging when the gateway is disabled | Verifies a staging token instance has no Basic header when the probe returns a non-Basic (302) response. |
+| `AxiosFactory.createTokenInstanceForFirm` | re-probes instead of caching a disabled gateway after an ambiguous probe failure | Verifies a transport-level probe failure (no HTTP response) is rethrown and not cached, so the next call re-probes. |
 
 ---
 

@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.56.2] (25/06/2026)
+Send the staging HTTP Basic Auth header on firm OAuth token requests only when the staging gateway actually requires it (detected via a one-time `WWW-Authenticate: Basic` probe). Fixes `silverfin authorize` and token refresh failing with "unknown client" on stagings that have HTTP basic auth disabled.
+
 ## [1.56.1] (08/06/2026)
 Increase the waiting time for the test runs to avoid timeout errors.
 
