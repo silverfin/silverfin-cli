@@ -427,14 +427,12 @@ describe("AxiosFactory", () => {
     });
   });
 
-  describe("Create auth instance for firm", () => {
-    const mockHost = "https://test-api.com";
-
-    it("should not thrown an error for missing tokens", () => {
-      firmCredentials.getHost.mockReturnValue(mockHost);
+  describe("Create token instance for firm", () => {
+    it("should not throw when there are no stored tokens", async () => {
+      firmCredentials.getHost.mockReturnValue("https://test-api.com");
       firmCredentials.getTokenPair.mockReturnValue(null);
 
-      const axiosInstance = AxiosFactory.createAuthInstanceForFirm(123);
+      const axiosInstance = await AxiosFactory.createTokenInstanceForFirm(123);
 
       expect(axiosInstance).toBeDefined();
       expect(axios.create).toHaveBeenCalled();
@@ -443,10 +441,10 @@ describe("AxiosFactory", () => {
       expect(exitSpy).not.toHaveBeenCalled();
     });
 
-    it("should not attempt to refresh tokens", async () => {
-      firmCredentials.getHost.mockReturnValue(mockHost);
+    it("should not attach a refresh interceptor", async () => {
+      firmCredentials.getHost.mockReturnValue("https://test-api.com");
 
-      const axiosInstance = AxiosFactory.createAuthInstanceForFirm(123);
+      const axiosInstance = await AxiosFactory.createTokenInstanceForFirm(123);
 
       expect(axiosInstance).toBeDefined();
       expect(axios.create).toHaveBeenCalled();
@@ -463,17 +461,35 @@ describe("AxiosFactory", () => {
       expect(axiosInstance.post).not.toHaveBeenCalled();
     });
 
-    it("should use basic auth for firm instance in staging", () => {
-      const mockHost = "https://test-api.staging.getsilverfin.com";
-      const firmId = 50000;
-      firmCredentials.getHost.mockReturnValue(mockHost);
+    it("should NOT attach basic auth on production (and not probe for a gateway)", async () => {
+      firmCredentials.getHost.mockReturnValue("https://test-api.com");
 
-      const axiosInstance = AxiosFactory.createAuthInstanceForFirm(firmId);
+      const axiosInstance = await AxiosFactory.createTokenInstanceForFirm(123);
 
-      expect(axiosInstance).toBeDefined();
-      expect(axiosInstance.defaults.baseURL).toBe(`https://test-api.staging.getsilverfin.com/api/v4/f/50000`);
+      expect(axiosInstance.defaults.headers.Authorization).toBeUndefined();
+      expect(axios.get).not.toHaveBeenCalled();
+    });
 
+    it("should attach basic auth on staging when the gateway requires it", async () => {
+      firmCredentials.getHost.mockReturnValue("https://gated.staging.getsilverfin.com");
+      axios.get.mockResolvedValue({
+        status: 401,
+        headers: { "www-authenticate": 'Basic realm="Staging"' },
+      });
+
+      const axiosInstance = await AxiosFactory.createTokenInstanceForFirm(50000);
+
+      expect(axiosInstance.defaults.baseURL).toBe("https://gated.staging.getsilverfin.com/api/v4/f/50000");
       expect(axiosInstance.defaults.headers.Authorization).toBe("Basic test_basic_auth");
+    });
+
+    it("should NOT attach basic auth on staging when the gateway is disabled", async () => {
+      firmCredentials.getHost.mockReturnValue("https://open.staging.getsilverfin.com");
+      axios.get.mockResolvedValue({ status: 302, headers: {} });
+
+      const axiosInstance = await AxiosFactory.createTokenInstanceForFirm(50000);
+
+      expect(axiosInstance.defaults.headers.Authorization).toBeUndefined();
     });
   });
 });
