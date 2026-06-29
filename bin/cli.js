@@ -3,6 +3,8 @@
 const toolkit = require("../index");
 const liquidTestGenerator = require("../lib/liquidTestGenerator");
 const liquidTestRunner = require("../lib/liquidTestRunner");
+const resultsReader = require("../lib/resultsReader");
+const dataCapture = require("../lib/dataCapture");
 const { ExportFileInstanceGenerator } = require("../lib/exportFileInstanceGenerator");
 const stats = require("../lib/cli/stats");
 const { Command, Option } = require("commander");
@@ -528,6 +530,51 @@ program
     const reconciledStatus = options.unreconciled ? false : true;
     const testName = options.test ? options.test : "test_name";
     liquidTestGenerator.testGenerator(options.url, testName, reconciledStatus);
+  });
+
+// GET RESULTS — read back a live company file's computed results + customs as JSON
+program
+  .command("get-results")
+  .description("Fetch the computed results and custom data of a reconciliation or account in a live company file, printed as JSON")
+  .requiredOption("-u, --url <url>", "Specify the full Silverfin URL of the reconciliation/account in the company file (mandatory)")
+  .option("-o, --output <file>", "Write the JSON to a file instead of stdout (optional)")
+  .action(async (options) => {
+    const data = await resultsReader.fetchResults(options.url);
+    if (!data) {
+      process.exitCode = 1;
+      return;
+    }
+    const json = JSON.stringify(data, null, 2);
+    if (options.output) {
+      const fs = require("fs");
+      fs.writeFileSync(options.output, json);
+      consola.success(`Wrote results to ${options.output}`);
+    } else {
+      console.log(json);
+    }
+  });
+
+// CAPTURE — snapshot a live company file's data as JSON
+program
+  .command("capture")
+  .description("Capture a live company file's data as JSON. Default: the template at the URL and its dependencies (scoped). Use --full to capture company/period/reconciliation customs and results across all periods")
+  .requiredOption("-u, --url <url>", "Specify the full Silverfin URL of the reconciliation/account in the company file (mandatory)")
+  .option("--full", "Capture the whole company file (all periods, workflows, reconciliations) instead of just the template's scope (optional)", false)
+  .option("-o, --output <file>", "Write the JSON to a file instead of stdout (optional)")
+  .action(async (options) => {
+    const data = await dataCapture.capture(options.url, { full: options.full });
+    if (!data) {
+      process.exitCode = 1;
+      return;
+    }
+    const json = JSON.stringify(data, null, 2);
+    if (options.output) {
+      const fs = require("fs");
+      fs.writeFileSync(options.output, json);
+      consola.success(`Wrote capture to ${options.output}`);
+    } else {
+      console.log(json);
+    }
   });
 
 // Update Text Properties from Liquid Test data

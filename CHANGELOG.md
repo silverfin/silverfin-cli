@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 Added `update-text-properties` command. It uploads custom text properties from a Liquid Test YAML file to a company file at company, period, reconciliation and account levels for the entries referenced in the test scenario. Usage: `silverfin update-text-properties -u <url> -t <test-name>`. Supports `--handle` for faster YAML file lookup, `--dry-run` to preview the payload, and `--yes` to skip the confirmation prompt.
 
+Added `get-results` command. It fetches the computed results and custom data of a reconciliation or account in a live company file (identified by its Silverfin URL) and prints them as JSON. Usage: `silverfin get-results -u <url>`. Supports `-o, --output <file>` to write the JSON to a file instead of stdout.
+
+Added `capture` command. It captures a live company file's data as JSON. By default it captures the template at the URL and its dependencies (scoped); `--full` captures company/period/reconciliation customs and results across all periods. Usage: `silverfin capture -u <url> [--full]`. Supports `-o, --output <file>`.
+
 Added `set-custom` and `delete-custom` commands for ad-hoc manipulation of a live company file's custom data. `set-custom -u <url> --namespace <ns> --key <k> --value <v>` sets a single custom (value JSON-parsed when possible); `delete-custom` soft-deletes it (value null). Both support `--level company|period|reconciliation|account` (inferred from the URL by default), `--handle`/`--account` targeting, `--file` for batch, and `--yes` to skip the confirmation prompt.
 
 ## [1.56.1] (08/06/2026)
