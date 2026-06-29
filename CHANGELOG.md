@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 Added `update-text-properties` command. It uploads custom text properties from a Liquid Test YAML file to a company file at company, period, reconciliation and account levels for the entries referenced in the test scenario. Usage: `silverfin update-text-properties -u <url> -t <test-name>`. Supports `--handle` for faster YAML file lookup, `--dry-run` to preview the payload, and `--yes` to skip the confirmation prompt.
 
+Added `set-custom` and `delete-custom` commands for ad-hoc manipulation of a live company file's custom data. `set-custom -u <url> --namespace <ns> --key <k> --value <v>` sets a single custom (value JSON-parsed when possible); `delete-custom` soft-deletes it (value null). Both support `--level company|period|reconciliation|account` (inferred from the URL by default), `--handle`/`--account` targeting, `--file` for batch, and `--yes` to skip the confirmation prompt.
+
 ## [1.56.1] (08/06/2026)
 Increase the waiting time for the test runs to avoid timeout errors.
 

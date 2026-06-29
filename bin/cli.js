@@ -21,6 +21,7 @@ const { AutoCompletions } = require("../lib/cli/autoCompletions");
 const fsUtils = require("../lib/utils/fsUtils");
 const textPropertyUtils = require("../lib/utils/textPropertyUtils");
 const liquidTestUtils = require("../lib/utils/liquidTestUtils");
+const customWriter = require("../lib/customWriter");
 
 const firmIdDefault = cliUtils.loadDefaultFirmId();
 cliUtils.handleUncaughtErrors();
@@ -667,6 +668,59 @@ program
       process.exitCode = 1;
     }
   });
+
+// Shared orchestration for set-custom / delete-custom
+const runCustomWrite = async (options, del) => {
+  const plan = await customWriter.prepareWrite(options.url, options, { del });
+  if (!plan) {
+    process.exitCode = 1;
+    return;
+  }
+  const verb = del ? "delete" : "set";
+  const count = plan.properties.length;
+  consola.warn(`About to ${verb} ${count} custom propert${count === 1 ? "y" : "ies"} at the ${plan.level} level (${plan.targetDesc}) on firm ${plan.firmId}, company ${plan.companyId}.`);
+  if (!options.yes) {
+    cliUtils.promptConfirmation();
+  }
+  const response = await plan.apply();
+  const responses = Array.isArray(response) ? response : [response];
+  const failed = responses.filter((r) => !r || r.status < 200 || r.status >= 300);
+  if (failed.length > 0) {
+    consola.error(`${verb}: ${failed.length}/${responses.length} request(s) failed`);
+    process.exitCode = 1;
+  } else {
+    consola.success(`${del ? "Deleted" : "Set"} ${count} custom propert${count === 1 ? "y" : "ies"} at the ${plan.level} level`);
+  }
+};
+
+// SET a custom value on a live company file
+program
+  .command("set-custom")
+  .description("Set a custom value on a live company file (company/period/reconciliation/account level)")
+  .requiredOption("-u, --url <url>", "Full Silverfin URL of the reconciliation/account in the company file (mandatory)")
+  .option("--level <level>", "company | period | reconciliation | account (default: inferred from the URL)")
+  .option("--namespace <namespace>", "Custom namespace")
+  .option("--key <key>", "Custom key")
+  .option("--value <value>", "Custom value (JSON-parsed when possible, otherwise treated as a string)")
+  .option("--handle <handle>", "Reconciliation handle (for --level reconciliation, instead of the URL target)")
+  .option("--account <number>", "Account number (for --level account)")
+  .option("--file <file>", "JSON file with an array of {namespace, key, value} for a batch set")
+  .option("-y, --yes", "Skip the confirmation prompt (optional)", false)
+  .action((options) => runCustomWrite(options, false));
+
+// DELETE (soft-delete via null) a custom value on a live company file
+program
+  .command("delete-custom")
+  .description("Delete (soft-delete via null) a custom value on a live company file")
+  .requiredOption("-u, --url <url>", "Full Silverfin URL of the reconciliation/account in the company file (mandatory)")
+  .option("--level <level>", "company | period | reconciliation | account (default: inferred from the URL)")
+  .option("--namespace <namespace>", "Custom namespace")
+  .option("--key <key>", "Custom key")
+  .option("--handle <handle>", "Reconciliation handle (for --level reconciliation)")
+  .option("--account <number>", "Account number (for --level account)")
+  .option("--file <file>", "JSON file with an array of {namespace, key} for a batch delete")
+  .option("-y, --yes", "Skip the confirmation prompt (optional)", false)
+  .action((options) => runCustomWrite(options, true));
 
 // Check Liquid Test dependencies for a reconciliation template
 program
