@@ -1,3 +1,43 @@
 {
-  "reconciliation_type": "can_be_reconciled_without_data"
+  "id": {
+    "1001": 8801,
+    "1002": 9901
+  },
+  "partner_id": {
+    "25": 8901,
+    "26": 9801
+  },
+  "handle": "reconciliation_text_1",
+  "name_en": "Reconciliation Text 1",
+  "name_nl": "Afstemming Tekst 1",
+  "name_fr": "Texte de Rapprochement 1",
+  "name_de": "",
+  "name_da": "",
+  "name_se": "",
+  "name_fi": "",
+  "description_en": "A reconciliation text with two text parts",
+  "description_nl": "Een afstemmingstekst met twee tekstdelen",
+  "description_fr": "",
+  "description_de": "",
+  "description_da": "",
+  "description_se": "",
+  "description_fi": "",
+  "auto_hide_formula": "",
+  "virtual_account_number": "",
+  "reconciliation_type": "can_be_reconciled_without_data",
+  "public": false,
+  "allow_duplicate_reconciliations": false,
+  "is_active": true,
+  "externally_managed": false,
+  "published": true,
+  "hide_code": false,
+  "use_full_width": false,
+  "downloadable_as_docx": false,
+  "test_firm_id": null,
+  "text": "main.liquid",
+  "text_parts": {
+    "part_1": "text_parts/part_1.liquid",
+    "part_2": "text_parts/part_2.liquid"
+  },
+  "test": "tests/reconciliation_text_1_liquid_test.yml"
 }

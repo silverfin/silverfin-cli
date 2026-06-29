@@ -35,5 +35,6 @@
       }
     }
   ],
-  "externally_managed": true
+  "externally_managed": true,
+  "hide_code": false
 }

@@ -1,4 +1,5 @@
 const fs = require("fs");
+const os = require("os");
 const path = require("path");
 const fsUtils = require("../../../lib/utils/fsUtils");
 
@@ -11,7 +12,7 @@ describe("fsUtils", () => {
     let reconciliationTextsDir;
 
     beforeEach(() => {
-      tempDir = fs.mkdtempSync(path.join(repoRoot, "tmp-"));
+      tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "sf-cli-test-"));
       process.chdir(tempDir);
       reconciliationTextsDir = path.join(tempDir, "reconciliation_texts");
     });

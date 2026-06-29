@@ -5,17 +5,23 @@
   },
   "host": "https://test-environment.silverfin.com",
   "1001": {
-    "firmName": "The Demo Firm"
+    "firmName": "The Demo Firm",
+    "accessToken": "test_access_token_firm_1001",
+    "refreshToken": "test_refresh_token_firm_1001"
   },
   "1002": {
-    "firmName": "The Production Firm"
+    "firmName": "The Production Firm",
+    "accessToken": "test_access_token_firm_1002",
+    "refreshToken": "test_refresh_token_firm_1002"
   },
   "partnerCredentials": {
     "25": {
-      "name": "Partner 1"
+      "name": "Partner 1",
+      "token": "test_api_key_partner_25"
     },
     "26": {
-      "name": "Partner 2"
+      "name": "Partner 2",
+      "token": "test_api_key_partner_26"
     }
   }
 }

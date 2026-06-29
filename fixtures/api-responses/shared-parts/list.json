@@ -1,0 +1,37 @@
+[
+  {
+    "id": 5601,
+    "name": "shared_part_1",
+    "externally_managed": true,
+    "hide_code": false,
+    "text": "Liquid content for shared_part_1",
+    "used_in": [
+      {
+        "id": 8801,
+        "type": "reconciliationText",
+        "handle": "reconciliation_text_1"
+      },
+      {
+        "id": 8802,
+        "type": "reconciliationText",
+        "handle": "reconciliation_text_2"
+      }
+    ]
+  },
+  {
+    "id": 5602,
+    "name": "shared_part_2",
+    "externally_managed": false,
+    "hide_code": false,
+    "text": "Liquid content for shared_part_2",
+    "used_in": []
+  },
+  {
+    "id": 5603,
+    "name": "shared_part_3",
+    "externally_managed": true,
+    "hide_code": true,
+    "text": "Liquid content for shared_part_3",
+    "used_in": []
+  }
+]

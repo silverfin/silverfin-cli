@@ -1,0 +1,25 @@
+test_basic: &test_basic
+  name: Basic account template test
+  context: period
+  data:
+    period:
+      accounts:
+        "280":
+          value: 5000
+        "282":
+          value: 3000
+  expectation: |
+    Total: 8,000.00
+
+test_zero:
+  <<: *test_basic
+  name: Zero balance test
+  data:
+    period:
+      accounts:
+        "280":
+          value: 0
+        "282":
+          value: 0
+  expectation: |
+    Total: 0.00

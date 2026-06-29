@@ -1,0 +1,30 @@
+{
+  "id": {
+    "1001": 1102,
+    "1002": 1202
+  },
+  "partner_id": {},
+  "test": "tests/account_2_liquid_test.yml",
+  "name_en": "Account Template 2",
+  "name_nl": "account_2",
+  "name_fr": "",
+  "name_de": "",
+  "name_da": "",
+  "name_se": "",
+  "name_fi": "",
+  "description_en": "",
+  "description_nl": "",
+  "description_fr": "",
+  "description_de": "",
+  "description_da": "",
+  "description_se": "",
+  "description_fi": "",
+  "externally_managed": false,
+  "account_range": "100-199",
+  "mapping_list_ranges": [],
+  "published": false,
+  "hide_code": false,
+  "test_firm_id": null,
+  "text": "main.liquid",
+  "text_parts": {}
+}

@@ -1,0 +1,31 @@
+{
+  "id": 2201,
+  "name_en": "Export File 1",
+  "name_nl": "export_1",
+  "name_fr": "Fichier d'Export 1",
+  "name_de": "",
+  "name_da": "",
+  "name_se": "",
+  "name_fi": "",
+  "description_en": "An export file with text parts",
+  "description_nl": "Een exportbestand met tekstdelen",
+  "description_fr": "",
+  "description_de": "",
+  "description_da": "",
+  "description_se": "",
+  "description_fi": "",
+  "file_name": "export_1.xlsx",
+  "externally_managed": false,
+  "encoding": "UTF-8",
+  "published": true,
+  "hide_code": false,
+  "download_warning": null,
+  "test_firm_id": null,
+  "text": "{% comment %}export_1 - main{% endcomment %}\nRevenue: {{ period.accounts[\"700\"].value | currency }}",
+  "text_parts": [
+    {
+      "name": "header",
+      "content": "{% comment %}export_1 - header part{% endcomment %}\nExport Report"
+    }
+  ]
+}
