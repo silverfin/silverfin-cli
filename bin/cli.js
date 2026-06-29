@@ -532,15 +532,22 @@ program
 // Update Text Properties from Liquid Test data
 program
   .command("update-text-properties")
-  .description("Upload custom text properties from a Liquid Test YAML file to a reconciliation in a company file")
+  .description(
+    "Upload custom text properties from a Liquid Test YAML file to a company file. Pushes custom data at the company, period, reconciliation and account levels for every entry referenced in the test scenario (not only the reconciliation in the URL). The URL identifies the target firm/company."
+  )
   .requiredOption("-u, --url <url>", "Specify the full Silverfin URL of the reconciliation in the company file (mandatory)")
   .requiredOption("-t, --test <test-name>", "Specify the name of the test to use as data source (mandatory)")
   .option("-h, --handle <handle>", "Specify the reconciliation handle to narrow down the YAML file search (optional)")
   .option("--dry-run", "Only transform and display the properties without uploading (optional)", false)
+  .option("-y, --yes", "Skip the confirmation prompt before uploading (optional)", false)
   .action(async (options) => {
     // Parse URL to extract IDs
     const urlData = liquidTestUtils.extractURL(options.url);
     const { firmId, companyId } = urlData;
+    if (!firmId || !companyId) {
+      consola.error("Could not determine the firm and company from the URL. Double-check the Silverfin URL and try again.");
+      return;
+    }
 
     // Find the test data in the YAML files
     const testData = textPropertyUtils.findTestData(options.test, options.handle);
@@ -555,16 +562,15 @@ program
       updates.push({ level: "company", properties, apply: () => SF.updateCompanyCustom(firmId, companyId, properties) });
     }
 
-    // Fetch periods once if needed for resolving period dates
+    // Fetch all periods once (paginated) if needed for resolving period dates
     let periodsArray = null;
 
     for (const [periodKey, periodEntry] of Object.entries(testData.periods)) {
       // Resolve period date to period ID
       if (!periodsArray) {
-        const periodsResponse = await SF.getPeriods(firmId, companyId);
-        periodsArray = periodsResponse?.data || [];
+        periodsArray = await SF.getAllPeriods(firmId, companyId);
       }
-      const period = periodsArray.find((p) => p.fiscal_year.end_date === periodKey);
+      const period = periodsArray.find((p) => p.fiscal_year?.end_date === periodKey);
       if (!period) {
         consola.warn(`Period "${periodKey}" not found in company — skipping`);
         continue;
@@ -626,6 +632,16 @@ program
         consola.log(JSON.stringify(update.properties, null, 2));
       }
       return;
+    }
+
+    // Summarise what will be written and where, then confirm (unless --yes)
+    const firmName = firmCredentials.getFirmName(firmId);
+    consola.warn(`About to write custom data to company ${companyId} on firm ${firmName ? `${firmName} (${firmId})` : firmId}:`);
+    for (const update of updates) {
+      consola.warn(`  • ${update.level}: ${update.properties.length} properties`);
+    }
+    if (!options.yes) {
+      cliUtils.promptConfirmation();
     }
 
     // Apply all updates
