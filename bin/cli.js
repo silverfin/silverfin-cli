@@ -6,7 +6,7 @@ const liquidTestRunner = require("../lib/liquidTestRunner");
 const resultsReader = require("../lib/resultsReader");
 const dataCapture = require("../lib/dataCapture");
 const inputDescriber = require("../lib/inputDescriber");
-const templateManifest = require("../lib/templateManifest");
+const dataScope = require("../lib/dataScope");
 const { ExportFileInstanceGenerator } = require("../lib/exportFileInstanceGenerator");
 const stats = require("../lib/cli/stats");
 const { Command, Option } = require("commander");
@@ -601,10 +601,10 @@ program
     }
   });
 
-// MANIFEST — static data scope of a template (drives deep-capture + self-validating render)
+// MANIFEST — static data scope of a template (drives deep-capture + default resolution)
 program
   .command("manifest")
-  .description("Build a static data manifest (scope) for a reconciliation template by scanning its Liquid (main + text_parts + shared parts): own customs, cross-template results/customs, period drop + prior-period depth, company drop, accounts, shared parts. Run from your templates repo")
+  .description("Print a template's static data scope: own customs, cross-template results/customs, period drop + prior-period depth, company drop, accounts, result echoes, involved files. Delegates the analysis to silverfin-ls (set SILVERFIN_LS_CMD to override the binary). Run from your templates repo")
   .option("-h, --handle <handle>", "Reconciliation handle (local, no API call)")
   .option("-u, --url <url>", "Silverfin URL (resolves the handle via the API instead of --handle)")
   .option("-o, --output <file>", "Write the JSON to a file instead of stdout (optional)")
@@ -620,7 +620,7 @@ program
       process.exitCode = 1;
       return;
     }
-    const data = await templateManifest.buildManifest(handle);
+    const data = dataScope.getDataScope(handle);
     if (!data) {
       process.exitCode = 1;
       return;
