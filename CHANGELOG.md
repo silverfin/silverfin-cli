@@ -13,6 +13,8 @@ Added `set-custom` and `delete-custom` commands for ad-hoc manipulation of a liv
 
 Added `describe-inputs` command. It lists a reconciliation's custom inputs with their declared defaults, stored values and live effective values, plus the template's results, as JSON. Usage: `silverfin describe-inputs -u <url>` (run from your templates repo). Effective values are filled only from certain sources — the stored value, the live result where the template directly exposes the input (`{% result 'tag' custom.ns.key %}`), or a literal default — and any input whose effective value is not derivable from the API is flagged (it is only resolvable in the rendered UI).
 
+Added `manifest` command. It builds a static data manifest (scope) for a reconciliation template by scanning its Liquid (main, text_parts and shared parts, recursively): own customs, cross-template results/customs, period drop and prior-period depth, company drop, accounts and shared parts. Usage: `silverfin manifest -h <handle>` or `-u <url>` (run from your templates repo). It is the first step of a deep-capture + self-validating render pipeline for resolving effective default values without a browser.
+
 ## [1.56.1] (08/06/2026)
 Increase the waiting time for the test runs to avoid timeout errors.
 

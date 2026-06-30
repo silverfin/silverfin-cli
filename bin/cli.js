@@ -6,6 +6,7 @@ const liquidTestRunner = require("../lib/liquidTestRunner");
 const resultsReader = require("../lib/resultsReader");
 const dataCapture = require("../lib/dataCapture");
 const inputDescriber = require("../lib/inputDescriber");
+const templateManifest = require("../lib/templateManifest");
 const { ExportFileInstanceGenerator } = require("../lib/exportFileInstanceGenerator");
 const stats = require("../lib/cli/stats");
 const { Command, Option } = require("commander");
@@ -595,6 +596,40 @@ program
       const fs = require("fs");
       fs.writeFileSync(options.output, json);
       consola.success(`Wrote inputs to ${options.output}`);
+    } else {
+      console.log(json);
+    }
+  });
+
+// MANIFEST — static data scope of a template (drives deep-capture + self-validating render)
+program
+  .command("manifest")
+  .description("Build a static data manifest (scope) for a reconciliation template by scanning its Liquid (main + text_parts + shared parts): own customs, cross-template results/customs, period drop + prior-period depth, company drop, accounts, shared parts. Run from your templates repo")
+  .option("-h, --handle <handle>", "Reconciliation handle (local, no API call)")
+  .option("-u, --url <url>", "Silverfin URL (resolves the handle via the API instead of --handle)")
+  .option("-o, --output <file>", "Write the JSON to a file instead of stdout (optional)")
+  .action(async (options) => {
+    let handle = options.handle;
+    if (!handle && options.url) {
+      const parameters = liquidTestUtils.extractURL(options.url);
+      const details = await SF.readReconciliationTextDetails("firm", parameters.firmId, parameters.companyId, parameters.ledgerId, parameters.reconciliationId);
+      handle = details?.data?.handle;
+    }
+    if (!handle) {
+      consola.error("Provide --handle <handle> or --url <url>.");
+      process.exitCode = 1;
+      return;
+    }
+    const data = await templateManifest.buildManifest(handle);
+    if (!data) {
+      process.exitCode = 1;
+      return;
+    }
+    const json = JSON.stringify(data, null, 2);
+    if (options.output) {
+      const fs = require("fs");
+      fs.writeFileSync(options.output, json);
+      consola.success(`Wrote manifest to ${options.output}`);
     } else {
       console.log(json);
     }
