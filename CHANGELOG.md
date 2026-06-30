@@ -11,6 +11,8 @@ Added `capture` command. It captures a live company file's data as JSON. By defa
 
 Added `set-custom` and `delete-custom` commands for ad-hoc manipulation of a live company file's custom data. `set-custom -u <url> --namespace <ns> --key <k> --value <v>` sets a single custom (value JSON-parsed when possible); `delete-custom` soft-deletes it (value null). Both support `--level company|period|reconciliation|account` (inferred from the URL by default), `--handle`/`--account` targeting, `--file` for batch, and `--yes` to skip the confirmation prompt.
 
+Added `describe-inputs` command. It lists a reconciliation's custom inputs with their declared defaults, stored values and live effective values, plus the template's results, as JSON. Usage: `silverfin describe-inputs -u <url>` (run from your templates repo). Effective values are filled only from certain sources — the stored value, the live result where the template directly exposes the input (`{% result 'tag' custom.ns.key %}`), or a literal default — and any input whose effective value is not derivable from the API is flagged (it is only resolvable in the rendered UI).
+
 ## [1.56.1] (08/06/2026)
 Increase the waiting time for the test runs to avoid timeout errors.
 

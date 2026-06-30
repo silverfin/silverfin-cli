@@ -5,6 +5,7 @@ const liquidTestGenerator = require("../lib/liquidTestGenerator");
 const liquidTestRunner = require("../lib/liquidTestRunner");
 const resultsReader = require("../lib/resultsReader");
 const dataCapture = require("../lib/dataCapture");
+const inputDescriber = require("../lib/inputDescriber");
 const { ExportFileInstanceGenerator } = require("../lib/exportFileInstanceGenerator");
 const stats = require("../lib/cli/stats");
 const { Command, Option } = require("commander");
@@ -572,6 +573,28 @@ program
       const fs = require("fs");
       fs.writeFileSync(options.output, json);
       consola.success(`Wrote capture to ${options.output}`);
+    } else {
+      console.log(json);
+    }
+  });
+
+// DESCRIBE INPUTS — list a reconciliation's custom inputs with declared defaults + live effective values
+program
+  .command("describe-inputs")
+  .description("List a reconciliation's custom inputs with their declared defaults, stored values, and live effective values (certain sources only), plus the template's results. Run from your templates repo")
+  .requiredOption("-u, --url <url>", "Specify the full Silverfin URL of the reconciliation in the company file (mandatory)")
+  .option("-o, --output <file>", "Write the JSON to a file instead of stdout (optional)")
+  .action(async (options) => {
+    const data = await inputDescriber.describeInputs(options.url);
+    if (!data) {
+      process.exitCode = 1;
+      return;
+    }
+    const json = JSON.stringify(data, null, 2);
+    if (options.output) {
+      const fs = require("fs");
+      fs.writeFileSync(options.output, json);
+      consola.success(`Wrote inputs to ${options.output}`);
     } else {
       console.log(json);
     }
