@@ -582,11 +582,12 @@ program
 // DESCRIBE INPUTS — list a reconciliation's custom inputs with declared defaults + live effective values
 program
   .command("describe-inputs")
-  .description("List a reconciliation's custom inputs with their declared defaults, stored values, and live effective values (certain sources only), plus the template's results. Run from your templates repo")
+  .description("List a reconciliation's custom inputs with their declared defaults, stored values, and live effective values (certain sources only), plus the template's results. Use --resolve to additionally fill inputs whose default is a direct reference to data created elsewhere (cross-template results/customs, period/company customs, prior periods) by reading it from a targeted deep capture. Run from your templates repo")
   .requiredOption("-u, --url <url>", "Specify the full Silverfin URL of the reconciliation in the company file (mandatory)")
+  .option("--resolve", "Resolve `unavailable` defaults that reference data created elsewhere, via a targeted deep capture of the live company file (extra API calls). Requires silverfin-ls", false)
   .option("-o, --output <file>", "Write the JSON to a file instead of stdout (optional)")
   .action(async (options) => {
-    const data = await inputDescriber.describeInputs(options.url);
+    const data = await inputDescriber.describeInputs(options.url, { resolve: options.resolve });
     if (!data) {
       process.exitCode = 1;
       return;
