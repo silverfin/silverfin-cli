@@ -23,7 +23,7 @@ jest.mock("../../../lib/api/firmCredentials", () => ({
 jest.mock("../../../lib/api/axiosFactory", () => ({
   AxiosFactory: {
     createInstance: jest.fn(),
-    createAuthInstanceForFirm: jest.fn(),
+    createTokenInstanceForFirm: jest.fn(),
   },
 }));
 
@@ -76,7 +76,7 @@ describe("SilverfinAuthorizer", () => {
     mockAxiosInstance.post.mockResolvedValue(mockTokenResponse);
     mockAxiosInstance.get.mockResolvedValue(mockFirmResponse);
     AxiosFactory.createInstance.mockReturnValue(mockAxiosInstance);
-    AxiosFactory.createAuthInstanceForFirm.mockReturnValue(mockAxiosInstance);
+    AxiosFactory.createTokenInstanceForFirm.mockResolvedValue(mockAxiosInstance);
 
     // Mock process.exit
     exitSpy = jest.spyOn(process, "exit").mockImplementation((code) => {
@@ -97,7 +97,7 @@ describe("SilverfinAuthorizer", () => {
 
       expect(open).toHaveBeenCalledWith(expect.stringContaining("api.test.com/f/123/oauth/authorize"));
 
-      expect(AxiosFactory.createAuthInstanceForFirm).toHaveBeenCalledWith(mockFirmId);
+      expect(AxiosFactory.createTokenInstanceForFirm).toHaveBeenCalledWith(mockFirmId);
 
       expect(mockAxiosInstance.post).toHaveBeenCalledWith(expect.stringContaining("api.test.com/f/123/oauth/token"));
 
@@ -134,7 +134,7 @@ describe("SilverfinAuthorizer", () => {
 
       expect(open).not.toHaveBeenCalled();
 
-      expect(AxiosFactory.createAuthInstanceForFirm).not.toHaveBeenCalled();
+      expect(AxiosFactory.createTokenInstanceForFirm).not.toHaveBeenCalled();
       expect(AxiosFactory.createInstance).not.toHaveBeenCalled();
 
       expect(firmCredentials.storeNewTokenPair).not.toHaveBeenCalled();
