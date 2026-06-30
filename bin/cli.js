@@ -784,6 +784,11 @@ const runCustomWrite = async (options, del) => {
   }
   const verb = del ? "delete" : "set";
   const count = plan.properties.length;
+  if (options.dryRun) {
+    consola.info(`[dry-run] Would ${verb} ${count} custom propert${count === 1 ? "y" : "ies"} at the ${plan.level} level (${plan.targetDesc}) on firm ${plan.firmId}, company ${plan.companyId}. No request sent.`);
+    console.log(JSON.stringify({ dryRun: true, action: verb, level: plan.level, firmId: plan.firmId, companyId: plan.companyId, target: plan.targetDesc, properties: plan.properties }, null, 2));
+    return;
+  }
   consola.warn(`About to ${verb} ${count} custom propert${count === 1 ? "y" : "ies"} at the ${plan.level} level (${plan.targetDesc}) on firm ${plan.firmId}, company ${plan.companyId}.`);
   if (!options.yes) {
     cliUtils.promptConfirmation();
@@ -811,6 +816,7 @@ program
   .option("--handle <handle>", "Reconciliation handle (for --level reconciliation, instead of the URL target)")
   .option("--account <number>", "Account number (for --level account)")
   .option("--file <file>", "JSON file with an array of {namespace, key, value} for a batch set")
+  .option("--dry-run", "Show what would be written without sending the request (optional)", false)
   .option("-y, --yes", "Skip the confirmation prompt (optional)", false)
   .action((options) => runCustomWrite(options, false));
 
@@ -825,6 +831,7 @@ program
   .option("--handle <handle>", "Reconciliation handle (for --level reconciliation)")
   .option("--account <number>", "Account number (for --level account)")
   .option("--file <file>", "JSON file with an array of {namespace, key} for a batch delete")
+  .option("--dry-run", "Show what would be deleted (value:null) without sending the request (optional)", false)
   .option("-y, --yes", "Skip the confirmation prompt (optional)", false)
   .action((options) => runCustomWrite(options, true));
 
