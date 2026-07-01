@@ -6,7 +6,41 @@ jest.mock("consola");
 const SF = require("../../lib/api/sfApi");
 const Utils = require("../../lib/utils/liquidTestUtils");
 const { ReconciliationText } = require("../../lib/templates/reconciliationText");
-const { describeInputs, parseInputs, parseResultEchoes, parseAdjacentEchoes, storedMapFromCustom, literalValue } = require("../../lib/inputDescriber");
+const { describeInputs, parseInputs, parseResultEchoes, parseAdjacentEchoes, parseForiCollections, describeCollections, storedMapFromCustom, literalValue } = require("../../lib/inputDescriber");
+
+describe("parseForiCollections / describeCollections (line-item collections)", () => {
+  it("detects a fori collection assigned from a custom namespace + its item fields", () => {
+    const liquid = `
+      {% assign items = custom.items | sort:"date" %}
+      {% fori item in items %}
+        {% input item.date as:date %}
+        {% input item.amount as:currency %}
+        {% input item.description %}
+      {% endfori %}`;
+    const cols = parseForiCollections(liquid);
+    expect(cols).toHaveLength(1);
+    expect(cols[0]).toMatchObject({ namespace: "items", collection: "custom.items", loopVar: "item" });
+    expect(cols[0].fields.sort()).toEqual(["amount", "date", "description"]);
+  });
+
+  it("detects a fori iterating custom.<ns> directly", () => {
+    const cols = parseForiCollections(`{% fori x in custom.things %}{% input x.foo %}{% endfori %}`);
+    expect(cols).toEqual([{ namespace: "things", collection: "custom.things", loopVar: "x", fields: ["foo"] }]);
+  });
+
+  it("attaches the live items from the custom array", () => {
+    const cols = [{ namespace: "items", collection: "custom.items", loopVar: "item", fields: ["date", "amount"] }];
+    const customArray = [
+      { namespace: "items", key: "1", value: { date: "2024-12-31", amount: 1000 } },
+      { namespace: "items", key: "2", value: { amount: 500 } },
+      { namespace: "other", key: "x", value: 1 },
+    ];
+    const out = describeCollections(cols, customArray);
+    expect(out).toHaveLength(1);
+    expect(out[0]).toMatchObject({ collection: "custom.items", itemCount: 2 });
+    expect(out[0].items.map((i) => i.key)).toEqual(["1", "2"]);
+  });
+});
 
 describe("parseAdjacentEchoes (indirect result echoes)", () => {
   it("attributes a result echoing a variable to the nearest preceding input", () => {

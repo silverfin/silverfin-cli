@@ -27,6 +27,7 @@ const textPropertyUtils = require("../lib/utils/textPropertyUtils");
 const liquidTestUtils = require("../lib/utils/liquidTestUtils");
 const customWriter = require("../lib/customWriter");
 const defaultSetter = require("../lib/defaultSetter");
+const targetResolver = require("../lib/targetResolver");
 
 const firmIdDefault = cliUtils.loadDefaultFirmId();
 cliUtils.handleUncaughtErrors();
@@ -540,9 +541,10 @@ program
   .command("get-results")
   .description("Fetch the computed results and custom data of a reconciliation or account in a live company file, printed as JSON")
   .requiredOption("-u, --url <url>", "Specify the full Silverfin URL of the reconciliation/account in the company file (mandatory)")
+  .option("--handle <handle>", "Read a sibling reconciliation by handle in the same company/period (instead of the URL target)")
   .option("-o, --output <file>", "Write the JSON to a file instead of stdout (optional)")
   .action(async (options) => {
-    const data = await resultsReader.fetchResults(options.url);
+    const data = await resultsReader.fetchResults(options.url, { handle: options.handle });
     if (!data) {
       process.exitCode = 1;
       return;
@@ -557,15 +559,32 @@ program
     }
   });
 
+// RESOLVE-HANDLE — resolve a sibling reconciliation's instance id + URL from a handle
+program
+  .command("resolve-handle")
+  .description("Resolve a reconciliation handle to its instance id and URL in the same company/period as the given URL, so you can point commands at a sibling (upstream) template")
+  .requiredOption("-u, --url <url>", "A Silverfin URL identifying the target company/period (mandatory)")
+  .requiredOption("--handle <handle>", "The reconciliation handle to resolve (mandatory)")
+  .action(async (options) => {
+    const target = await targetResolver.resolveReconciliationTarget(options.url, options.handle);
+    if (target.error) {
+      consola.error(target.error);
+      process.exitCode = 1;
+      return;
+    }
+    console.log(JSON.stringify({ handle: target.handle, reconciliationId: target.reconciliationId, workflowId: target.workflowId, periodId: target.ledgerId, url: target.url }, null, 2));
+  });
+
 // CAPTURE — snapshot a live company file's data as JSON
 program
   .command("capture")
   .description("Capture a live company file's data as JSON. Default: the template at the URL and its dependencies (scoped). Use --full to capture company/period/reconciliation customs and results across all periods")
   .requiredOption("-u, --url <url>", "Specify the full Silverfin URL of the reconciliation/account in the company file (mandatory)")
   .option("--full", "Capture the whole company file (all periods, workflows, reconciliations) instead of just the template's scope (optional)", false)
+  .option("--handle <handle>", "Snapshot a sibling reconciliation by handle in the same company/period (its full custom incl. line-item collections + results)")
   .option("-o, --output <file>", "Write the JSON to a file instead of stdout (optional)")
   .action(async (options) => {
-    const data = await dataCapture.capture(options.url, { full: options.full });
+    const data = await dataCapture.capture(options.url, { full: options.full, handle: options.handle });
     if (!data) {
       process.exitCode = 1;
       return;
@@ -587,9 +606,10 @@ program
   .requiredOption("-u, --url <url>", "Specify the full Silverfin URL of the reconciliation in the company file (mandatory)")
   .option("--resolve", "Resolve `unavailable` defaults that reference data created elsewhere, via a targeted deep capture of the live company file (extra API calls). Requires silverfin-ls", false)
   .option("--compute", "With --resolve: additionally compute variable-defaults that reduce to a lookup into captured live data, using a bounded offline STL evaluator. Heavier (deep-captures the template scope); values are labelled `computed:… (offline; validate vs live)` and MUST be validated against a live render", false)
+  .option("--handle <handle>", "Describe a sibling reconciliation by handle in the same company/period (instead of the URL target)")
   .option("-o, --output <file>", "Write the JSON to a file instead of stdout (optional)")
   .action(async (options) => {
-    const data = await inputDescriber.describeInputs(options.url, { resolve: options.resolve, compute: options.compute });
+    const data = await inputDescriber.describeInputs(options.url, { resolve: options.resolve, compute: options.compute, handle: options.handle });
     if (!data) {
       process.exitCode = 1;
       return;
