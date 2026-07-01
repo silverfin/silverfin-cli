@@ -55,23 +55,68 @@ describe("stlLite.run — dynamic-key lookup into captured data", () => {
 });
 
 describe("stlLite.run — never fabricates (safety)", () => {
-  it("leaves a variable undefined when it uses an unsupported filter", () => {
-    const env = stl.run(`{% assign c = 100 | currency %}`, ctx);
+  it("leaves a variable undefined when it uses a genuinely unsupported filter", () => {
+    const env = stl.run(`{% assign c = 100 | some_unknown_filter %}`, ctx);
     expect(env.c).toBeUndefined();
   });
 
-  it("leaves a variable undefined when it uses infix arithmetic", () => {
-    const env = stl.run(`{% assign a = 2 %}{% assign m = a + 3 %}`, ctx);
-    expect(env.a).toBe(2);
+  it("leaves arithmetic undefined when an operand does not resolve", () => {
+    const env = stl.run(`{% assign m = unknown_var - 3 %}`, ctx);
     expect(env.m).toBeUndefined();
   });
 
-  it("does not desync on unsupported blocks (for/case are skipped)", () => {
+  it("does not desync on unsupported blocks / unresolved for-collections", () => {
     const env = stl.run(
       `{% for x in list %}{% assign ignored = 1 %}{% endfor %}{% assign after = "ok" %}`,
       ctx
     );
     expect(env.after).toBe("ok");
     expect(env.ignored).toBeUndefined();
+  });
+});
+
+describe("stlLite.run — arithmetic, filters, loops, account aggregation", () => {
+  it("computes safe arithmetic (incl. no-space subtraction and precedence)", () => {
+    const env = stl.run(`{% assign a = 10 %}{% assign b = 3 %}{% assign r = a-b %}{% assign r2 = a + b * 2 %}`, ctx);
+    expect(env.r).toBe(7);
+    expect(env.r2).toBe(16);
+  });
+
+  it("treats currency/percentage as numeric pass-throughs", () => {
+    const env = stl.run(`{% assign c = 5000.5 | currency %}{% assign p = 21 | percentage %}`, ctx);
+    expect(env.c).toBe(5000.5);
+    expect(env.p).toBe(21);
+  });
+
+  it("clamps with at_least / at_most", () => {
+    const env = stl.run(`{% assign lo = 3 | at_least:10 %}{% assign hi = 30 | at_most:10 %}`, ctx);
+    expect(env.lo).toBe(10);
+    expect(env.hi).toBe(10);
+  });
+
+  it("splits a string into an array and iterates it in a for-loop", () => {
+    const env = stl.run(`{% assign parts = "a|b|c" | split:"|" %}{% assign n = 0 %}{% for p in parts %}{% assign n = n + 1 %}{% endfor %}`, ctx);
+    expect(env.n).toBe(3);
+  });
+
+  it("filters period.accounts by range and aggregates .value / .count", () => {
+    const actx = {
+      period: {
+        accounts: [
+          { number: "700000", value: 100 },
+          { number: "705000", value: 50 },
+          { number: "710000", value: 999 },
+        ],
+      },
+    };
+    const env = stl.run(`{% assign s = period.accounts | range:'700_709' %}{% assign total = s.value %}{% assign cnt = s.count %}`, actx);
+    expect(env.total).toBe(150);
+    expect(env.cnt).toBe(2);
+  });
+
+  it("does not fabricate opening_value (not captured)", () => {
+    const actx = { period: { accounts: [{ number: "700000", value: 100 }] } };
+    const env = stl.run(`{% assign x = period.accounts | range:'7' %}{% assign ov = x.opening_value %}`, actx);
+    expect(env.ov).toBeUndefined();
   });
 });
