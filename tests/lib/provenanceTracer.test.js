@@ -55,3 +55,30 @@ describe("provenanceTracer.traceDefault", () => {
     expect(r.invertible).toBe(false);
   });
 });
+
+describe("provenanceTracer.traceDefault — safety (never a wrong write)", () => {
+  it("refuses a direct default with a value-changing filter (times)", () => {
+    const r = traceDefault({ input: "custom.x.y", default: "period.reconciliations.other.custom.ns.key | times: 2" }, "", ctx, deep, () => null);
+    expect(r.invertible).toBe(false);
+    expect(r.reason).toMatch(/value-changing filter/);
+  });
+
+  it("refuses a variable default whose assignment has a value-changing filter", () => {
+    const liquid = `{% assign foo = period.reconciliations.other.custom.ns.key | times: 2 %}`;
+    const r = traceDefault({ input: "custom.x.y", default: "foo" }, liquid, ctx, deep, () => null);
+    expect(r.invertible).toBe(false);
+    expect(r.reason).toMatch(/value-changing filter/);
+  });
+
+  it("still inverts through a harmless default: filter", () => {
+    const r = traceDefault({ input: "custom.x.y", default: "period.reconciliations.other.custom.ns.key | default:0" }, "", ctx, deep, () => null);
+    expect(r.invertible).toBe(true);
+    expect(r.target).toMatchObject({ namespace: "ns", key: "key" });
+  });
+
+  it("refuses a custom field-access ref (custom.ns.key.value), not a plain custom", () => {
+    const r = traceDefault({ input: "custom.x.y", default: "period.reconciliations.other.custom.ns.key.value" }, "", ctx, deep, () => null);
+    expect(r.invertible).toBe(false);
+    expect(r.reason).toMatch(/not a plain custom/);
+  });
+});
