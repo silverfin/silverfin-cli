@@ -26,6 +26,7 @@ const fsUtils = require("../lib/utils/fsUtils");
 const textPropertyUtils = require("../lib/utils/textPropertyUtils");
 const liquidTestUtils = require("../lib/utils/liquidTestUtils");
 const customWriter = require("../lib/customWriter");
+const defaultSetter = require("../lib/defaultSetter");
 
 const firmIdDefault = cliUtils.loadDefaultFirmId();
 cliUtils.handleUncaughtErrors();
@@ -835,6 +836,43 @@ program
   .option("--dry-run", "Show what would be deleted (value:null) without sending the request (optional)", false)
   .option("-y, --yes", "Skip the confirmation prompt (optional)", false)
   .action((options) => runCustomWrite(options, true));
+
+// SET-DEFAULT — change an input's DEFAULT by writing the upstream custom it derives from
+program
+  .command("set-default")
+  .description("Set a reconciliation input's DEFAULT to a value by writing the UPSTREAM custom it derives from — NOT an override on the field itself. Auto-proceeds when the default is auto-invertible (a direct cross-template custom, or a result that echoes a custom); otherwise it prints the provenance chain and writes nothing. Prints a change table (old → new + why + blast radius). Run from your templates repo. Requires silverfin-ls")
+  .requiredOption("-u, --url <url>", "Full Silverfin URL of the reconciliation in the company file (mandatory)")
+  .requiredOption("--input <path>", "The input whose default to set, e.g. custom.liquidation.taxable_year1 (mandatory)")
+  .requiredOption("--value <value>", "Desired default value (mandatory)")
+  .option("--dry-run", "Show the upstream change that would be made, without writing (optional)", false)
+  .option("-o, --output <file>", "Write the JSON result to a file (optional)")
+  .action(async (options) => {
+    const result = await defaultSetter.setDefault(options.url, options.input, options.value, { dryRun: options.dryRun });
+    if (!result) {
+      process.exitCode = 1;
+      return;
+    }
+    if (!result.invertible) {
+      consola.warn(`"${options.input}" default is NOT auto-invertible — nothing written.`);
+      consola.info(result.trace.reason);
+      console.log("\nProvenance chain:\n  " + result.trace.chain.join("\n    → "));
+      if (result.trace.upstreamResult) {
+        console.log(`\nTo change it, set ${result.trace.upstreamResult.handle}'s own inputs (period ${result.trace.upstreamResult.periodKey}) directly:`);
+        console.log(`  silverfin set-custom -u "<${result.trace.upstreamResult.handle} url>" --namespace <ns> --key <key> --value ${options.value}`);
+      }
+      return;
+    }
+    console.log(result.report.toTable());
+    if (result.wrote) {
+      if (result.applied) consola.success(`Applied. Upstream value now: ${JSON.stringify(result.verified)}. Re-run describe-inputs to confirm the default flowed.`);
+      else consola.error("The upstream write failed.");
+    } else {
+      consola.info("[dry-run] no request sent.");
+    }
+    if (options.output) {
+      require("fs").writeFileSync(options.output, JSON.stringify({ ...result, report: result.report.toJSON() }, null, 2));
+    }
+  });
 
 // Check Liquid Test dependencies for a reconciliation template
 program
