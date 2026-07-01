@@ -604,6 +604,21 @@ program
     }
   });
 
+// DOCTOR — verify the silverfin-ls integration
+program
+  .command("doctor")
+  .description("Check that silverfin-ls is installed and supports `data-scope` (required by manifest, describe-inputs --resolve/--compute, and set-default)")
+  .action(() => {
+    const result = dataScope.checkSilverfinLs();
+    if (result.ok) {
+      consola.success(`silverfin-ls is working via "${result.command}" — data-scope OK (probe resolved ${result.sample.crossTemplate} cross-template refs).`);
+    } else {
+      consola.error(`silverfin-ls is NOT working${result.command ? ` (via "${result.command}")` : ""}: ${result.error}`);
+      console.log("\n" + dataScope.installHelp());
+      process.exitCode = 1;
+    }
+  });
+
 // MANIFEST — static data scope of a template (drives deep-capture + default resolution)
 program
   .command("manifest")
