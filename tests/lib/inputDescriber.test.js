@@ -6,7 +6,43 @@ jest.mock("consola");
 const SF = require("../../lib/api/sfApi");
 const Utils = require("../../lib/utils/liquidTestUtils");
 const { ReconciliationText } = require("../../lib/templates/reconciliationText");
-const { describeInputs, parseInputs, parseResultEchoes, storedMapFromCustom, literalValue } = require("../../lib/inputDescriber");
+const { describeInputs, parseInputs, parseResultEchoes, parseAdjacentEchoes, storedMapFromCustom, literalValue } = require("../../lib/inputDescriber");
+
+describe("parseAdjacentEchoes (indirect result echoes)", () => {
+  it("attributes a result echoing a variable to the nearest preceding input", () => {
+    const liquid = `
+      {% input custom.liquidation.taxable_year1 as:currency default:some_var %}
+      {% assign v = custom.liquidation.taxable_year1 | default:some_var | currency %}
+      {% result 'taxable_year1_begin' v %}`;
+    const map = parseAdjacentEchoes(liquid);
+    expect(map.get("custom.liquidation.taxable_year1")).toBe("taxable_year1_begin");
+  });
+
+  it("keeps the 2026 split: from_2026 input -> from_2026 tag only", () => {
+    const liquid = `
+      {% input custom.liquidation_from_2026.taxable_year1 as:currency default:v %}
+      {% result 'taxable_year1_begin_from_2026' vv %}`;
+    const map = parseAdjacentEchoes(liquid);
+    expect(map.get("custom.liquidation_from_2026.taxable_year1")).toBe("taxable_year1_begin_from_2026");
+  });
+
+  it("does NOT cross the 2026 split (before input, from_2026 tag)", () => {
+    const liquid = `
+      {% input custom.liquidation.taxable_year1 as:currency default:v %}
+      {% result 'taxable_year1_begin_from_2026' vv %}`;
+    expect(parseAdjacentEchoes(liquid).has("custom.liquidation.taxable_year1")).toBe(false);
+  });
+
+  it("ignores DIRECT echoes (those are parseResultEchoes' job)", () => {
+    const liquid = `{% input custom.a.b %}{% result 'b' custom.a.b %}`;
+    expect(parseAdjacentEchoes(liquid).has("custom.a.b")).toBe(false);
+  });
+
+  it("requires the tag to relate to the input key", () => {
+    const liquid = `{% input custom.a.foo %}{% result 'totally_unrelated' some_var %}`;
+    expect(parseAdjacentEchoes(liquid).has("custom.a.foo")).toBe(false);
+  });
+});
 
 describe("inputDescriber pure helpers", () => {
   describe("parseInputs", () => {
