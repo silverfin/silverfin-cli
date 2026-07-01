@@ -28,6 +28,7 @@ const liquidTestUtils = require("../lib/utils/liquidTestUtils");
 const customWriter = require("../lib/customWriter");
 const defaultSetter = require("../lib/defaultSetter");
 const targetResolver = require("../lib/targetResolver");
+const renderRunner = require("../lib/renderRunner");
 
 const firmIdDefault = cliUtils.loadDefaultFirmId();
 cliUtils.handleUncaughtErrors();
@@ -554,6 +555,29 @@ program
       const fs = require("fs");
       fs.writeFileSync(options.output, json);
       consola.success(`Wrote results to ${options.output}`);
+    } else {
+      console.log(json);
+    }
+  });
+
+// RENDER — deterministic, fixture-driven render of a template's logic (vs live get-results)
+program
+  .command("render")
+  .description("Render a reconciliation template against its LOCAL liquid-test fixture (deterministic, fixture-driven) and return the outcome as JSON — the right tool for verifying template LOGIC/output. Use this (or run-test) instead of set-custom+get-results when a live company doesn't have the template's data set up (get-results would just be empty). Run from your templates repo")
+  .requiredOption("-h, --handle <handle>", "Reconciliation handle to render (mandatory)")
+  .option("-f, --firm <firm-id>", "Firm id (defaults to your configured firm)", firmIdDefault)
+  .option("-t, --test <test-name>", "Render a specific test in the template's YAML (default: all tests)", "")
+  .option("-o, --output <file>", "Write the JSON to a file instead of stdout (optional)")
+  .action(async (options) => {
+    const data = await renderRunner.renderTemplate(options.firm, options.handle, options.test);
+    if (!data) {
+      process.exitCode = 1;
+      return;
+    }
+    const json = JSON.stringify(data, null, 2);
+    if (options.output) {
+      require("fs").writeFileSync(options.output, json);
+      consola.success(`Wrote render outcome to ${options.output}`);
     } else {
       console.log(json);
     }

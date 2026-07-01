@@ -5,7 +5,22 @@ jest.mock("consola");
 const SF = require("../../lib/api/sfApi");
 const Utils = require("../../lib/utils/liquidTestUtils");
 const { consola } = require("consola");
-const { fetchResults } = require("../../lib/resultsReader");
+const { fetchResults, resultSummary } = require("../../lib/resultsReader");
+
+describe("resultsReader.resultSummary", () => {
+  it("counts results and adds no note when non-empty", () => {
+    const s = resultSummary({ a: 1, b: 2 });
+    expect(s.resultCount).toBe(2);
+    expect(s.note).toBeUndefined();
+  });
+
+  it("explains an empty results table (not a caching issue)", () => {
+    const s = resultSummary({});
+    expect(s.resultCount).toBe(0);
+    expect(s.note).toMatch(/NOT a caching issue/);
+    expect(resultSummary(null).resultCount).toBe(0);
+  });
+});
 
 describe("resultsReader.fetchResults", () => {
   beforeEach(() => {
@@ -33,6 +48,7 @@ describe("resultsReader.fetchResults", () => {
       periodId: "200",
       reconciliationId: "300",
       results: { vol_1022_man: "5000.0" },
+      resultCount: 1,
       custom: [{ namespace: "ns", key: "k", value: "v" }],
     });
   });
