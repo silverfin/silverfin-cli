@@ -585,9 +585,10 @@ program
   .description("List a reconciliation's custom inputs with their declared defaults, stored values, and live effective values (certain sources only), plus the template's results. Use --resolve to additionally fill inputs whose default is a direct reference to data created elsewhere (cross-template results/customs, period/company customs, prior periods) by reading it from a targeted deep capture. Run from your templates repo")
   .requiredOption("-u, --url <url>", "Specify the full Silverfin URL of the reconciliation in the company file (mandatory)")
   .option("--resolve", "Resolve `unavailable` defaults that reference data created elsewhere, via a targeted deep capture of the live company file (extra API calls). Requires silverfin-ls", false)
+  .option("--compute", "With --resolve: additionally compute variable-defaults that reduce to a lookup into captured live data, using a bounded offline STL evaluator. Heavier (deep-captures the template scope); values are labelled `computed:… (offline; validate vs live)` and MUST be validated against a live render", false)
   .option("-o, --output <file>", "Write the JSON to a file instead of stdout (optional)")
   .action(async (options) => {
-    const data = await inputDescriber.describeInputs(options.url, { resolve: options.resolve });
+    const data = await inputDescriber.describeInputs(options.url, { resolve: options.resolve, compute: options.compute });
     if (!data) {
       process.exitCode = 1;
       return;
