@@ -2,8 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [1.56.3] (02/07/2026)
 Added `update-text-properties` command. It uploads custom text properties from a Liquid Test YAML file to a company file at company, period, reconciliation and account levels for the entries referenced in the test scenario. Usage: `silverfin update-text-properties -u <url> -t <test-name>`. Supports `--handle` for faster YAML file lookup, `--dry-run` to preview the payload, and `--yes` to skip the confirmation prompt.
+
+## [1.56.2] (25/06/2026)
+Send the staging HTTP Basic Auth header on firm OAuth token requests only when the staging gateway actually requires it (detected via a one-time `WWW-Authenticate: Basic` probe). Fixes `silverfin authorize` and token refresh failing with "unknown client" on stagings that have HTTP basic auth disabled.
 
 ## [1.56.1] (08/06/2026)
 Increase the waiting time for the test runs to avoid timeout errors.
