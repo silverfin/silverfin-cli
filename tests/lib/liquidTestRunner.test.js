@@ -465,6 +465,28 @@ describe("runTestsStatusOnly", () => {
     expect(consola.log).toHaveBeenCalledWith(expect.stringContaining("Liquid syntax error on line 3"));
   });
 
+  it("should collapse newlines in the error message onto a single indented line", async () => {
+    const handle = "reconciliation_text_1";
+    setupFsUtilsMocks(handle);
+
+    const testDir = path.join(tempDir, "reconciliation_texts", handle, "tests");
+    fs.mkdirSync(testDir, { recursive: true });
+    fs.writeFileSync(path.join(testDir, `${handle}_liquid_test.yml`), SIMPLE_YAML);
+
+    ReconciliationText.read.mockReturnValue({ handle, text: "x", text_parts: [] });
+
+    SF.createTestRun = jest.fn().mockResolvedValue({ data: 13 });
+    SF.readTestRun = jest.fn().mockResolvedValue({
+      data: { status: "test_error", tests: {}, error_message: "line 1\nline 2\r\nline 3" },
+    });
+
+    const promise = runTestsStatusOnly(1001, "reconciliationText", [handle]);
+    await jest.runAllTimersAsync();
+    await promise;
+
+    expect(consola.log).toHaveBeenCalledWith("  line 1 line 2 line 3");
+  });
+
   it("should handle multiple handles and return FAILED if any fail", async () => {
     const handlePass = "reconciliation_text_1";
     const handleFail = "reconciliation_text_2";
