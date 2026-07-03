@@ -714,6 +714,7 @@ program
     const { firmId, companyId } = urlData;
     if (!firmId || !companyId) {
       consola.error("Could not determine the firm and company from the URL. Double-check the Silverfin URL and try again.");
+      process.exitCode = 1;
       return;
     }
 
@@ -740,7 +741,11 @@ program
       }
       const period = periodsArray.find((p) => p.fiscal_year?.end_date === periodKey);
       if (!period) {
-        consola.warn(`Period "${periodKey}" not found in company — skipping`);
+        // Skipping still seeds the rest of the scenario, but the partial seed must
+        // be detectable: flag it as a failure, consistent with the
+        // reconciliation/account not-found paths.
+        consola.error(`Period "${periodKey}" not found in company — skipping (marked as failure)`);
+        process.exitCode = 1;
         continue;
       }
       const targetPeriodId = period.id;
