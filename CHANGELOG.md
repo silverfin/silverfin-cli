@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.56.4] (03/07/2026)
+Cap the liquid-test polling interval at 5 seconds. The delay between result polls grew 5% per poll without a limit, so long test runs (~10 minutes) were only checked every 30-60 seconds and a finished run could sit unnoticed for up to a minute.
+
 ## [1.56.3] (03/07/2026)
 Improve `run-test --status` output for CI: surface the underlying error message when a run ends in `test_error`/`internal_error` (previously reported as a bare `FAILED` with no reason), and suppress the progress spinner when stdout is not a TTY (it flooded CI logs with hundreds of "Running tests.." frames).
 

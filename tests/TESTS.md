@@ -857,6 +857,7 @@ Source: `lib/liquidTestRunner.js`
 | `runTests` | should return undefined when config is missing | Verifies that `undefined` is returned and an error is logged when the template's `config.json` does not exist. |
 | `runTests` | should return undefined when YAML test file does not exist | Verifies that `undefined` is returned and an error is logged when the YAML test file path in the config does not exist on disk. |
 | `runTests` | should run tests and return testRun result when YAML exists and API responds | Verifies that `createTestRun` and `readTestRun` are called and the completed test-run object is returned. |
+| `runTests` | should cap the polling interval at 5 seconds on long test runs | Verifies that the poll delay growth is capped at 5s, so a long-running test is still detected promptly once it finishes. |
 | `runTests` | should log info and return false when YAML file is empty (single line) | Verifies that `undefined` is returned and an info message about no stored tests is logged when the YAML file contains only a comment. |
 | `runTests` | should run tests for accountTemplate type | Verifies that `runTests` works end-to-end for the `accountTemplate` type and returns a completed test-run object. |
 | `runTestsWithOutput` | should exit with error for invalid templateType | Verifies that an invalid `templateType` causes an error to be logged and `process.exit(1)` to be called. |
