@@ -3,6 +3,10 @@
 const toolkit = require("../index");
 const liquidTestGenerator = require("../lib/liquidTestGenerator");
 const liquidTestRunner = require("../lib/liquidTestRunner");
+const resultsReader = require("../lib/resultsReader");
+const dataCapture = require("../lib/dataCapture");
+const inputDescriber = require("../lib/inputDescriber");
+const dataScope = require("../lib/dataScope");
 const { ExportFileInstanceGenerator } = require("../lib/exportFileInstanceGenerator");
 const stats = require("../lib/cli/stats");
 const { Command, Option } = require("commander");
@@ -21,6 +25,10 @@ const { AutoCompletions } = require("../lib/cli/autoCompletions");
 const fsUtils = require("../lib/utils/fsUtils");
 const textPropertyUtils = require("../lib/utils/textPropertyUtils");
 const liquidTestUtils = require("../lib/utils/liquidTestUtils");
+const customWriter = require("../lib/customWriter");
+const defaultSetter = require("../lib/defaultSetter");
+const targetResolver = require("../lib/targetResolver");
+const renderRunner = require("../lib/renderRunner");
 
 const firmIdDefault = cliUtils.loadDefaultFirmId();
 cliUtils.handleUncaughtErrors();
@@ -529,6 +537,166 @@ program
     liquidTestGenerator.testGenerator(options.url, testName, reconciledStatus);
   });
 
+// GET RESULTS — read back a live company file's computed results + customs as JSON
+program
+  .command("get-results")
+  .description("Fetch the computed results and custom data of a reconciliation or account in a live company file, printed as JSON")
+  .requiredOption("-u, --url <url>", "Specify the full Silverfin URL of the reconciliation/account in the company file (mandatory)")
+  .option("--handle <handle>", "Read a sibling reconciliation by handle in the same company/period (instead of the URL target)")
+  .option("-o, --output <file>", "Write the JSON to a file instead of stdout (optional)")
+  .action(async (options) => {
+    const data = await resultsReader.fetchResults(options.url, { handle: options.handle });
+    if (!data) {
+      process.exitCode = 1;
+      return;
+    }
+    const json = JSON.stringify(data, null, 2);
+    if (options.output) {
+      const fs = require("fs");
+      fs.writeFileSync(options.output, json);
+      consola.success(`Wrote results to ${options.output}`);
+    } else {
+      console.log(json);
+    }
+  });
+
+// RENDER — deterministic, fixture-driven render of a template's logic (vs live get-results)
+program
+  .command("render")
+  .description("Render a reconciliation template against its LOCAL liquid-test fixture (deterministic, fixture-driven) and return the outcome as JSON — the right tool for verifying template LOGIC/output. Use this (or run-test) instead of set-custom+get-results when a live company doesn't have the template's data set up (get-results would just be empty). Run from your templates repo")
+  .requiredOption("-h, --handle <handle>", "Reconciliation handle to render (mandatory)")
+  .option("-f, --firm <firm-id>", "Firm id (defaults to your configured firm)", firmIdDefault)
+  .option("-t, --test <test-name>", "Render a specific test in the template's YAML (default: all tests)", "")
+  .option("-o, --output <file>", "Write the JSON to a file instead of stdout (optional)")
+  .action(async (options) => {
+    const data = await renderRunner.renderTemplate(options.firm, options.handle, options.test);
+    if (!data) {
+      process.exitCode = 1;
+      return;
+    }
+    const json = JSON.stringify(data, null, 2);
+    if (options.output) {
+      require("fs").writeFileSync(options.output, json);
+      consola.success(`Wrote render outcome to ${options.output}`);
+    } else {
+      console.log(json);
+    }
+  });
+
+// RESOLVE-HANDLE — resolve a sibling reconciliation's instance id + URL from a handle
+program
+  .command("resolve-handle")
+  .description("Resolve a reconciliation handle to its instance id and URL in the same company/period as the given URL, so you can point commands at a sibling (upstream) template")
+  .requiredOption("-u, --url <url>", "A Silverfin URL identifying the target company/period (mandatory)")
+  .requiredOption("--handle <handle>", "The reconciliation handle to resolve (mandatory)")
+  .action(async (options) => {
+    const target = await targetResolver.resolveReconciliationTarget(options.url, options.handle);
+    if (target.error) {
+      consola.error(target.error);
+      process.exitCode = 1;
+      return;
+    }
+    console.log(JSON.stringify({ handle: target.handle, reconciliationId: target.reconciliationId, workflowId: target.workflowId, periodId: target.ledgerId, url: target.url }, null, 2));
+  });
+
+// CAPTURE — snapshot a live company file's data as JSON
+program
+  .command("capture")
+  .description("Capture a live company file's data as JSON. Default: the template at the URL and its dependencies (scoped). Use --full to capture company/period/reconciliation customs and results across all periods")
+  .requiredOption("-u, --url <url>", "Specify the full Silverfin URL of the reconciliation/account in the company file (mandatory)")
+  .option("--full", "Capture the whole company file (all periods, workflows, reconciliations) instead of just the template's scope (optional)", false)
+  .option("--handle <handle>", "Snapshot a sibling reconciliation by handle in the same company/period (its full custom incl. line-item collections + results)")
+  .option("-o, --output <file>", "Write the JSON to a file instead of stdout (optional)")
+  .action(async (options) => {
+    const data = await dataCapture.capture(options.url, { full: options.full, handle: options.handle });
+    if (!data) {
+      process.exitCode = 1;
+      return;
+    }
+    const json = JSON.stringify(data, null, 2);
+    if (options.output) {
+      const fs = require("fs");
+      fs.writeFileSync(options.output, json);
+      consola.success(`Wrote capture to ${options.output}`);
+    } else {
+      console.log(json);
+    }
+  });
+
+// DESCRIBE INPUTS — list a reconciliation's custom inputs with declared defaults + live effective values
+program
+  .command("describe-inputs")
+  .description("List a reconciliation's custom inputs with their declared defaults, stored values, and live effective values (certain sources only), plus the template's results. Use --resolve to additionally fill inputs whose default is a direct reference to data created elsewhere (cross-template results/customs, period/company customs, prior periods) by reading it from a targeted deep capture. Run from your templates repo")
+  .requiredOption("-u, --url <url>", "Specify the full Silverfin URL of the reconciliation in the company file (mandatory)")
+  .option("--resolve", "Resolve `unavailable` defaults that reference data created elsewhere, via a targeted deep capture of the live company file (extra API calls). Requires silverfin-ls", false)
+  .option("--compute", "With --resolve: additionally compute variable-defaults that reduce to a lookup into captured live data, using a bounded offline STL evaluator. Heavier (deep-captures the template scope); values are labelled `computed:… (offline; validate vs live)` and MUST be validated against a live render", false)
+  .option("--handle <handle>", "Describe a sibling reconciliation by handle in the same company/period (instead of the URL target)")
+  .option("-o, --output <file>", "Write the JSON to a file instead of stdout (optional)")
+  .action(async (options) => {
+    const data = await inputDescriber.describeInputs(options.url, { resolve: options.resolve, compute: options.compute, handle: options.handle });
+    if (!data) {
+      process.exitCode = 1;
+      return;
+    }
+    const json = JSON.stringify(data, null, 2);
+    if (options.output) {
+      const fs = require("fs");
+      fs.writeFileSync(options.output, json);
+      consola.success(`Wrote inputs to ${options.output}`);
+    } else {
+      console.log(json);
+    }
+  });
+
+// DOCTOR — verify the silverfin-ls integration
+program
+  .command("doctor")
+  .description("Check that silverfin-ls is installed and supports `data-scope` (required by manifest, describe-inputs --resolve/--compute, and set-default)")
+  .action(() => {
+    const result = dataScope.checkSilverfinLs();
+    if (result.ok) {
+      consola.success(`silverfin-ls is working via "${result.command}" — data-scope OK (probe resolved ${result.sample.crossTemplate} cross-template refs).`);
+    } else {
+      consola.error(`silverfin-ls is NOT working${result.command ? ` (via "${result.command}")` : ""}: ${result.error}`);
+      console.log("\n" + dataScope.installHelp());
+      process.exitCode = 1;
+    }
+  });
+
+// MANIFEST — static data scope of a template (drives deep-capture + default resolution)
+program
+  .command("manifest")
+  .description("Print a template's static data scope: own customs, cross-template results/customs, period drop + prior-period depth, company drop, accounts, result echoes, involved files. Delegates the analysis to silverfin-ls (set SILVERFIN_LS_CMD to override the binary). Run from your templates repo")
+  .option("-h, --handle <handle>", "Reconciliation handle (local, no API call)")
+  .option("-u, --url <url>", "Silverfin URL (resolves the handle via the API instead of --handle)")
+  .option("-o, --output <file>", "Write the JSON to a file instead of stdout (optional)")
+  .action(async (options) => {
+    let handle = options.handle;
+    if (!handle && options.url) {
+      const parameters = liquidTestUtils.extractURL(options.url);
+      const details = await SF.readReconciliationTextDetails("firm", parameters.firmId, parameters.companyId, parameters.ledgerId, parameters.reconciliationId);
+      handle = details?.data?.handle;
+    }
+    if (!handle) {
+      consola.error("Provide --handle <handle> or --url <url>.");
+      process.exitCode = 1;
+      return;
+    }
+    const data = dataScope.getDataScope(handle);
+    if (!data) {
+      process.exitCode = 1;
+      return;
+    }
+    const json = JSON.stringify(data, null, 2);
+    if (options.output) {
+      const fs = require("fs");
+      fs.writeFileSync(options.output, json);
+      consola.success(`Wrote manifest to ${options.output}`);
+    } else {
+      console.log(json);
+    }
+  });
+
 // Update Text Properties from Liquid Test data
 program
   .command("update-text-properties")
@@ -670,6 +838,103 @@ program
     }
     if (hadFailures) {
       process.exitCode = 1;
+    }
+  });
+
+// Shared orchestration for set-custom / delete-custom
+const runCustomWrite = async (options, del) => {
+  const plan = await customWriter.prepareWrite(options.url, options, { del });
+  if (!plan) {
+    process.exitCode = 1;
+    return;
+  }
+  const verb = del ? "delete" : "set";
+  const count = plan.properties.length;
+  if (options.dryRun) {
+    consola.info(`[dry-run] Would ${verb} ${count} custom propert${count === 1 ? "y" : "ies"} at the ${plan.level} level (${plan.targetDesc}) on firm ${plan.firmId}, company ${plan.companyId}. No request sent.`);
+    console.log(JSON.stringify({ dryRun: true, action: verb, level: plan.level, firmId: plan.firmId, companyId: plan.companyId, target: plan.targetDesc, properties: plan.properties }, null, 2));
+    return;
+  }
+  consola.warn(`About to ${verb} ${count} custom propert${count === 1 ? "y" : "ies"} at the ${plan.level} level (${plan.targetDesc}) on firm ${plan.firmId}, company ${plan.companyId}.`);
+  if (!options.yes) {
+    cliUtils.promptConfirmation();
+  }
+  const response = await plan.apply();
+  const responses = Array.isArray(response) ? response : [response];
+  const failed = responses.filter((r) => !r || r.status < 200 || r.status >= 300);
+  if (failed.length > 0) {
+    consola.error(`${verb}: ${failed.length}/${responses.length} request(s) failed`);
+    process.exitCode = 1;
+  } else {
+    consola.success(`${del ? "Deleted" : "Set"} ${count} custom propert${count === 1 ? "y" : "ies"} at the ${plan.level} level`);
+  }
+};
+
+// SET a custom value on a live company file
+program
+  .command("set-custom")
+  .description("Set a custom value on a live company file (company/period/reconciliation/account level)")
+  .requiredOption("-u, --url <url>", "Full Silverfin URL of the reconciliation/account in the company file (mandatory)")
+  .option("--level <level>", "company | period | reconciliation | account (default: inferred from the URL)")
+  .option("--namespace <namespace>", "Custom namespace")
+  .option("--key <key>", "Custom key")
+  .option("--value <value>", "Custom value (JSON-parsed when possible, otherwise treated as a string)")
+  .option("--handle <handle>", "Reconciliation handle (for --level reconciliation, instead of the URL target)")
+  .option("--account <number>", "Account number (for --level account)")
+  .option("--file <file>", "JSON file with an array of {namespace, key, value} for a batch set")
+  .option("--dry-run", "Show what would be written without sending the request (optional)", false)
+  .option("-y, --yes", "Skip the confirmation prompt (optional)", false)
+  .action((options) => runCustomWrite(options, false));
+
+// DELETE (soft-delete via null) a custom value on a live company file
+program
+  .command("delete-custom")
+  .description("Delete (soft-delete via null) a custom value on a live company file")
+  .requiredOption("-u, --url <url>", "Full Silverfin URL of the reconciliation/account in the company file (mandatory)")
+  .option("--level <level>", "company | period | reconciliation | account (default: inferred from the URL)")
+  .option("--namespace <namespace>", "Custom namespace")
+  .option("--key <key>", "Custom key")
+  .option("--handle <handle>", "Reconciliation handle (for --level reconciliation)")
+  .option("--account <number>", "Account number (for --level account)")
+  .option("--file <file>", "JSON file with an array of {namespace, key} for a batch delete")
+  .option("--dry-run", "Show what would be deleted (value:null) without sending the request (optional)", false)
+  .option("-y, --yes", "Skip the confirmation prompt (optional)", false)
+  .action((options) => runCustomWrite(options, true));
+
+// SET-DEFAULT — change an input's DEFAULT by writing the upstream custom it derives from
+program
+  .command("set-default")
+  .description("Set a reconciliation input's DEFAULT to a value by writing the UPSTREAM custom it derives from — NOT an override on the field itself. Auto-proceeds when the default is auto-invertible (a direct cross-template custom, or a result that echoes a custom); otherwise it prints the provenance chain and writes nothing. Prints a change table (old → new + why + blast radius). Run from your templates repo. Requires silverfin-ls")
+  .requiredOption("-u, --url <url>", "Full Silverfin URL of the reconciliation in the company file (mandatory)")
+  .requiredOption("--input <path>", "The input whose default to set, e.g. custom.liquidation.taxable_year1 (mandatory)")
+  .requiredOption("--value <value>", "Desired default value (mandatory)")
+  .option("--dry-run", "Show the upstream change that would be made, without writing (optional)", false)
+  .option("-o, --output <file>", "Write the JSON result to a file (optional)")
+  .action(async (options) => {
+    const result = await defaultSetter.setDefault(options.url, options.input, options.value, { dryRun: options.dryRun });
+    if (!result) {
+      process.exitCode = 1;
+      return;
+    }
+    if (!result.invertible) {
+      consola.warn(`"${options.input}" default is NOT auto-invertible — nothing written.`);
+      consola.info(result.trace.reason);
+      console.log("\nProvenance chain:\n  " + result.trace.chain.join("\n    → "));
+      if (result.trace.upstreamResult) {
+        console.log(`\nTo change it, set ${result.trace.upstreamResult.handle}'s own inputs (period ${result.trace.upstreamResult.periodKey}) directly:`);
+        console.log(`  silverfin set-custom -u "<${result.trace.upstreamResult.handle} url>" --namespace <ns> --key <key> --value ${options.value}`);
+      }
+      return;
+    }
+    console.log(result.report.toTable());
+    if (result.wrote) {
+      if (result.applied) consola.success(`Applied. Upstream value now: ${JSON.stringify(result.verified)}. Re-run describe-inputs to confirm the default flowed.`);
+      else consola.error("The upstream write failed.");
+    } else {
+      consola.info("[dry-run] no request sent.");
+    }
+    if (options.output) {
+      require("fs").writeFileSync(options.output, JSON.stringify({ ...result, report: result.report.toJSON() }, null, 2));
     }
   });
 
