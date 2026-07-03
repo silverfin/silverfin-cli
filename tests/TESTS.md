@@ -867,6 +867,7 @@ Source: `lib/liquidTestRunner.js`
 | `runTestsStatusOnly` | should return PASSED when all handles pass | Verifies that `"PASSED"` is returned and logged when all supplied handles have passing test runs. |
 | `runTestsStatusOnly` | should return FAILED when a handle fails | Verifies that `"FAILED"` is returned and logged when a test run reports failures. |
 | `runTestsStatusOnly` | should return FAILED when test result is null (runTests returned nothing) | Verifies that `"FAILED"` is returned when `runTests` returns nothing (e.g. missing config). |
+| `runTestsStatusOnly` | should surface the error message when a run errors out instead of completing | Verifies that a `test_error` run returns `"FAILED"` and logs the underlying `error_message` as an indented detail line. |
 | `runTestsStatusOnly` | should handle multiple handles and return FAILED if any fail | Verifies that `"FAILED"` is returned when at least one handle in a multi-handle run fails. |
 
 ---
