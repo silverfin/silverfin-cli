@@ -19,6 +19,8 @@ const { runCommandChecks } = require("../lib/cli/utils");
 const { CwdValidator } = require("../lib/cli/cwdValidator");
 const { AutoCompletions } = require("../lib/cli/autoCompletions");
 const fsUtils = require("../lib/utils/fsUtils");
+const textPropertyUtils = require("../lib/utils/textPropertyUtils");
+const liquidTestUtils = require("../lib/utils/liquidTestUtils");
 
 const firmIdDefault = cliUtils.loadDefaultFirmId();
 cliUtils.handleUncaughtErrors();
@@ -525,6 +527,160 @@ program
     const reconciledStatus = options.unreconciled ? false : true;
     const testName = options.test ? options.test : "test_name";
     liquidTestGenerator.testGenerator(options.url, testName, reconciledStatus);
+  });
+
+// Update Text Properties from Liquid Test data
+program
+  .command("update-text-properties")
+  .description(
+    "Upload custom text properties from a Liquid Test YAML file to a company file. Pushes custom data at the company, period, reconciliation and account levels for every entry referenced in the test scenario (not only the reconciliation in the URL). The URL identifies the target firm/company."
+  )
+  .requiredOption("-u, --url <url>", "Specify the full Silverfin URL of the reconciliation in the company file (mandatory)")
+  .requiredOption("-t, --test <test-name>", "Specify the name of the test to use as data source (mandatory)")
+  .option("-h, --handle <handle>", "Specify the reconciliation handle to narrow down the YAML file search (optional)")
+  .option("--file <file-name>", "Specify the exact YAML file name (inside the template's tests/ folder) to read the test from, instead of the test file referenced by the template's config.json (optional)")
+  .option("--dry-run", "Only transform and display the properties without uploading (optional)", false)
+  .option("-y, --yes", "Skip the confirmation prompt before uploading (optional)", false)
+  .action(async (options) => {
+    // Parse URL to extract IDs
+    const urlData = liquidTestUtils.extractURL(options.url);
+    const { firmId, companyId } = urlData;
+    if (!firmId || !companyId) {
+      consola.error("Could not determine the firm and company from the URL. Double-check the Silverfin URL and try again.");
+      process.exitCode = 1;
+      return;
+    }
+
+    // Find the test data in the YAML files
+    const testData = textPropertyUtils.findTestData(options.test, options.handle, options.file);
+    consola.info(`Found test "${options.test}" in ${testData.handle}/tests/${testData.file}`);
+
+    // Collect all updates to perform
+    const updates = [];
+
+    // Company-level custom
+    if (testData.company?.custom) {
+      const properties = textPropertyUtils.transformCustomToProperties(testData.company.custom);
+      updates.push({ level: "company", properties, apply: () => SF.updateCompanyCustom(firmId, companyId, properties) });
+    }
+
+    // Fetch all periods once (paginated) if needed for resolving period dates
+    let periodsArray = null;
+
+    for (const [periodKey, periodEntry] of Object.entries(testData.periods)) {
+      // Resolve period date to period ID
+      if (!periodsArray) {
+        periodsArray = await SF.getAllPeriods(firmId, companyId);
+      }
+      const { period, error: periodError } = textPropertyUtils.findPeriodByKey(periodsArray, periodKey);
+      if (!period) {
+        // Skipping still seeds the rest of the scenario, but the partial seed must
+        // be detectable: flag it as a failure, consistent with the
+        // reconciliation/account not-found paths.
+        consola.error(`${periodError} — skipping (marked as failure)`);
+        process.exitCode = 1;
+        continue;
+      }
+      const targetPeriodId = period.id;
+
+      // Period-level custom
+      if (periodEntry.custom) {
+        const properties = textPropertyUtils.transformCustomToProperties(periodEntry.custom);
+        updates.push({ level: `period [${periodKey}]`, properties, apply: () => SF.updatePeriodCustom(firmId, companyId, targetPeriodId, properties) });
+      }
+
+      // Reconciliation-level custom
+      for (const [reconHandle, customData] of Object.entries(periodEntry.reconciliations)) {
+        const properties = textPropertyUtils.transformCustomToProperties(customData);
+        updates.push({
+          level: `reconciliation [${reconHandle}] in ${periodKey}`,
+          properties,
+          apply: async () => {
+            const recon = await SF.findReconciliationInWorkflows(firmId, reconHandle, companyId, targetPeriodId);
+            if (!recon) {
+              consola.error(`Reconciliation "${reconHandle}" not found in any workflow for period ${periodKey}`);
+              return null;
+            }
+            return SF.updateReconciliationCustom(firmId, companyId, targetPeriodId, recon.id, properties);
+          },
+        });
+      }
+
+      // Account-level custom
+      for (const [accountNumber, customData] of Object.entries(periodEntry.accounts)) {
+        const properties = textPropertyUtils.transformCustomToProperties(customData);
+        updates.push({
+          level: `account [${accountNumber}] in ${periodKey}`,
+          properties,
+          apply: async () => {
+            const account = await SF.findAccountByNumber(firmId, companyId, targetPeriodId, accountNumber);
+            const accountId = account?.account?.id;
+            if (!accountId) {
+              consola.error(`Account "${accountNumber}" could not be resolved for period ${periodKey}`);
+              return null;
+            }
+            return SF.updateAccountCustom(firmId, companyId, targetPeriodId, accountId, properties);
+          },
+        });
+      }
+    }
+
+    if (updates.length === 0) {
+      consola.warn("No custom properties found in this test");
+      return;
+    }
+
+    consola.info(`Found ${updates.length} custom update(s) to apply`);
+
+    if (options.dryRun) {
+      for (const update of updates) {
+        consola.info(`[dry-run] ${update.level}: ${update.properties.length} properties`);
+        consola.log(JSON.stringify(update.properties, null, 2));
+      }
+      return;
+    }
+
+    // Summarise what will be written and where, then confirm (unless --yes)
+    const firmName = firmCredentials.getFirmName(firmId);
+    consola.warn(`About to write custom data to company ${companyId} on firm ${firmName ? `${firmName} (${firmId})` : firmId}:`);
+    for (const update of updates) {
+      consola.warn(`  • ${update.level}: ${update.properties.length} properties`);
+    }
+    if (!options.yes) {
+      cliUtils.promptConfirmation();
+    }
+
+    // Apply all updates
+    let hadFailures = false;
+    for (const update of updates) {
+      consola.start(`Updating ${update.level} (${update.properties.length} properties)...`);
+      // A throw (network error, unexpected lookup failure) must count as a
+      // per-item failure, not abort the batch mid-way with no summary.
+      let response;
+      try {
+        response = await update.apply();
+      } catch (error) {
+        hadFailures = true;
+        consola.error(`${update.level}: failed (${error.message})`);
+        continue;
+      }
+      if (!response) {
+        hadFailures = true;
+        continue;
+      }
+      // Handle both single response (reconciliation) and array of responses (company/period/account)
+      const responses = Array.isArray(response) ? response : [response];
+      const failed = responses.filter((r) => !r || r.status < 200 || r.status >= 300);
+      if (failed.length === 0) {
+        consola.success(`${update.level}: updated`);
+      } else {
+        hadFailures = true;
+        consola.error(`${update.level}: ${failed.length}/${responses.length} failed`);
+      }
+    }
+    if (hadFailures) {
+      process.exitCode = 1;
+    }
   });
 
 // Check Liquid Test dependencies for a reconciliation template
