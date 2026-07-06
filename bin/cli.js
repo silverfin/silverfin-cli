@@ -538,6 +538,7 @@ program
   .requiredOption("-u, --url <url>", "Specify the full Silverfin URL of the reconciliation in the company file (mandatory)")
   .requiredOption("-t, --test <test-name>", "Specify the name of the test to use as data source (mandatory)")
   .option("-h, --handle <handle>", "Specify the reconciliation handle to narrow down the YAML file search (optional)")
+  .option("--file <file-name>", "Specify the exact YAML file name (inside the template's tests/ folder) to read the test from, instead of the test file referenced by the template's config.json (optional)")
   .option("--dry-run", "Only transform and display the properties without uploading (optional)", false)
   .option("-y, --yes", "Skip the confirmation prompt before uploading (optional)", false)
   .action(async (options) => {
@@ -551,7 +552,7 @@ program
     }
 
     // Find the test data in the YAML files
-    const testData = textPropertyUtils.findTestData(options.test, options.handle);
+    const testData = textPropertyUtils.findTestData(options.test, options.handle, options.file);
     consola.info(`Found test "${options.test}" in ${testData.handle}/tests/${testData.file}`);
 
     // Collect all updates to perform

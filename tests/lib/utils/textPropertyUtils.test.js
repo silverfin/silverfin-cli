@@ -57,11 +57,35 @@ describe("textPropertyUtils", () => {
       },
     };
 
-    it("extracts custom data at all four levels when scoped by handle", () => {
-      fs.existsSync.mockReturnValue(true);
-      fs.readdirSync.mockReturnValue(["my_handle_liquid_test.yml"]);
-      fs.readFileSync.mockReturnValue("yaml-content");
-      yaml.parse.mockReturnValue(yamlPayload);
+    // Simulate a repo layout: each handle dir has a config.json whose "test" key
+    // points at the canonical YAML file, mirroring how run-test resolves it.
+    const mockRepo = (configs, yamlContents) => {
+      fs.existsSync.mockImplementation((p) => {
+        const file = String(p);
+        if (file.endsWith("config.json")) return true;
+        if (file.endsWith(".yml")) return Object.keys(yamlContents).some((name) => file.endsWith(name));
+        return true; // base dir and everything else
+      });
+      fs.statSync.mockReturnValue({ isDirectory: () => true });
+      fs.readdirSync.mockReturnValue(Object.keys(configs));
+      fs.readFileSync.mockImplementation((p) => {
+        const file = String(p);
+        if (file.endsWith("config.json")) {
+          const dir = Object.keys(configs).find((d) => file.includes(`/${d}/`));
+          return JSON.stringify(configs[dir] ?? {});
+        }
+        return "yaml-content:" + file;
+      });
+      yaml.parse.mockImplementation((content) => {
+        const name = Object.keys(yamlContents).find((n) => String(content).endsWith(n));
+        const payload = yamlContents[name];
+        if (payload instanceof Error) throw payload;
+        return payload;
+      });
+    };
+
+    it("extracts custom data at all four levels from the config-referenced file when scoped by handle", () => {
+      mockRepo({ my_handle: { test: "tests/my_handle_liquid_test.yml" } }, { "my_handle_liquid_test.yml": yamlPayload });
 
       const result = findTestData("my_test", "my_handle");
 
@@ -73,46 +97,113 @@ describe("textPropertyUtils", () => {
       expect(result.periods["2024-12-31"].accounts["610000"]).toEqual({ "a.k": "av" });
     });
 
-    it("scans all template folders when no handle is given", () => {
-      fs.existsSync.mockReturnValue(true);
-      fs.statSync.mockReturnValue({ isDirectory: () => true });
-      fs.readdirSync.mockImplementation((p) => (String(p).endsWith("tests") ? ["my_test_liquid_test.yml"] : ["handle_a"]));
-      fs.readFileSync.mockReturnValue("yaml-content");
-      yaml.parse.mockReturnValue({ my_test: { data: { periods: {} } } });
+    it("scans all templates' config-referenced test files when no handle is given", () => {
+      mockRepo(
+        {
+          handle_a: { test: "tests/handle_a_liquid_test.yml" },
+          handle_b: { test: "tests/handle_b_liquid_test.yml" },
+        },
+        {
+          "handle_a_liquid_test.yml": { some_other_test: {} },
+          "handle_b_liquid_test.yml": { my_test: { data: { periods: {} } } },
+        }
+      );
 
       const result = findTestData("my_test");
 
-      expect(result.handle).toBe("handle_a");
-      expect(result.file).toBe("my_test_liquid_test.yml");
+      expect(result.handle).toBe("handle_b");
+      expect(result.file).toBe("handle_b_liquid_test.yml");
     });
 
-    it("skips a malformed YAML file and continues to the next one", () => {
-      fs.existsSync.mockReturnValue(true);
-      fs.readdirSync.mockReturnValue(["bad_liquid_test.yml", "good_liquid_test.yml"]);
-      fs.readFileSync.mockReturnValue("yaml-content");
-      yaml.parse
-        .mockImplementationOnce(() => {
-          throw new Error("bad indentation");
-        })
-        .mockImplementationOnce(() => ({ my_test: { data: { periods: {} } } }));
+    it("skips a template with a malformed YAML file and continues with the others", () => {
+      mockRepo(
+        {
+          handle_a: { test: "tests/bad_liquid_test.yml" },
+          handle_b: { test: "tests/good_liquid_test.yml" },
+        },
+        {
+          "bad_liquid_test.yml": new Error("bad indentation"),
+          "good_liquid_test.yml": { my_test: { data: { periods: {} } } },
+        }
+      );
 
-      const result = findTestData("my_test", "my_handle");
+      const result = findTestData("my_test");
 
       expect(consola.warn).toHaveBeenCalledWith(expect.stringContaining("malformed YAML"));
       expect(result.file).toBe("good_liquid_test.yml");
     });
 
-    it("errors and exits when the test name is not found", () => {
-      fs.existsSync.mockReturnValue(true);
-      fs.readdirSync.mockReturnValue(["my_handle_liquid_test.yml"]);
-      fs.readFileSync.mockReturnValue("yaml-content");
-      yaml.parse.mockReturnValue({ some_other_test: {} });
+    it("skips templates whose config.json has no test key", () => {
+      mockRepo(
+        {
+          handle_a: {},
+          handle_b: { test: "tests/handle_b_liquid_test.yml" },
+        },
+        { "handle_b_liquid_test.yml": { my_test: { data: { periods: {} } } } }
+      );
+
+      const result = findTestData("my_test");
+
+      expect(result.handle).toBe("handle_b");
+    });
+
+    it("errors and exits when the test name is not found, pointing at --file", () => {
+      mockRepo({ my_handle: { test: "tests/my_handle_liquid_test.yml" } }, { "my_handle_liquid_test.yml": { some_other_test: {} } });
       const exitSpy = jest.spyOn(process, "exit").mockImplementation(() => {
         throw new Error("process.exit");
       });
 
       expect(() => findTestData("missing_test", "my_handle")).toThrow("process.exit");
-      expect(consola.error).toHaveBeenCalled();
+      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("--file"));
+
+      exitSpy.mockRestore();
+    });
+
+    it("refuses to guess when the test name exists in multiple templates", () => {
+      const payload = { my_test: { data: { periods: {} } } };
+      mockRepo(
+        {
+          handle_a: { test: "tests/handle_a_liquid_test.yml" },
+          handle_b: { test: "tests/handle_b_liquid_test.yml" },
+        },
+        { "handle_a_liquid_test.yml": payload, "handle_b_liquid_test.yml": payload }
+      );
+      const exitSpy = jest.spyOn(process, "exit").mockImplementation(() => {
+        throw new Error("process.exit");
+      });
+
+      expect(() => findTestData("my_test")).toThrow("process.exit");
+      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("multiple templates"));
+      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("handle_a/tests/handle_a_liquid_test.yml"));
+      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("--handle"));
+
+      exitSpy.mockRestore();
+    });
+
+    it("reads the exact tests/<fileName> when fileName is given, overriding config.json", () => {
+      mockRepo(
+        { my_handle: { test: "tests/my_handle_liquid_test.yml" } },
+        {
+          "my_handle_liquid_test.yml": { my_test: { data: { periods: { "2023-12-31": {} } } } },
+          "my_handle_TY25_liquid_test.yml": { my_test: { data: { periods: { "2024-12-31": {} } } } },
+        }
+      );
+
+      const result = findTestData("my_test", "my_handle", "my_handle_TY25_liquid_test.yml");
+
+      expect(result.file).toBe("my_handle_TY25_liquid_test.yml");
+      expect(Object.keys(result.periods)).toEqual(["2024-12-31"]);
+      expect(yaml.parse).toHaveBeenCalledTimes(1);
+    });
+
+    it("errors when fileName matches no file containing the test", () => {
+      mockRepo({ my_handle: { test: "tests/my_handle_liquid_test.yml" } }, { "my_handle_liquid_test.yml": { my_test: {} } });
+      const exitSpy = jest.spyOn(process, "exit").mockImplementation(() => {
+        throw new Error("process.exit");
+      });
+
+      expect(() => findTestData("my_test", "my_handle", "does_not_exist.yml")).toThrow("process.exit");
+      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining('named "does_not_exist.yml"'));
 
       exitSpy.mockRestore();
     });
