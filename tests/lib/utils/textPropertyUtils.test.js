@@ -5,7 +5,7 @@ jest.mock("yaml");
 const fs = require("fs");
 const yaml = require("yaml");
 const { consola } = require("consola");
-const { transformCustomToProperties, findTestData } = require("../../../lib/utils/textPropertyUtils");
+const { transformCustomToProperties, findTestData, findPeriodByKey } = require("../../../lib/utils/textPropertyUtils");
 
 describe("textPropertyUtils", () => {
   beforeEach(() => {
@@ -115,6 +115,41 @@ describe("textPropertyUtils", () => {
       expect(consola.error).toHaveBeenCalled();
 
       exitSpy.mockRestore();
+    });
+  });
+
+  describe("findPeriodByKey", () => {
+    const yearEnd2024 = { id: 101, end_date: "2024-12-31", fiscal_year: { end_date: "2024-12-31" } };
+    const monthly202401 = { id: 102, end_date: "2024-01-31", fiscal_year: { end_date: "2024-12-31" } };
+    const monthly202402 = { id: 103, end_date: "2024-02-29", fiscal_year: { end_date: "2024-12-31" } };
+    const noFiscalYear = { id: 205, end_date: "2025-03-31", fiscal_year: null };
+
+    it("resolves a unique fiscal year end date", () => {
+      const { period, error } = findPeriodByKey([monthly202401, { id: 300, end_date: "2023-12-31", fiscal_year: { end_date: "2023-12-31" } }], "2023-12-31");
+      expect(error).toBeUndefined();
+      expect(period.id).toBe(300);
+    });
+
+    it("prefers the year-end period when several periods share a fiscal year end date", () => {
+      const { period } = findPeriodByKey([monthly202401, monthly202402, yearEnd2024], "2024-12-31");
+      expect(period.id).toBe(101);
+    });
+
+    it("resolves an id-based key for periods without a fiscal year", () => {
+      const { period } = findPeriodByKey([yearEnd2024, noFiscalYear], "205");
+      expect(period.id).toBe(205);
+    });
+
+    it("returns an error instead of picking an arbitrary period when the key stays ambiguous", () => {
+      const { period, error } = findPeriodByKey([monthly202401, monthly202402], "2024-12-31");
+      expect(period).toBeUndefined();
+      expect(error).toContain("ambiguous");
+    });
+
+    it("returns an error when no period matches", () => {
+      const { period, error } = findPeriodByKey([yearEnd2024], "2030-12-31");
+      expect(period).toBeUndefined();
+      expect(error).toContain("not found");
     });
   });
 });
