@@ -3,7 +3,7 @@
 All notable changes to this project will be documented in this file.
 
 ## [1.56.4] (06/07/2026)
-Added `update-text-properties` command. It uploads custom text properties from a Liquid Test YAML file to a company file at company, period, reconciliation and account levels for the entries referenced in the test scenario. Usage: `silverfin update-text-properties -u <url> -t <test-name>`. Supports `--handle` for faster YAML file lookup, `--dry-run` to preview the payload, and `--yes` to skip the confirmation prompt.
+Added `update-text-properties` command. It uploads custom text properties from a Liquid Test YAML file to a company file at company, period, reconciliation and account levels for the entries referenced in the test scenario. Usage: `silverfin update-text-properties -u <url> -t <test-name>`. The YAML file read is the one referenced by the template's `config.json` `test` key (same as `run-test`); pass `--file <exact-file-name>` to read another file, e.g. a year variant like `*_TY25_liquid_test.yml`. When the test name exists in several templates the command lists them and asks for `--handle` instead of guessing. Also supports `--dry-run` to preview the payload and `--yes` to skip the confirmation prompt.
 
 ## [1.56.3] (03/07/2026)
 Improve `run-test --status` output for CI: surface the underlying error message when a run ends in `test_error`/`internal_error` (previously reported as a bare `FAILED` with no reason), and suppress the progress spinner when stdout is not a TTY (it flooded CI logs with hundreds of "Running tests.." frames).
