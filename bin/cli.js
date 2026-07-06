@@ -571,12 +571,12 @@ program
       if (!periodsArray) {
         periodsArray = await SF.getAllPeriods(firmId, companyId);
       }
-      const period = periodsArray.find((p) => p.fiscal_year?.end_date === periodKey);
+      const { period, error: periodError } = textPropertyUtils.findPeriodByKey(periodsArray, periodKey);
       if (!period) {
         // Skipping still seeds the rest of the scenario, but the partial seed must
         // be detectable: flag it as a failure, consistent with the
         // reconciliation/account not-found paths.
-        consola.error(`Period "${periodKey}" not found in company — skipping (marked as failure)`);
+        consola.error(`${periodError} — skipping (marked as failure)`);
         process.exitCode = 1;
         continue;
       }
@@ -653,7 +653,16 @@ program
     let hadFailures = false;
     for (const update of updates) {
       consola.start(`Updating ${update.level} (${update.properties.length} properties)...`);
-      const response = await update.apply();
+      // A throw (network error, unexpected lookup failure) must count as a
+      // per-item failure, not abort the batch mid-way with no summary.
+      let response;
+      try {
+        response = await update.apply();
+      } catch (error) {
+        hadFailures = true;
+        consola.error(`${update.level}: failed (${error.message})`);
+        continue;
+      }
       if (!response) {
         hadFailures = true;
         continue;
