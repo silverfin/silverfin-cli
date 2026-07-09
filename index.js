@@ -1346,6 +1346,51 @@ async function updateFirmName(firmId) {
   }
 }
 
+/**
+ * Copy a source company's data into a brand-new company in a destination (development) firm using the
+ * platform's Data Copier. Intended for BSO developers to reproduce a client's situation in a dev firm
+ * without touching the production firm. Only *data* is copied (account values incl. adjustments, text
+ * properties, people/company drop and configuration) — not template *code*, which must already exist
+ * in the destination firm to be populated.
+ * @param {Number} destinationFirmId - Firm where the copied company will be created
+ * @param {Number} sourceCompanyId - Company id to copy data from (source/production firm)
+ * @param {Array<Number>} sourceLedgerIds - Period ids to copy (the `ledgers/{period_id}/workflows` id in the source company URL)
+ * @returns {Object|Boolean} - The API response payload, or false on failure
+ */
+async function copyCompanyData(destinationFirmId, sourceCompanyId, sourceLedgerIds) {
+  try {
+    if (!sourceCompanyId) {
+      consola.error("A source company id is required (--source-company-id).");
+      return false;
+    }
+    if (!Array.isArray(sourceLedgerIds) || sourceLedgerIds.length === 0) {
+      consola.error("At least one source ledger (period) id is required (--source-ledger-ids).");
+      return false;
+    }
+
+    const attributes = {
+      source_company_id: sourceCompanyId,
+      source_ledger_ids: sourceLedgerIds,
+    };
+
+    consola.info(`Requesting data copy into firm ${destinationFirmId} (source company ${sourceCompanyId}, period id(s): ${sourceLedgerIds.join(", ")})`);
+
+    const response = await SF.runCompanyDataCopier("firm", destinationFirmId, attributes);
+
+    if (!response || !response.data) {
+      consola.error(`Data Copier request failed for firm ${destinationFirmId}. Verify the source company id and period ids exist, and that you are an admin of the source firm.`);
+      return false;
+    }
+
+    consola.success(`Data copy started for firm ${destinationFirmId}. Once the async job completes, a new copied company (named "SF_COPY_<source-company-id>_<timestamp>") will appear in the destination firm.`);
+    consola.debug(`Data Copier response: ${JSON.stringify(response.data)}`);
+    return response.data;
+  } catch (error) {
+    errorUtils.errorHandler(error);
+    return false;
+  }
+}
+
 module.exports = {
   fetchReconciliationByHandle,
   fetchReconciliationById,
@@ -1389,4 +1434,5 @@ module.exports = {
   getTemplateId,
   getAllTemplatesId,
   updateFirmName,
+  copyCompanyData,
 };
