@@ -265,6 +265,24 @@ silverfin development-mode --handle <handle>
 silverfin development-mode --update-templates
 ```
 
+### Copy company data (Data Copier)
+
+The `company-data-copier` command triggers the platform's Data Copier to copy a source company's data into a brand-new company in a destination (development) firm. This lets you reproduce a client's situation in a dev firm to debug templates against realistic data, without ever touching the production firm.
+
+It copies **data only** — account values (including adjustments), text properties, people/company drop and configuration. It does **not** copy template code: a template is only populated if it already exists in the destination firm.
+
+```bash
+silverfin company-data-copier --source-company-id <company_id> --source-ledger-ids <period_id_1> <period_id_2> --firm <destination_firm_id>
+```
+
+- `--source-company-id` / `-c`: the company id to copy data from (in the source firm).
+- `--source-ledger-ids` / `-l`: one or more period ids to copy, space-separated. You can find each id in the source company URL between `ledgers/` and `/workflows`.
+- `--firm` / `-f`: the destination firm where the copied company will be created (defaults to your configured default firm).
+
+The copy runs as an asynchronous job on the platform, so the command returns as soon as the request is accepted. Once the job completes, a new copied company (named `SF_COPY_<source-company-id>_<timestamp>`) appears in the destination firm.
+
+> **Note:** the Data Copier is deployed to specific environments. Point the CLI at the right host first with `silverfin config --set-host <url>` (or the `SF_HOST` env var), and make sure you are an admin of the source firm.
+
 ## Contributing
 
 If you find any bug or you have any suggestion, please feel free to open an issue in this repository.
