@@ -1,5 +1,6 @@
 jest.mock("consola");
 jest.mock("../../lib/api/sfApi");
+jest.mock("axios");
 jest.mock("../../lib/cli/spinner", () => ({ spinner: { spin: jest.fn(), stop: jest.fn() } }));
 jest.mock("../../lib/utils/errorUtils", () => ({
   errorHandler: jest.fn(),
@@ -10,12 +11,25 @@ jest.mock("../../lib/utils/urlHandler", () => ({
   UrlHandler: jest.fn().mockImplementation(() => ({ openFile: mockOpenFile })),
 }));
 
+const path = require("path");
+const AdmZip = require("adm-zip");
+const axios = require("axios");
 const SF = require("../../lib/api/sfApi");
 const { consola } = require("consola");
 const { UrlHandler } = require("../../lib/utils/urlHandler");
 const { LiquidSamplerRunner } = require("../../lib/liquidSamplerRunner");
 
 const REPORT_URL = "https://reports.example.com/sampler/abc123.html";
+
+// Build an in-memory results.zip from the committed fixture so the compact path
+// can be exercised end-to-end without hitting the backend or shipping a 150 MB zip.
+function fixtureZipBuffer() {
+  const zip = new AdmZip();
+  const fixtureDir = path.join(__dirname, "..", "fixtures", "sampler-results");
+  zip.addLocalFile(path.join(fixtureDir, "sample_entry_ids.yml"));
+  zip.addLocalFolder(path.join(fixtureDir, "output"), "output");
+  return zip.toBuffer();
+}
 
 describe("LiquidSamplerRunner - surfacing results", () => {
   const originalCI = process.env.CI;
@@ -67,5 +81,53 @@ describe("LiquidSamplerRunner - surfacing results", () => {
     await new LiquidSamplerRunner("1", { openReport: true }).checkStatus("run-1");
 
     expect(mockOpenFile).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("LiquidSamplerRunner - compact diff", () => {
+  let logSpy;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    process.env.CI = "true"; // compact must work in CI
+    SF.readSamplerRun.mockResolvedValue({
+      data: { status: "completed", result_url: REPORT_URL },
+    });
+    axios.get.mockResolvedValue({ data: fixtureZipBuffer() });
+    logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    logSpy.mockRestore();
+    delete process.env.CI;
+  });
+
+  it("downloads the result and prints the compact diff between markers when compact is set", async () => {
+    await new LiquidSamplerRunner("1", { compact: true }).checkStatus("run-1");
+
+    expect(axios.get).toHaveBeenCalledWith(REPORT_URL, { responseType: "arraybuffer" });
+    const output = logSpy.mock.calls.map((c) => c[0]).join("\n");
+    expect(output).toContain("<!-- SAMPLER_COMPACT_START -->");
+    expect(output).toContain("<!-- SAMPLER_COMPACT_END -->");
+    expect(output).toContain("### vkt_1");
+    expect(output).toContain("[2×] `street_var`: `\"\"` → `null`");
+  });
+
+  it("does NOT download or print a compact diff by default", async () => {
+    await new LiquidSamplerRunner("1", { openReport: false }).checkStatus("run-1");
+
+    expect(axios.get).not.toHaveBeenCalled();
+    const output = logSpy.mock.calls.map((c) => c[0]).join("\n");
+    expect(output).not.toContain("SAMPLER_COMPACT_START");
+  });
+
+  it("does not fail the run if the compact download fails", async () => {
+    axios.get.mockRejectedValue(new Error("network down"));
+
+    await new LiquidSamplerRunner("1", { compact: true }).checkStatus("run-1");
+
+    // URL still surfaced, warning logged, no throw
+    expect(consola.success).toHaveBeenCalledWith(`Sampler report: ${REPORT_URL}`);
+    expect(consola.warn).toHaveBeenCalledWith(expect.stringContaining("Could not build compact diff"));
   });
 });
