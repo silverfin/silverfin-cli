@@ -54,7 +54,12 @@ describe("company-data-copier", () => {
         source_company_id: sourceCompanyId,
         source_ledger_ids: sourceLedgerIds,
       });
-      expect(consola.success).toHaveBeenCalled();
+      // Success is reported as "requested/enqueued", not "completed": the copy is fire-and-forget.
+      expect(consola.success).toHaveBeenCalledWith(expect.stringMatching(/requested|enqueued/i));
+      // The follow-up guidance must flag the async nature and the _FAILED failure signal.
+      const infoMessages = consola.info.mock.calls.map((call) => call.join(" ")).join("\n");
+      expect(infoMessages).toMatch(/asynchronously/i);
+      expect(infoMessages).toMatch(/_FAILED/);
       expect(result).toEqual(mockResponse.data);
     });
 

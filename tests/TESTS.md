@@ -439,7 +439,7 @@ Source: `lib/api/sfApi.js`
 | `updateAccountTemplate` | should POST to update account template and return response | Verifies that a POST to `account_templates/:id` returns the updated account template. |
 | `findAccountTemplateByName` | should find account template by name_nl | Verifies that the matching account template is returned when its `name_nl` is found in the list. |
 | `findAccountTemplateByName` | should return null when list is empty | Verifies that `null` is returned when the list API returns an empty array. |
-| `runCompanyDataCopier` | should POST to company_data_copier/run with the attributes and return the response | Verifies that the Data Copier attributes are POSTed to `company_data_copier/run` and the response is returned. |
+| `runCompanyDataCopier` | should POST to the public v3 company_data_copier/run route with the attributes and return the response | Verifies that the Data Copier attributes are POSTed to the absolute `/api/public/v3/company_data_copier/run` route (not the firm-scoped baseURL) and the response is returned. |
 | `runCompanyDataCopier` | should delegate to the error handler on failure | Verifies that a non-2xx response is routed through `responseErrorHandler`. |
 
 ---

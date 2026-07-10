@@ -1382,7 +1382,14 @@ async function copyCompanyData(destinationFirmId, sourceCompanyId, sourceLedgerI
       return false;
     }
 
-    consola.success(`Data copy started for firm ${destinationFirmId}. Once the async job completes, a new copied company (named "SF_COPY_<source-company-id>_<timestamp>") will appear in the destination firm.`);
+    consola.success(`Data copy requested (enqueued) for firm ${destinationFirmId}.`);
+    consola.info(
+      [
+        `The copy runs asynchronously on the platform — this command does not wait for it and there is no way to poll its status.`,
+        `Check the destination firm after a few minutes for a new copied company (named like "Company_${sourceCompanyId}_<hex>", e.g. "Company_${sourceCompanyId}_a3f1b9d4").`,
+        `A company whose name ends in "_FAILED" means the background copy failed — delete it and retry.`,
+      ].join("\n")
+    );
     consola.debug(`Data Copier response: ${JSON.stringify(response.data)}`);
     return response.data;
   } catch (error) {
