@@ -31,7 +31,8 @@ tests/
 │       ├── import-shared-part.test.js
 │       ├── update-shared-part.test.js
 │       ├── create-shared-part.test.js
-│       └── get-shared-part-id.test.js
+│       ├── get-shared-part-id.test.js
+│       └── company-data-copier.test.js
 └── lib/
     ├── api/
     │   ├── axiosFactory.test.js
@@ -149,6 +150,22 @@ Source: `bin/cli.js` (Commander program)
 | silverfin update-reconciliation --help output contains --handle option | Verifies `--handle` is declared for the update-reconciliation command. |
 | silverfin update-reconciliation --help output contains --id option | Verifies `--id` is declared. |
 | silverfin update-reconciliation --help output contains --all option | Verifies `--all` is declared. |
+| silverfin --help output contains company-data-copier | Verifies the `company-data-copier` subcommand is registered. |
+| silverfin company-data-copier --help output contains --firm option | Verifies `--firm` is declared for the company-data-copier command. |
+| silverfin company-data-copier --help output contains --source-company-id option | Verifies `--source-company-id` is declared. |
+| silverfin company-data-copier --help output contains --source-ledger-ids option | Verifies `--source-ledger-ids` is declared. |
+
+---
+
+### `tests/bin/cli/company-data-copier.test.js`
+Source: `index.js` → `lib/api/sfApi.js`
+
+| Function | Test | Description |
+|---|---|---|
+| `copyCompanyData` | should call the Data Copier with firm type and the correct attributes and log success | Verifies that the API is called with `"firm"`, the destination firm id, and the `{ source_company_id, source_ledger_ids }` body, a success message is logged, and the response data is returned. |
+| `copyCompanyData` | should error and return false when no source company id is given | Verifies that the API is not called, an error is logged, and `false` is returned when the source company id is missing. |
+| `copyCompanyData` | should error and return false when no source ledger ids are given | Verifies that the API is not called, an error is logged, and `false` is returned when the ledger id list is empty. |
+| `copyCompanyData` | should error and return false when the API returns no data | Verifies that an error is logged and `false` is returned when the Data Copier response has no data. |
 
 ---
 
@@ -422,6 +439,8 @@ Source: `lib/api/sfApi.js`
 | `updateAccountTemplate` | should POST to update account template and return response | Verifies that a POST to `account_templates/:id` returns the updated account template. |
 | `findAccountTemplateByName` | should find account template by name_nl | Verifies that the matching account template is returned when its `name_nl` is found in the list. |
 | `findAccountTemplateByName` | should return null when list is empty | Verifies that `null` is returned when the list API returns an empty array. |
+| `runCompanyDataCopier` | should POST to the public v3 company_data_copier/run route with the attributes and return the response | Verifies that the Data Copier attributes are POSTed to the absolute `/api/public/v3/company_data_copier/run` route (not the firm-scoped baseURL) and the response is returned. |
+| `runCompanyDataCopier` | should delegate to the error handler on failure | Verifies that a non-2xx response is routed through `responseErrorHandler`. |
 
 ---
 

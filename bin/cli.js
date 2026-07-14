@@ -771,6 +771,33 @@ program
     await generator.generateAndOpenFile();
   });
 
+// COPY company data (Data Copier)
+program
+  .command("company-data-copier")
+  .description("Copy a source company's data into a new company in a destination (development) firm. Copies data only (account values, text properties, people/company drop, configuration) — not template code.")
+  .requiredOption("-c, --source-company-id <company-id>", "Company id to copy data from (source firm)")
+  .requiredOption("-l, --source-ledger-ids <ledger-ids...>", "One or more period ids to copy, space-separated (the id in the source company URL between 'ledgers/' and '/workflows')")
+  .requiredOption("-f, --firm <firm-id>", "Destination firm where the copied company will be created", firmIdDefault)
+  .action(async (options) => {
+    cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
+
+    const sourceCompanyId = Number(options.sourceCompanyId);
+    if (!Number.isInteger(sourceCompanyId) || sourceCompanyId <= 0) {
+      consola.error(`Invalid source company id: "${options.sourceCompanyId}". It must be a positive integer.`);
+      process.exit(1);
+    }
+
+    // Commander collects the variadic option into an array of strings (e.g. "-l 123 456").
+    const sourceLedgerIds = options.sourceLedgerIds.map((value) => Number(value));
+
+    if (sourceLedgerIds.some((id) => !Number.isInteger(id) || id <= 0)) {
+      consola.error(`Invalid source ledger (period) id in: "${options.sourceLedgerIds.join(" ")}". Each id must be a positive integer.`);
+      process.exit(1);
+    }
+
+    await toolkit.copyCompanyData(options.firm, sourceCompanyId, sourceLedgerIds);
+  });
+
 // Update the CLI
 if (pkg.repository && pkg.repository.url) {
   program

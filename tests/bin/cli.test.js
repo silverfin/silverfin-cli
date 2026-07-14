@@ -42,6 +42,10 @@ describe("bin/cli.js Commander wiring", () => {
     it("output contains import-account-template", () => {
       expect(helpOutput).toMatch(/import-account-template/);
     });
+
+    it("output contains company-data-copier", () => {
+      expect(helpOutput).toMatch(/company-data-copier/);
+    });
   });
 
   describe("silverfin import-reconciliation --help", () => {
@@ -85,6 +89,26 @@ describe("bin/cli.js Commander wiring", () => {
 
     it("output contains --all option", () => {
       expect(helpOutput).toMatch(/--all/);
+    });
+  });
+
+  describe("silverfin company-data-copier --help", () => {
+    let helpOutput;
+
+    beforeAll(() => {
+      helpOutput = runCli("company-data-copier --help");
+    });
+
+    it("output contains --firm option", () => {
+      expect(helpOutput).toMatch(/--firm/);
+    });
+
+    it("output contains --source-company-id option", () => {
+      expect(helpOutput).toMatch(/--source-company-id/);
+    });
+
+    it("output contains --source-ledger-ids option", () => {
+      expect(helpOutput).toMatch(/--source-ledger-ids/);
     });
   });
 });
