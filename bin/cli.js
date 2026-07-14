@@ -524,10 +524,21 @@ program
   .option("-at, --account-template <names...>", "Specify account detail template name(s) - can specify multiple")
   .option("-s, --shared-part <names...>", "Specify shared part name(s) - can specify multiple")
   .option("--firm-ids <firm-ids...>", "Specify firm ID(s) to run the sampler against - can specify multiple (optional)")
-  .option("--id <sampler-id>", "Specify an existing sampler ID to fetch results for (optional)")
+  .addOption(
+    new Option("--id <sampler-id>", "Specify an existing sampler ID to fetch results for (optional)").conflicts([
+      "handle",
+      "accountTemplate",
+      "sharedPart",
+      "firmIds",
+    ])
+  )
   .action(async (options) => {
     // If an existing sampler ID is provided, fetch and display results
     if (options.id) {
+      if (!/^\d+$/.test(options.id)) {
+        consola.error("Invalid sampler ID: must be a numeric value");
+        process.exit(1);
+      }
       await new LiquidSamplerRunner(options.partner).checkStatus(options.id);
       return;
     }
