@@ -517,7 +517,7 @@ program
 
 // Run Liquid Sampler
 program
-  .command("run-sampler")
+  .command("run-sampler", { hidden: true})
   .description("Run Liquid Sampler for partner templates (reconciliation texts, account detail templates, and/or shared parts)")
   .requiredOption("-p, --partner <partner-id>", "Specify the partner to be used")
   .option("-h, --handle <handles...>", "Specify reconciliation text handle(s) - can specify multiple")
