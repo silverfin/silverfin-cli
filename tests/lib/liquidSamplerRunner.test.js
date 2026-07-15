@@ -18,6 +18,7 @@ const AdmZip = require("adm-zip");
 const axios = require("axios");
 const SF = require("../../lib/api/sfApi");
 const { consola } = require("consola");
+const { spinner } = require("../../lib/cli/spinner");
 const { UrlHandler } = require("../../lib/utils/urlHandler");
 const { LiquidSamplerRunner } = require("../../lib/liquidSamplerRunner");
 
@@ -221,5 +222,70 @@ describe("LiquidSamplerRunner - compact diff", () => {
       writeSpy.mockRestore();
       mkdtempSpy.mockRestore();
     }
+  });
+});
+
+describe("LiquidSamplerRunner - polling status output", () => {
+  const originalIsTTY = process.stdout.isTTY;
+  const originalCI = process.env.CI;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    SF.createSamplerRun.mockResolvedValue({ data: { id: "run-1" } });
+  });
+
+  afterEach(() => {
+    process.stdout.isTTY = originalIsTTY;
+    if (originalCI === undefined) delete process.env.CI;
+    else process.env.CI = originalCI;
+    jest.useRealTimers();
+  });
+
+  it("uses the spinner when stdout is a TTY, regardless of CI", async () => {
+    process.stdout.isTTY = true;
+    process.env.CI = "true";
+    jest.useFakeTimers();
+    SF.readSamplerRun.mockResolvedValue({ data: { status: "completed", result_url: REPORT_URL } });
+
+    const runPromise = new LiquidSamplerRunner("1").run();
+    await jest.advanceTimersByTimeAsync(15000);
+    await runPromise;
+
+    expect(spinner.spin).toHaveBeenCalledWith("Running sampler...");
+  });
+
+  it("falls back to a log line when stdout is not a TTY, even outside CI", async () => {
+    process.stdout.isTTY = false;
+    delete process.env.CI;
+    jest.useFakeTimers();
+    SF.readSamplerRun.mockResolvedValue({ data: { status: "completed", result_url: REPORT_URL } });
+
+    const runPromise = new LiquidSamplerRunner("1").run();
+    await jest.advanceTimersByTimeAsync(15000);
+    await runPromise;
+
+    expect(spinner.spin).not.toHaveBeenCalled();
+    expect(consola.info).toHaveBeenCalledWith(expect.stringContaining("Running sampler..."));
+  });
+
+  it("logs a heartbeat during a long non-interactive poll instead of staying silent", async () => {
+    process.stdout.isTTY = false;
+    delete process.env.CI;
+    jest.useFakeTimers();
+    SF.readSamplerRun
+      .mockResolvedValueOnce({ data: { status: "running" } })
+      .mockResolvedValueOnce({ data: { status: "running" } })
+      .mockResolvedValueOnce({ data: { status: "running" } })
+      .mockResolvedValueOnce({ data: { status: "running" } })
+      .mockResolvedValueOnce({ data: { status: "completed", result_url: REPORT_URL } });
+
+    const runPromise = new LiquidSamplerRunner("1").run();
+    for (let i = 0; i < 5; i++) {
+      await jest.advanceTimersByTimeAsync(15000);
+    }
+    await runPromise;
+
+    const heartbeats = consola.info.mock.calls.filter(([msg]) => msg.includes("elapsed"));
+    expect(heartbeats.length).toBeGreaterThanOrEqual(1);
   });
 });
