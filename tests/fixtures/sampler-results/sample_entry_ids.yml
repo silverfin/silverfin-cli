@@ -1,0 +1,15 @@
+---
+reconciliation_entries:
+  '1_100_1000_5000':
+    label: vkt_1
+    url: https://example.staging.getsilverfin.com/f/1/100/ledgers/1000/reconciliation_texts/5000
+  '1_101_1001_5000':
+    label: vkt_1
+    url: https://example.staging.getsilverfin.com/f/1/101/ledgers/1001/reconciliation_texts/5000
+  '1_102_1002_6000':
+    label: liquidation_reserve
+    url: https://example.staging.getsilverfin.com/f/1/102/ledgers/1002/reconciliation_texts/6000
+account_entries:
+  '1_103_1003_490000.000':
+    label: some_account_template
+    url: https://example.staging.getsilverfin.com/f/1/103/ledgers/1003/account_templates/490000.000

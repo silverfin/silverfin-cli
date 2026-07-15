@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.57.1] (15/07/2026)
+Improve `silverfin run-sampler` by adding a compact output mode.
+
 ## [1.57.0] (14/07/2026)
 Added a new `silverfin run-sampler` command to run the Liquid Sampler for partner templates. Specify a partner with `-p` and one or more reconciliation text handles (`-h`), account detail template names (`-at`), and/or shared part names (`-s`), optionally scoping the run to specific firms with `--firm-ids`. Pass `--id <sampler-id>` to fetch and display the results of an existing sampler run instead.
 

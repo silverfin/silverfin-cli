@@ -532,14 +532,20 @@ program
       "firmIds",
     ])
   )
+  .option("--no-open", "Do not download/open the report locally; only print its URL (default in CI)")
+  .option("--compact", "Download the result and print a compact named_results diff (grouped by template) to stdout - review-friendly and safe in CI")
   .action(async (options) => {
+    // Commander sets options.open = false when --no-open is passed.
+    // In CI, never open regardless of the flag.
+    const runnerOptions = { openReport: options.open && !process.env.CI, compact: options.compact || false };
+
     // If an existing sampler ID is provided, fetch and display results
     if (options.id) {
       if (!/^\d+$/.test(options.id)) {
         consola.error("Invalid sampler ID: must be a numeric value");
         process.exit(1);
       }
-      await new LiquidSamplerRunner(options.partner).checkStatus(options.id);
+      await new LiquidSamplerRunner(options.partner, runnerOptions).checkStatus(options.id);
       return;
     }
 
@@ -561,7 +567,7 @@ program
 
     const firmIds = options.firmIds || [];
 
-    await new LiquidSamplerRunner(options.partner).run(templateHandles, firmIds);
+    await new LiquidSamplerRunner(options.partner, runnerOptions).run(templateHandles, firmIds);
   });
 
 // Create Liquid Test
