@@ -74,11 +74,21 @@ describe("liquidSamplerCompact - readEntryLabels", () => {
   });
 
   it("keeps account and reconciliation entries separate when their raw ids match", () => {
-    const labels = readEntryLabels(FIXTURE_DIR);
-    // The fixture ids don't collide, but the map must be keyed by kind too so
-    // that a shared raw id between kinds doesn't overwrite one label with
-    // the other's.
-    expect(Object.keys(labels).every((key) => key.includes("/"))).toBe(true);
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "sampler-compact-test-"));
+    fs.writeFileSync(
+      path.join(dir, "sample_entry_ids.yml"),
+      JSON.stringify({
+        account_entries: { 5000: { label: "account_tpl", url: null } },
+        reconciliation_entries: { 5000: { label: "reco_tpl", url: null } },
+      }),
+    );
+    try {
+      const labels = readEntryLabels(dir);
+      expect(labels["account_entries/5000"].label).toBe("account_tpl");
+      expect(labels["reconciliation_entries/5000"].label).toBe("reco_tpl");
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it("returns an empty map when the yml is missing", () => {
@@ -140,6 +150,26 @@ describe("liquidSamplerCompact - extractCompact", () => {
       const labels = data.templates.map((t) => t.label).sort();
       expect(labels).toEqual(["account_tpl", "reco_tpl"]);
       expect(data.summary.entriesChanged).toBe(2);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("doesn't merge an account entry and a reconciliation entry that share the same label", () => {
+    const dir = buildResultsDir({
+      account_entries: [{ id: "5000", label: "shared_label", before: { a: "1" }, after: { a: "2" } }],
+      reconciliation_entries: [{ id: "6000", label: "shared_label", before: { b: "1" }, after: { b: "2" } }],
+    });
+    try {
+      const data = extractCompact(dir);
+      // Two distinct templates (one per kind), not one merged "shared_label"
+      // entry combining both entries/changes.
+      expect(data.templates).toHaveLength(2);
+      expect(data.summary.templatesChanged).toBe(2);
+      for (const template of data.templates) {
+        expect(template.label).toBe("shared_label");
+        expect(template.entriesChanged).toBe(1);
+      }
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }
