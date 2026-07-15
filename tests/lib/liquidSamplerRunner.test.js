@@ -171,4 +171,29 @@ describe("LiquidSamplerRunner - compact diff", () => {
       fs.rmSync(escapedDir, { recursive: true, force: true });
     }
   });
+
+  it("cleans up the temp dir if extraction fails partway through", async () => {
+    const zip = new AdmZip();
+    zip.addFile("sample_entry_ids.yml", Buffer.from(""));
+    zip.addFile("output/reconciliation_entries/1/before/registers.json", Buffer.from("{}"));
+    axios.get.mockResolvedValue({ data: zip.toBuffer() });
+
+    const realWriteFileSync = fs.writeFileSync;
+    const mkdtempSpy = jest.spyOn(fs, "mkdtempSync");
+    const writeSpy = jest.spyOn(fs, "writeFileSync").mockImplementation((dest, data) => {
+      if (String(dest).endsWith("registers.json")) throw new Error("disk full");
+      return realWriteFileSync(dest, data);
+    });
+
+    try {
+      await new LiquidSamplerRunner("1", { compact: true }).checkStatus("run-1");
+
+      const tempDir = mkdtempSpy.mock.results[0].value;
+      expect(fs.existsSync(tempDir)).toBe(false);
+      expect(consola.warn).toHaveBeenCalledWith(expect.stringContaining("Could not build compact diff"));
+    } finally {
+      writeSpy.mockRestore();
+      mkdtempSpy.mockRestore();
+    }
+  });
 });
