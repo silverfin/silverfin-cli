@@ -129,6 +129,29 @@ describe("liquidSamplerCompact - extractCompact", () => {
       fs.rmSync(dir, { recursive: true, force: true });
     }
   });
+
+  it("doesn't count an entry with unreadable registers.json as sampled", () => {
+    const dir = buildResultsDir({
+      reconciliation_entries: [{ id: "5000", label: "vkt_1", before: { a: "1" }, after: { a: "2" } }],
+    });
+    // Corrupt the "after" file for a second entry that was never given valid content.
+    const brokenEntryDir = path.join(dir, "output", "reconciliation_entries", "5001", "after");
+    fs.mkdirSync(brokenEntryDir, { recursive: true });
+    fs.mkdirSync(path.join(dir, "output", "reconciliation_entries", "5001", "before"), { recursive: true });
+    fs.writeFileSync(path.join(brokenEntryDir, "registers.json"), "not json");
+    fs.writeFileSync(
+      path.join(dir, "output", "reconciliation_entries", "5001", "before", "registers.json"),
+      JSON.stringify({ named_results: {} }),
+    );
+
+    try {
+      const data = extractCompact(dir);
+      expect(data.summary.entriesSampled).toBe(1);
+      expect(data.summary.entriesSkipped).toBe(1);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });
 
 describe("liquidSamplerCompact - formatCompact", () => {
@@ -143,5 +166,13 @@ describe("liquidSamplerCompact - formatCompact", () => {
   it("renders a clear message when nothing changed", () => {
     const md = formatCompact({ summary: { templatesChanged: 0, entriesChanged: 0, entriesSampled: 5 }, templates: [] });
     expect(md).toContain("No `named_results` changes across 5 sampled entries");
+  });
+
+  it("discloses skipped entries when some registers.json were unreadable", () => {
+    const md = formatCompact({
+      summary: { templatesChanged: 0, entriesChanged: 0, entriesSampled: 5, entriesSkipped: 2 },
+      templates: [],
+    });
+    expect(md).toContain("2 skipped (unreadable registers.json)");
   });
 });
