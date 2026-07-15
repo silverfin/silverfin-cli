@@ -49,6 +49,21 @@ describe("liquidSamplerCompact - diffNamedResults", () => {
     const changes = diffNamedResults({ z: 1, a: 1 }, { z: 2, a: 2 });
     expect(changes.map((c) => c.key)).toEqual(["a", "z"]);
   });
+
+  it("ignores object key-order differences that don't change content", () => {
+    const changes = diffNamedResults({ a: { x: 1, y: 2 } }, { a: { y: 2, x: 1 } });
+    expect(changes).toEqual([]);
+  });
+
+  it("still reports a real change to a nested object value", () => {
+    const changes = diffNamedResults({ a: { x: 1, y: 2 } }, { a: { y: 2, x: 99 } });
+    expect(changes.map((c) => c.key)).toEqual(["a"]);
+  });
+
+  it("still treats array element reordering as a real change", () => {
+    const changes = diffNamedResults({ a: [1, 2] }, { a: [2, 1] });
+    expect(changes.map((c) => c.key)).toEqual(["a"]);
+  });
 });
 
 describe("liquidSamplerCompact - readEntryLabels", () => {
