@@ -1,7 +1,33 @@
+const fs = require("fs");
+const os = require("os");
 const path = require("path");
 const { extractCompact, formatCompact, diffNamedResults, readEntryLabels } = require("../../lib/liquidSamplerCompact");
 
 const FIXTURE_DIR = path.join(__dirname, "..", "fixtures", "sampler-results");
+
+/**
+ * Build a minimal results directory (sample_entry_ids.yml + output/) under a
+ * fresh temp dir, from a plain description of entries per kind.
+ * @param {Object<string, Array<{id: string, label: string, before: Object, after: Object}>>} byKind
+ * @returns {string} path to the built results directory
+ */
+function buildResultsDir(byKind) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "sampler-compact-test-"));
+  const yml = {};
+  for (const [kind, entries] of Object.entries(byKind)) {
+    yml[kind] = {};
+    for (const entry of entries) {
+      yml[kind][entry.id] = { label: entry.label, url: null };
+      for (const phase of ["before", "after"]) {
+        const entryDir = path.join(dir, "output", kind, entry.id, phase);
+        fs.mkdirSync(entryDir, { recursive: true });
+        fs.writeFileSync(path.join(entryDir, "registers.json"), JSON.stringify({ named_results: entry[phase] }));
+      }
+    }
+  }
+  fs.writeFileSync(path.join(dir, "sample_entry_ids.yml"), JSON.stringify(yml));
+  return dir;
+}
 
 describe("liquidSamplerCompact - diffNamedResults", () => {
   it("reports a changed value", () => {
@@ -26,10 +52,18 @@ describe("liquidSamplerCompact - diffNamedResults", () => {
 });
 
 describe("liquidSamplerCompact - readEntryLabels", () => {
-  it("maps entry ids to template labels for both entry kinds", () => {
+  it("maps kind/entry id to template labels for both entry kinds", () => {
     const labels = readEntryLabels(FIXTURE_DIR);
-    expect(labels["1_100_1000_5000"].label).toBe("vkt_1");
-    expect(labels["1_103_1003_490000.000"].label).toBe("some_account_template");
+    expect(labels["reconciliation_entries/1_100_1000_5000"].label).toBe("vkt_1");
+    expect(labels["account_entries/1_103_1003_490000.000"].label).toBe("some_account_template");
+  });
+
+  it("keeps account and reconciliation entries separate when their raw ids match", () => {
+    const labels = readEntryLabels(FIXTURE_DIR);
+    // The fixture ids don't collide, but the map must be keyed by kind too so
+    // that a shared raw id between kinds doesn't overwrite one label with
+    // the other's.
+    expect(Object.keys(labels).every((key) => key.includes("/"))).toBe(true);
   });
 
   it("returns an empty map when the yml is missing", () => {
@@ -79,6 +113,21 @@ describe("liquidSamplerCompact - extractCompact", () => {
     // Reuse the fixture output dir but from a path without the yml alongside.
     const noLabels = extractCompact(path.join(FIXTURE_DIR, "..", "sampler-results-no-such"));
     expect(noLabels.templates).toEqual([]);
+  });
+
+  it("keeps an account entry and a reconciliation entry with the same raw id separate", () => {
+    const dir = buildResultsDir({
+      account_entries: [{ id: "5000", label: "account_tpl", before: { a: "1" }, after: { a: "2" } }],
+      reconciliation_entries: [{ id: "5000", label: "reco_tpl", before: { b: "1" }, after: { b: "2" } }],
+    });
+    try {
+      const data = extractCompact(dir);
+      const labels = data.templates.map((t) => t.label).sort();
+      expect(labels).toEqual(["account_tpl", "reco_tpl"]);
+      expect(data.summary.entriesChanged).toBe(2);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
 
