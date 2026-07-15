@@ -11,6 +11,8 @@ jest.mock("../../lib/utils/urlHandler", () => ({
   UrlHandler: jest.fn().mockImplementation(() => ({ openFile: mockOpenFile })),
 }));
 
+const os = require("os");
+const fs = require("fs");
 const path = require("path");
 const AdmZip = require("adm-zip");
 const axios = require("axios");
@@ -143,5 +145,27 @@ describe("LiquidSamplerRunner - compact diff", () => {
     // URL still surfaced, warning logged, no throw
     expect(consola.success).toHaveBeenCalledWith(`Sampler report: ${REPORT_URL}`);
     expect(consola.warn).toHaveBeenCalledWith(expect.stringContaining("Could not build compact diff"));
+  });
+
+  it("never writes outside the temp dir for a zip-slip entry name", async () => {
+    const zip = new AdmZip();
+    zip.addFile("sample_entry_ids.yml", Buffer.from(""));
+    // AdmZip normalizes "../" out of entryName on add, so smuggle a raw
+    // traversal name straight into the entry to simulate a maliciously
+    // crafted archive that tries to escape the extraction temp dir into a
+    // sibling directory under the OS temp root (still writable, unlike
+    // escaping all the way to "/").
+    const evilEntry = zip.addFile("registers.json", Buffer.from("{}"));
+    evilEntry.entryName = "../evil-zip-slip/registers.json";
+    axios.get.mockResolvedValue({ data: zip.toBuffer() });
+
+    const escapedDir = path.join(os.tmpdir(), "evil-zip-slip");
+    try {
+      await new LiquidSamplerRunner("1", { compact: true }).checkStatus("run-1");
+
+      expect(fs.existsSync(escapedDir)).toBe(false);
+    } finally {
+      fs.rmSync(escapedDir, { recursive: true, force: true });
+    }
   });
 });
