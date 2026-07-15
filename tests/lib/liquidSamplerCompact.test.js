@@ -197,6 +197,27 @@ describe("liquidSamplerCompact - extractCompact", () => {
       fs.rmSync(dir, { recursive: true, force: true });
     }
   });
+
+  it("treats a registers.json that parses to a non-object as unreadable, not an empty result", () => {
+    const dir = buildResultsDir({});
+    const entryDir = path.join(dir, "output", "reconciliation_entries", "5002");
+    fs.mkdirSync(path.join(entryDir, "before"), { recursive: true });
+    fs.mkdirSync(path.join(entryDir, "after"), { recursive: true });
+    // Valid JSON, but not an object - e.g. a truncated-mid-write file.
+    fs.writeFileSync(path.join(entryDir, "before", "registers.json"), "42");
+    fs.writeFileSync(path.join(entryDir, "after", "registers.json"), JSON.stringify({ named_results: { a: "1" } }));
+
+    try {
+      const data = extractCompact(dir);
+      // Must be counted as skipped (unreadable), not as a sampled entry with
+      // a spurious ABSENT -> "1" change for key "a".
+      expect(data.summary.entriesSampled).toBe(0);
+      expect(data.summary.entriesSkipped).toBe(1);
+      expect(data.templates).toEqual([]);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });
 
 describe("liquidSamplerCompact - formatCompact", () => {
