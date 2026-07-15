@@ -121,7 +121,10 @@ describe("LiquidSamplerRunner - compact diff", () => {
   it("downloads the result and prints the compact diff between markers when compact is set", async () => {
     await new LiquidSamplerRunner("1", { compact: true }).checkStatus("run-1");
 
-    expect(axios.get).toHaveBeenCalledWith(REPORT_URL, { responseType: "arraybuffer" });
+    expect(axios.get).toHaveBeenCalledWith(REPORT_URL, {
+      responseType: "arraybuffer",
+      timeout: expect.any(Number),
+    });
     const output = logSpy.mock.calls.map((c) => c[0]).join("\n");
     expect(output).toContain("<!-- SAMPLER_COMPACT_START -->");
     expect(output).toContain("<!-- SAMPLER_COMPACT_END -->");
