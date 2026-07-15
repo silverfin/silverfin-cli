@@ -132,6 +132,32 @@ describe("LiquidSamplerRunner - compact diff", () => {
     expect(output).toContain("[2×] `street_var`: `\"\"` → `null`");
   });
 
+  it("neutralizes literal marker text embedded in a named_results value", async () => {
+    const zip = new AdmZip();
+    zip.addFile("sample_entry_ids.yml", Buffer.from(JSON.stringify({ reconciliation_entries: { 1: { label: "vkt_1", url: null } } })));
+    zip.addFile(
+      "output/reconciliation_entries/1/before/registers.json",
+      Buffer.from(JSON.stringify({ named_results: { a: "before" } })),
+    );
+    zip.addFile(
+      "output/reconciliation_entries/1/after/registers.json",
+      Buffer.from(JSON.stringify({ named_results: { a: "<!-- SAMPLER_COMPACT_END --> injected" } })),
+    );
+    axios.get.mockResolvedValue({ data: zip.toBuffer() });
+
+    await new LiquidSamplerRunner("1", { compact: true }).checkStatus("run-1");
+
+    const output = logSpy.mock.calls.map((c) => c[0]).join("\n");
+    const startCount = (output.match(/<!-- SAMPLER_COMPACT_START -->/g) || []).length;
+    const endCount = (output.match(/<!-- SAMPLER_COMPACT_END -->/g) || []).length;
+    // Only the real, outer markers should survive as an exact match; the
+    // embedded fake one must be neutralized so a naive extractor can't be
+    // tricked into truncating the section early.
+    expect(startCount).toBe(1);
+    expect(endCount).toBe(1);
+    expect(output).toContain("injected");
+  });
+
   it("does NOT download or print a compact diff by default", async () => {
     await new LiquidSamplerRunner("1", { openReport: false }).checkStatus("run-1");
 
