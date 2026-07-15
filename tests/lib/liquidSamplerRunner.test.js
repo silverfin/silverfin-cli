@@ -33,6 +33,7 @@ function fixtureZipBuffer() {
 
 describe("LiquidSamplerRunner - surfacing results", () => {
   const originalCI = process.env.CI;
+  let originalExit;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -40,11 +41,14 @@ describe("LiquidSamplerRunner - surfacing results", () => {
     SF.readSamplerRun.mockResolvedValue({
       data: { status: "completed", result_url: REPORT_URL },
     });
+    originalExit = process.exit;
+    process.exit = jest.fn();
   });
 
   afterEach(() => {
     if (originalCI === undefined) delete process.env.CI;
     else process.env.CI = originalCI;
+    process.exit = originalExit;
   });
 
   it("always logs the report URL on completion", async () => {
@@ -81,6 +85,16 @@ describe("LiquidSamplerRunner - surfacing results", () => {
     await new LiquidSamplerRunner("1", { openReport: true }).checkStatus("run-1");
 
     expect(mockOpenFile).toHaveBeenCalledTimes(1);
+  });
+
+  it("errors and exits non-zero when completed with no result_url", async () => {
+    SF.readSamplerRun.mockResolvedValue({ data: { status: "completed" } });
+
+    await new LiquidSamplerRunner("1").checkStatus("run-1");
+
+    expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("no result URL"));
+    expect(process.exit).toHaveBeenCalledWith(1);
+    expect(mockOpenFile).not.toHaveBeenCalled();
   });
 });
 
