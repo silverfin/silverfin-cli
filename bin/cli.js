@@ -530,14 +530,31 @@ program
       "accountTemplate",
       "sharedPart",
       "firmIds",
+      "fromZip",
+    ])
+  )
+  .addOption(
+    new Option("--from-zip <path>", "Build the compact diff from an already-downloaded results.zip - no sampler run, no network call").conflicts([
+      "handle",
+      "accountTemplate",
+      "sharedPart",
+      "firmIds",
+      "id",
     ])
   )
   .option("--no-open", "Do not download/open the report locally; only print its URL (default in CI)")
-  .option("--compact", "Download the result and print a compact named_results diff (grouped by template) to stdout - review-friendly and safe in CI")
+  .option("--compact", "Download the result and print a compact diff (named_results/results, dependencies, vanished renders, visual-only changes) grouped by template - review-friendly and safe in CI")
   .action(async (options) => {
     // Commander sets options.open = false when --no-open is passed.
     // In CI, never open regardless of the flag.
     const runnerOptions = { openReport: options.open && !process.env.CI, compact: options.compact || false };
+
+    // A local zip needs no partner API access at all - it's pure offline
+    // re-analysis of a result someone already has on disk.
+    if (options.fromZip) {
+      await new LiquidSamplerRunner(options.partner, runnerOptions).printCompactDiffFromZip(options.fromZip);
+      return;
+    }
 
     // If an existing sampler ID is provided, fetch and display results
     if (options.id) {
