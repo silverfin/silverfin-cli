@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.58.0] (22/07/2026)
+Expand `silverfin run-sampler --compact`: diff the `results` register alongside `named_results` (shown as a triggered-indicator count for 0/1 flag arrays), group entries whose rendered output vanished entirely into a single "output vanished" finding per template instead of dozens of individual lines, add a `dependencies`/`rollforward_params`/`required_keys_missing` scope-change tier (rendered as one sub-line per category, not a semicolon-packed dump), and add a visual-only tier that flags `view.html` changes invisible to the data diff - described field-by-field where a `data-name` anchors the change, with a plain "compare the files" fallback otherwise. Long values are now truncated and per-template/per-entry change lists are capped, both with an explicit "+N more" disclosure. Also adds `run-sampler --from-zip <path>` to build the compact diff from an already-downloaded `results.zip` with no sampler run or network call.
+
 ## [1.57.1] (15/07/2026)
 Improve `silverfin run-sampler` by adding a compact output mode.
 
