@@ -37,6 +37,8 @@ describe("AxiosFactory", () => {
 
   afterEach(() => {
     exitSpy.mockRestore();
+    // Safety net: never let one test's opt-in leak into the next.
+    AxiosFactory.setSuppressExitOnAuthFailure(false);
 
     axiosMockAdapter.restore();
   });
@@ -179,6 +181,26 @@ describe("AxiosFactory", () => {
       // Error is raised and not handled by AxiosFactory
       expect(exitSpy).toHaveBeenCalledTimes(0);
       expect(consola.error).toHaveBeenCalledTimes(0);
+    });
+
+    it("should reject with a marked error instead of exiting when suppressExitOnAuthFailure is set", async () => {
+      firmCredentials.getHost.mockReturnValue(mockHost);
+      firmCredentials.getTokenPair.mockReturnValue(mockTokenPair);
+
+      AxiosFactory.setSuppressExitOnAuthFailure(true);
+      try {
+        const axiosInstance = AxiosFactory.createInstance("firm", firmId);
+
+        axiosMockAdapter.onGet("/test-endpoint").reply(401, "Unauthorized");
+        axiosMockAdapter.onPost(`${mockHost}/f/${firmId}/oauth/token`).reply(401, "Unauthorized");
+
+        await expect(axiosInstance.get("/test-endpoint")).rejects.toMatchObject({ isAuthFailure: true });
+
+        expect(exitSpy).not.toHaveBeenCalled();
+        expect(consola.error).toHaveBeenCalledWith("Error refreshing credentials. Try running the authentication process again");
+      } finally {
+        AxiosFactory.setSuppressExitOnAuthFailure(false);
+      }
     });
 
     it("should throw the error again if there is no response", async () => {

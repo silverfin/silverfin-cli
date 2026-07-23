@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.58.0] (23/07/2026)
+Isolate an authentication failure to the affected handle in `run-test --status`: previously, if a token/API-key refresh failed for one handle in a batch (e.g. a CI run with a deliberately stale token), `AxiosFactory` called `process.exit(1)` and killed the whole Node process, taking down every other handle's in-flight request with it. Now this specific `--status` batch path catches the failure and reports it as `FAILED` (with an "Authentication error refreshing credentials" reason) for just that handle, while every other handle in the same run completes normally. Every other CLI command keeps the previous exit-on-failure behaviour unchanged.
+
 ## [1.57.1] (15/07/2026)
 Improve `silverfin run-sampler` by adding a compact output mode.
 
