@@ -87,8 +87,19 @@ describe("liquidSamplerCompact - diffNamedResults", () => {
   it("truncates long values instead of printing them in full", () => {
     const longText = "x".repeat(500);
     const changes = diffNamedResults({ a: longText }, { a: "short" });
-    expect(changes[0].before).toMatch(/^"x+…\(502 chars\)$/);
-    expect(changes[0].before.length).toBeLessThan(120);
+    expect(changes[0].before).toMatch(/^"x+…\(502 chars, #[0-9a-f]{8}\)$/);
+    expect(changes[0].before.length).toBeLessThan(140);
+  });
+
+  it("gives distinct truncated values a distinct dedup fingerprint, even with the same prefix and length", () => {
+    // Same first 100 chars (JSON quote + 99 "x"s) and same total length (502),
+    // but genuinely different content - must not render identically, since
+    // the rendered string doubles as the cross-entry dedup key.
+    const longA = "x".repeat(499) + "A";
+    const longB = "x".repeat(499) + "B";
+    const changesA = diffNamedResults({ a: longA }, { a: "short" });
+    const changesB = diffNamedResults({ a: longB }, { a: "short" });
+    expect(changesA[0].before).not.toBe(changesB[0].before);
   });
 });
 
@@ -110,8 +121,14 @@ describe("liquidSamplerCompact - diffResultsRegister", () => {
     expect(diff.after).toBe('["996.08","27171.4"]');
   });
 
-  it("treats a vanished results register as undefined", () => {
-    expect(diffResultsRegister(["1.0"], null)).toEqual({ before: "1/1 triggered", after: "undefined" });
+  it("renders an explicit null distinctly from a genuinely absent (undefined) register", () => {
+    // Both are treated as equivalent to "no results" for the unchanged-check
+    // above, but once a change IS detected, the two must not display
+    // identically - `results: null` is a real distinction from the register
+    // being fully absent, and the "output vanished" collapse heuristic in
+    // extractCompact keys off this exact rendered string.
+    expect(diffResultsRegister(["1.0"], null)).toEqual({ before: "1/1 triggered", after: "null" });
+    expect(diffResultsRegister(["1.0"], undefined)).toEqual({ before: "1/1 triggered", after: "undefined" });
   });
 });
 
@@ -135,6 +152,19 @@ describe("liquidSamplerCompact - diffScope", () => {
     expect(change.subLines[1]).toContain("handle");
     expect(change.subLines[1]).toContain("b");
     expect(change.subLines[1]).toContain("c");
+  });
+
+  it("does not throw when `dependencies.ledgers` or `.account_ranges` is malformed (not an array)", () => {
+    // A single entry with a malformed register value shouldn't abort the
+    // whole run's diff (`.map` isn't a function on a string/number/object) -
+    // it should be treated the same as the value being absent.
+    const before = { dependencies: { ledgers: "not-an-array", account_ranges: 42 } };
+    const after = { dependencies: { ledgers: [1, 2], account_ranges: ["60"] } };
+    expect(() => diffScope(before, after)).not.toThrow();
+    const [change] = diffScope(before, after);
+    expect(change.key).toBe("dependencies");
+    expect(change.subLines.join(" ")).toContain("+2 ledgers (1, 2)");
+    expect(change.subLines.join(" ")).toContain('+1 account range (60)');
   });
 
   it("summarizes rollforward_params by name", () => {
@@ -210,6 +240,13 @@ describe("liquidSamplerCompact - describeVisualChange", () => {
     const after = field("unchanged", 'placeholder="p"', "v") + field("changed", "", "new");
     const notes = describeVisualChange(before, after);
     expect(notes).toEqual(['field `changed` value: "old" → "new"']);
+  });
+
+  it("decodes HTML entities in an <input> value, consistently with the <textarea>/<select> branches", () => {
+    const before = `<input data-name="company_name" value="Foo &amp; Bar" />`;
+    const after = `<input data-name="company_name" value="Foo &amp; Baz" />`;
+    const notes = describeVisualChange(before, after);
+    expect(notes).toEqual(['field `company_name` value: "Foo & Bar" → "Foo & Baz"']);
   });
 });
 
@@ -568,6 +605,24 @@ describe("liquidSamplerCompact - formatCompact", () => {
     expect(md).toContain("[example](https://example.staging.getsilverfin.com");
   });
 
+  it("falls back to an output-path reference instead of trusting an unsafe example URL", () => {
+    // `sample_entry_ids.yml` isn't guaranteed to come from Silverfin's own
+    // sampler backend with `--from-zip` - a crafted `url` value must not be
+    // interpolated straight into Markdown link syntax.
+    const dir = buildResultsDir({
+      reconciliation_entries: [
+        { id: "1", label: "unsafe_url_tpl", before: { a: "1" }, after: { a: "2" }, url: "javascript:alert(1)" },
+      ],
+    });
+    try {
+      const md = formatCompact(extractCompact(dir));
+      expect(md).not.toContain("javascript:alert(1)");
+      expect(md).toContain("(`output/reconciliation_entries/1/`)");
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("renders a clear message when nothing changed at all, across every tier", () => {
     const md = formatCompact({ summary: { entriesSampled: 5 }, templates: [], scopeTemplates: [], collapsedTemplates: [], visualOnlyEntries: [] });
     expect(md).toContain("No changes detected across 5 sampled entries");
@@ -595,6 +650,20 @@ describe("liquidSamplerCompact - formatCompact", () => {
     const changeLines = md.split("\n").filter((l) => l.startsWith("- `key_"));
     expect(changeLines).toHaveLength(8);
     expect(md).toContain("+4 more changes");
+  });
+
+  it("doesn't print a contradictory '0 template(s) changed' headline when only the collapsed tier has findings", () => {
+    const dir = buildResultsDir({
+      reconciliation_entries: [{ id: "1", label: "collapsed_only", before: { a: "1", b: "2", c: "3" }, after: {} }],
+    });
+    try {
+      const md = formatCompact(extractCompact(dir));
+      expect(md).not.toContain("**0** template(s) changed");
+      expect(md).toContain("No named_results/results changes");
+      expect(md).toContain("⚠️ Output vanished");
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it("renders the collapsed-output section with a file/url pointer, ahead of the normal template sections", () => {
