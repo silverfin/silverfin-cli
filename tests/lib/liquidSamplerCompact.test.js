@@ -623,6 +623,52 @@ describe("liquidSamplerCompact - formatCompact", () => {
     }
   });
 
+  it("rejects a URL that passes an http(s) scheme check but injects Markdown link syntax via parentheses", () => {
+    // `https://trusted.example/a) [injected](https://attacker)` starts with
+    // "https://" but the unescaped `)` closes the generated `(...)` link
+    // early, letting the rest inject arbitrary Markdown.
+    const dir = buildResultsDir({
+      reconciliation_entries: [
+        {
+          id: "1",
+          label: "injection_tpl",
+          before: { a: "1" },
+          after: { a: "2" },
+          url: "https://trusted.example/a) [injected](https://attacker)",
+        },
+      ],
+    });
+    try {
+      const md = formatCompact(extractCompact(dir));
+      expect(md).not.toContain("[injected](https://attacker)");
+      expect(md).toContain("(`output/reconciliation_entries/1/`)");
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("also sanitizes the visual-only section's 'open in app' link, not just exampleRef", () => {
+    const dir = buildResultsDir({
+      reconciliation_entries: [
+        {
+          id: "1",
+          label: "visual_unsafe_url",
+          before: { a: "1" },
+          after: { a: "1" },
+          viewHtml: { before: "<div>old</div>", after: "<div>new</div>" },
+          url: "javascript:alert(1)",
+        },
+      ],
+    });
+    try {
+      const md = formatCompact(extractCompact(dir));
+      expect(md).not.toContain("javascript:alert(1)");
+      expect(md).not.toContain("[open in app]");
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("renders a clear message when nothing changed at all, across every tier", () => {
     const md = formatCompact({ summary: { entriesSampled: 5 }, templates: [], scopeTemplates: [], collapsedTemplates: [], visualOnlyEntries: [] });
     expect(md).toContain("No changes detected across 5 sampled entries");
