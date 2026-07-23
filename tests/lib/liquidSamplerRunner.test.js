@@ -159,6 +159,22 @@ describe("LiquidSamplerRunner - compact diff", () => {
     expect(output).toContain("injected");
   });
 
+  it("extracts view.html too, so a visual-only (data-unchanged) change surfaces", async () => {
+    const zip = new AdmZip();
+    zip.addFile("sample_entry_ids.yml", Buffer.from(JSON.stringify({ reconciliation_entries: { 1: { label: "vkt_1", url: null } } })));
+    zip.addFile("output/reconciliation_entries/1/before/registers.json", Buffer.from(JSON.stringify({ named_results: { a: "1" } })));
+    zip.addFile("output/reconciliation_entries/1/after/registers.json", Buffer.from(JSON.stringify({ named_results: { a: "1" } })));
+    zip.addFile("output/reconciliation_entries/1/before/view.html", Buffer.from("<div>old</div>"));
+    zip.addFile("output/reconciliation_entries/1/after/view.html", Buffer.from("<div>new</div>"));
+    axios.get.mockResolvedValue({ data: zip.toBuffer() });
+
+    await new LiquidSamplerRunner("1", { compact: true }).checkStatus("run-1");
+
+    const output = logSpy.mock.calls.map((c) => c[0]).join("\n");
+    expect(output).toContain("👁️ Visual-only changes");
+    expect(output).toContain("output/reconciliation_entries/1/{before,after}/view.html");
+  });
+
   it("does NOT download or print a compact diff by default", async () => {
     await new LiquidSamplerRunner("1", { openReport: false }).checkStatus("run-1");
 
@@ -222,6 +238,53 @@ describe("LiquidSamplerRunner - compact diff", () => {
       writeSpy.mockRestore();
       mkdtempSpy.mockRestore();
     }
+  });
+});
+
+describe("LiquidSamplerRunner - compact diff from a local zip (--from-zip)", () => {
+  let logSpy;
+  let originalExit;
+  let zipPath;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    originalExit = process.exit;
+    process.exit = jest.fn();
+    logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+    zipPath = path.join(os.tmpdir(), `sampler-from-zip-test-${process.pid}.zip`);
+    fs.writeFileSync(zipPath, fixtureZipBuffer());
+  });
+
+  afterEach(() => {
+    logSpy.mockRestore();
+    process.exit = originalExit;
+    fs.rmSync(zipPath, { force: true });
+  });
+
+  it("prints the compact diff without any network call", async () => {
+    await new LiquidSamplerRunner("1").printCompactDiffFromZip(zipPath);
+
+    expect(axios.get).not.toHaveBeenCalled();
+    expect(SF.readSamplerRun).not.toHaveBeenCalled();
+    const output = logSpy.mock.calls.map((c) => c[0]).join("\n");
+    expect(output).toContain("<!-- SAMPLER_COMPACT_START -->");
+    expect(output).toContain("### vkt_1");
+  });
+
+  it("exits non-zero with a clear error when the path doesn't exist", async () => {
+    await new LiquidSamplerRunner("1").printCompactDiffFromZip("/no/such/results.zip");
+
+    expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("Could not read zip"));
+    expect(process.exit).toHaveBeenCalledWith(1);
+  });
+
+  it("exits non-zero (rather than silently warning) when the zip is unreadable", async () => {
+    fs.writeFileSync(zipPath, "not a zip file");
+
+    await new LiquidSamplerRunner("1").printCompactDiffFromZip(zipPath);
+
+    expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("Could not build compact diff"));
+    expect(process.exit).toHaveBeenCalledWith(1);
   });
 });
 
