@@ -347,6 +347,7 @@ Source: `lib/api/axiosFactory.js`
 | `AxiosFactory.createInstance` (firm) | should attempt to refresh tokens only once on 401 and terminate the process | Verifies that when the token refresh itself returns 401 the process exits with code 1 after exactly one refresh attempt. |
 | `AxiosFactory.createInstance` (firm) | should throw any other response errors | Verifies that non-401 HTTP errors (e.g. 404) are rethrown without triggering a refresh or exiting the process. |
 | `AxiosFactory.createInstance` (firm) | should throw the error again if there is no response | Verifies that network-level errors (no HTTP response) are rethrown without triggering a refresh or process exit. |
+| `AxiosFactory.createInstance` (firm) | should reject with a marked error instead of exiting when suppressExitOnAuthFailure is set | Verifies that with `AxiosFactory.setSuppressExitOnAuthFailure(true)`, a failed refresh rejects the request with an `isAuthFailure`-marked error instead of calling `process.exit(1)`. |
 | `AxiosFactory.createInstance` (partner) | should create a valid instance | Verifies that a partner instance has the correct `baseURL` and no `Authorization` header. |
 | `AxiosFactory.createInstance` (partner) | should add partner_id and api_key to requests params | Verifies that every outgoing request automatically includes `api_key` and `partner_id` query parameters. |
 | `AxiosFactory.createInstance` (partner) | should throw an error for missing API key and terminate process | Verifies that when no partner credentials are stored an error is logged and the process exits. |
@@ -871,6 +872,8 @@ Source: `lib/liquidTestRunner.js`
 | `runTestsStatusOnly` | should collapse newlines in the error message onto a single indented line | Verifies that a multi-line `error_message` is collapsed to spaces so it stays on one indented line and can't be misparsed as a new top-level result. |
 | `runTestsStatusOnly` | should surface a specific error message for internal_error when present | Verifies that an `internal_error` run prefers the platform's `error_message` over the generic fallback text. |
 | `runTestsStatusOnly` | should handle multiple handles and return FAILED if any fail | Verifies that `"FAILED"` is returned when at least one handle in a multi-handle run fails. |
+| `runTestsStatusOnly` | should isolate an auth-failure (401 with failed refresh) to the affected handle instead of throwing | Verifies that an `isAuthFailure`-marked error from `runTests` is caught and reported as a `FAILED` result with a distinct reason, instead of propagating out of `runTestsStatusOnly`. |
+| `runTestsStatusOnly` | should isolate an auth failure to just the affected handle when running several handles together | Verifies that one handle's auth failure does not affect the outcome of the other handles running concurrently in the same `Promise.all` batch. |
 
 ---
 

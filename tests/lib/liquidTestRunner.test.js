@@ -19,6 +19,7 @@ jest.mock("../../lib/templates/accountTemplate");
 
 const SF = require("../../lib/api/sfApi");
 const { consola } = require("consola");
+const errorUtils = require("../../lib/utils/errorUtils");
 const fsUtils = require("../../lib/utils/fsUtils");
 const { ReconciliationText } = require("../../lib/templates/reconciliationText");
 const { AccountTemplate } = require("../../lib/templates/accountTemplate");
@@ -508,6 +509,68 @@ describe("runTestsStatusOnly", () => {
 
     expect(overallStatus).toBe("FAILED");
     expect(consola.log).toHaveBeenCalledWith(expect.stringContaining("Backend timeout"));
+  });
+
+  it("should isolate an auth-failure (401 with failed refresh) to the affected handle instead of throwing", async () => {
+    const handle = "reconciliation_text_1";
+    setupFsUtilsMocks(handle);
+
+    const testDir = path.join(tempDir, "reconciliation_texts", handle, "tests");
+    fs.mkdirSync(testDir, { recursive: true });
+    fs.writeFileSync(path.join(testDir, `${handle}_liquid_test.yml`), SIMPLE_YAML);
+
+    ReconciliationText.read.mockReturnValue({ handle, text: "x", text_parts: [] });
+
+    const authError = new Error("Authentication error: failed to refresh credentials");
+    authError.isAuthFailure = true;
+    SF.createTestRun = jest.fn().mockRejectedValue(authError);
+
+    const promise = runTestsStatusOnly(1001, "reconciliationText", [handle]);
+    await jest.runAllTimersAsync();
+    const overallStatus = await promise;
+
+    expect(overallStatus).toBe("FAILED");
+    expect(consola.log).toHaveBeenCalledWith(`${handle}: FAILED`);
+    expect(consola.log).toHaveBeenCalledWith(expect.stringContaining("Authentication error"));
+    // Isolated to this handle: runTests's own catch never falls through to the generic handler.
+    expect(errorUtils.errorHandler).not.toHaveBeenCalled();
+  });
+
+  it("should isolate an auth failure to just the affected handle when running several handles together", async () => {
+    const handleOk = "reconciliation_text_1";
+    const handleAuthFail = "reconciliation_text_2";
+
+    fsUtils.configExists.mockReturnValue(true);
+    fsUtils.readConfig.mockImplementation((type, handle) => ({
+      test: `tests/${handle}_liquid_test.yml`,
+      reconciliation_type: "can_be_reconciled_without_data",
+      id: { 1001: handle === handleOk ? 8801 : 9901 },
+    }));
+    fsUtils.listSharedPartsUsedInTemplate.mockReturnValue([]);
+
+    for (const handle of [handleOk, handleAuthFail]) {
+      const testDir = path.join(tempDir, "reconciliation_texts", handle, "tests");
+      fs.mkdirSync(testDir, { recursive: true });
+      fs.writeFileSync(path.join(testDir, `${handle}_liquid_test.yml`), SIMPLE_YAML);
+    }
+
+    ReconciliationText.read.mockImplementation((handle) => ({ handle, text: "x", text_parts: [] }));
+
+    const authError = new Error("Authentication error: failed to refresh credentials");
+    authError.isAuthFailure = true;
+    SF.createTestRun = jest.fn().mockImplementation((firmId, testParams) => {
+      return testParams.template.handle === handleAuthFail ? Promise.reject(authError) : Promise.resolve({ data: 20 });
+    });
+    SF.readTestRun = jest.fn().mockResolvedValue({ data: makeTestRun("completed", makePassedTests()) });
+
+    const promise = runTestsStatusOnly(1001, "reconciliationText", [handleOk, handleAuthFail]);
+    await jest.runAllTimersAsync();
+    const overallStatus = await promise;
+
+    // The stale-token handle fails, but the other handle's own request is never touched by it.
+    expect(overallStatus).toBe("FAILED");
+    expect(consola.log).toHaveBeenCalledWith(`${handleOk}: PASSED`);
+    expect(consola.log).toHaveBeenCalledWith(`${handleAuthFail}: FAILED`);
   });
 
   it("should handle multiple handles and return FAILED if any fail", async () => {

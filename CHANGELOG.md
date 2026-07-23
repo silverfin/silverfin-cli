@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.58.0] (23/07/2026)
+Fix `run-test --status` killing every other in-flight handle in the same batch when one handle hits a 401 whose token refresh also fails (e.g. a deliberately-blanked `refreshToken`, as CI does to avoid poisoning a shared token secret). Previously `AxiosFactory`'s failed-refresh handling always called `process.exit(1)`, which terminates the whole Node process regardless of `Promise.all` - so a single stale/expired token could report a false `FAILED` for every other, otherwise-passing template in the same `--status` call. `run-test --status` now isolates the failure to just the affected handle(s), reporting a distinct "Authentication error" reason instead. `AxiosFactory.setSuppressExitOnAuthFailure` is opt-in and only used by this batched code path, so every other command keeps its existing "print and exit" behavior on an auth failure.
+
 ## [1.57.1] (15/07/2026)
 Improve `silverfin run-sampler` by adding a compact output mode.
 
