@@ -288,6 +288,98 @@ describe("LiquidSamplerRunner - compact diff from a local zip (--from-zip)", () 
   });
 });
 
+describe("LiquidSamplerRunner - add diffs folder to a local zip (--add-diffs-folder)", () => {
+  let zipPath;
+  let originalExit;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    originalExit = process.exit;
+    process.exit = jest.fn();
+    zipPath = path.join(os.tmpdir(), `sampler-diffs-test-${process.pid}.zip`);
+  });
+
+  afterEach(() => {
+    process.exit = originalExit;
+    fs.rmSync(zipPath, { force: true });
+  });
+
+  function writeZip(entries) {
+    const zip = new AdmZip();
+    zip.addFile(
+      "sample_entry_ids.yml",
+      Buffer.from(
+        JSON.stringify({
+          reconciliation_entries: {
+            1: { label: "vkt_1", url: null },
+            2: { label: "vkt_1", url: null },
+          },
+        }),
+      ),
+    );
+    for (const [name, content] of entries) {
+      zip.addFile(name, Buffer.from(content));
+    }
+    fs.writeFileSync(zipPath, zip.toBuffer());
+  }
+
+  it("adds view.html before/after only for entries the compact diff flagged, leaving the rest of the zip intact", () => {
+    writeZip([
+      ["output/reconciliation_entries/1/before/registers.json", JSON.stringify({ named_results: { a: "before" } })],
+      ["output/reconciliation_entries/1/after/registers.json", JSON.stringify({ named_results: { a: "after" } })],
+      ["output/reconciliation_entries/1/before/view.html", "<div>1 old</div>"],
+      ["output/reconciliation_entries/1/after/view.html", "<div>1 new</div>"],
+      ["output/reconciliation_entries/2/before/registers.json", JSON.stringify({ named_results: { a: "same" } })],
+      ["output/reconciliation_entries/2/after/registers.json", JSON.stringify({ named_results: { a: "same" } })],
+      ["output/reconciliation_entries/2/before/view.html", "<div>2 unchanged</div>"],
+      ["output/reconciliation_entries/2/after/view.html", "<div>2 unchanged</div>"],
+    ]);
+
+    new LiquidSamplerRunner("1").addDiffsFolderToZip(zipPath);
+
+    const zip = new AdmZip(fs.readFileSync(zipPath));
+    const names = zip.getEntries().map((e) => e.entryName);
+    expect(names).toContain("diffs/reconciliation_entries/1/before/view.html");
+    expect(names).toContain("diffs/reconciliation_entries/1/after/view.html");
+    expect(names).not.toContain("diffs/reconciliation_entries/2/before/view.html");
+    expect(names).not.toContain("diffs/reconciliation_entries/2/after/view.html");
+    expect(zip.getEntry("diffs/reconciliation_entries/1/after/view.html").getData().toString()).toBe("<div>1 new</div>");
+    // The original entries stay intact - the zip is augmented, not replaced.
+    expect(names).toContain("output/reconciliation_entries/1/after/registers.json");
+
+    expect(consola.success).toHaveBeenCalledWith(expect.stringContaining("2 view.html file(s) across 1 entry"));
+  });
+
+  it("reports and leaves the zip untouched when no entries differ", () => {
+    writeZip([
+      ["output/reconciliation_entries/1/before/registers.json", JSON.stringify({ named_results: { a: "same" } })],
+      ["output/reconciliation_entries/1/after/registers.json", JSON.stringify({ named_results: { a: "same" } })],
+    ]);
+
+    new LiquidSamplerRunner("1").addDiffsFolderToZip(zipPath);
+
+    expect(consola.info).toHaveBeenCalledWith(expect.stringContaining("No differing entries"));
+    const zip = new AdmZip(fs.readFileSync(zipPath));
+    expect(zip.getEntries().some((e) => e.entryName.startsWith("diffs/"))).toBe(false);
+  });
+
+  it("exits non-zero with a clear error when the path doesn't exist", () => {
+    new LiquidSamplerRunner("1").addDiffsFolderToZip("/no/such/results.zip");
+
+    expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("Could not read zip"));
+    expect(process.exit).toHaveBeenCalledWith(1);
+  });
+
+  it("exits non-zero (rather than throwing) when the zip is unreadable", () => {
+    fs.writeFileSync(zipPath, "not a zip file");
+
+    new LiquidSamplerRunner("1").addDiffsFolderToZip(zipPath);
+
+    expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("Could not build diffs/ folder"));
+    expect(process.exit).toHaveBeenCalledWith(1);
+  });
+});
+
 describe("LiquidSamplerRunner - polling status output", () => {
   const originalIsTTY = process.stdout.isTTY;
   const originalCI = process.env.CI;

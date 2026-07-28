@@ -324,6 +324,16 @@ describe("liquidSamplerCompact - extractCompact", () => {
     expect(vkt.exampleUrl).toMatch(/^https:\/\/example\.staging\.getsilverfin\.com/);
   });
 
+  it("collects every flagged entry's kind/entryId into diffEntryKeys, excluding unchanged entries", () => {
+    expect(data.diffEntryKeys).toEqual([
+      "reconciliation_entries/1_100_1000_5000",
+      "reconciliation_entries/1_101_1001_5000",
+      "reconciliation_entries/1_102_1002_6000",
+    ]);
+    // the unchanged account entry must not appear
+    expect(data.diffEntryKeys).not.toContain("account_entries/1_103_1003_490000.000");
+  });
+
   it("falls back to raw entry id when labels are missing", () => {
     // point at a dir with entries but no sample_entry_ids.yml -> label = entry id.
     // Reuse the fixture output dir but from a path without the yml alongside.

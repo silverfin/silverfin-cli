@@ -154,5 +154,10 @@ describe("bin/cli.js Commander wiring", () => {
       const output = runCli("run-sampler -h some_handle");
       expect(output).toMatch(/You need to specify a partner/);
     });
+
+    it("--add-diffs-folder without --from-zip is rejected before touching the partner API", () => {
+      const output = runCli("run-sampler --add-diffs-folder");
+      expect(output).toMatch(/--add-diffs-folder requires --from-zip/);
+    });
   });
 });

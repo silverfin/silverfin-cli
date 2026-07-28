@@ -544,15 +544,28 @@ program
   )
   .option("--no-open", "Do not download/open the report locally; only print its URL (default in CI)")
   .option("--compact", "Download the result and print a compact diff (named_results/results, dependencies, vanished renders, visual-only changes) grouped by template - review-friendly and safe in CI")
+  .option(
+    "--add-diffs-folder",
+    "With --from-zip: add a diffs/ folder to the zip containing before/after pairs only for the entries the compact diff flagged (data/scope/vanished-output/visual-only changes), instead of every sampled entry"
+  )
   .action(async (options) => {
     // Commander sets options.open = false when --no-open is passed.
     // In CI, never open regardless of the flag.
     const runnerOptions = { openReport: options.open && !process.env.CI, compact: options.compact || false };
 
+    if (options.addDiffsFolder && !options.fromZip) {
+      consola.error("--add-diffs-folder requires --from-zip <path>");
+      process.exit(1);
+    }
+
     // A local zip needs no partner API access at all - it's pure offline
     // re-analysis of a result someone already has on disk.
     if (options.fromZip) {
-      await new LiquidSamplerRunner(options.partner, runnerOptions).printCompactDiffFromZip(options.fromZip);
+      const runner = new LiquidSamplerRunner(options.partner, runnerOptions);
+      await runner.printCompactDiffFromZip(options.fromZip);
+      if (options.addDiffsFolder) {
+        runner.addDiffsFolderToZip(options.fromZip);
+      }
       return;
     }
 
