@@ -1,0 +1,4 @@
+{
+  "name": "Workflow With Broken JSON",
+  "templates": {
+    "reconciliations": ["reconciliation_text_1",],
