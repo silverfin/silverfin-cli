@@ -122,7 +122,29 @@ The CLI will stick to some conventions regarding the structure and organization 
             /tests
                 README.md
                 [name_nl]_liquid_test.yml
+    /workflows
+        [workflow_handle].json
 ```
+
+### Workflows
+
+The optional `/workflows` directory groups templates so statistics can be reported per workflow (see [Statistics](#statistics)). Each workflow is a single JSON file, and the file name (without the `.json` extension) is the workflow handle used with `--workflow`.
+
+```json
+{
+  "name": "Workflow 1",
+  "templates": {
+    "reconciliations": ["reconciliation_text_1", "reconciliation_text_2"],
+    "accounts": ["account_1"],
+    "exports": ["export_1"]
+  }
+}
+```
+
+- `name` is the label shown in the terminal output and stored in the CSV.
+- `templates.reconciliations`, `templates.accounts` and `templates.exports` are all required, and each must be an array. Use an empty array when the workflow contains no template of that type.
+- The values are the identifiers described in [Naming conventions](#naming-conventions): the `handle` for Reconciliation Texts, the `name_nl` for Account Templates and the `name` for Export Files. They must match the directory names in your repository.
+- Shared Parts are not part of a workflow, so they are excluded from workflow statistics.
 
 ### Naming conventions
 
@@ -264,6 +286,28 @@ silverfin development-mode --handle <handle>
 ```bash
 silverfin development-mode --update-templates
 ```
+
+### Statistics
+
+The `stats` command generates an overview of the templates and Liquid Tests in your repository, prints it to the terminal and appends a row to a CSV file inside `/stats`. The `--since` flag is mandatory and must use the `YYYY-MM-DD` format; it determines the period used to count created and updated YAML files (based on your git history).
+
+```bash
+silverfin stats --since 2024-01-01
+```
+
+This writes to `./stats/overview.csv` and covers every template in the repository, Shared Parts included.
+
+To report per workflow instead, use `--workflow`. See [Workflows](#workflows) for the expected file format.
+
+```bash
+# A single workflow, from ./workflows/<handle>.json
+silverfin stats --since 2024-01-01 --workflow <handle>
+
+# Every workflow stored in ./workflows
+silverfin stats --since 2024-01-01 --workflow
+```
+
+Each workflow gets its own file, `./stats/<handle>_stats.csv`. When a handle is passed explicitly and it cannot be found or read, the command reports the problem and stops. When every workflow is included, a faulty workflow file is skipped with a warning and the remaining ones are still processed, followed by a summary of what was skipped.
 
 ## Contributing
 
