@@ -363,6 +363,20 @@ describe("LiquidSamplerRunner - add diffs folder to a local zip (--add-diffs-fol
     expect(zip.getEntries().some((e) => e.entryName.startsWith("diffs/"))).toBe(false);
   });
 
+  it("reports and leaves the zip untouched when entries differ but none have a view.html", () => {
+    writeZip([
+      ["output/reconciliation_entries/1/before/registers.json", JSON.stringify({ named_results: { a: "before" } })],
+      ["output/reconciliation_entries/1/after/registers.json", JSON.stringify({ named_results: { a: "after" } })],
+    ]);
+
+    new LiquidSamplerRunner("1").addDiffsFolderToZip(zipPath);
+
+    expect(consola.info).toHaveBeenCalledWith(expect.stringContaining("No view.html files found"));
+    expect(consola.success).not.toHaveBeenCalled();
+    const zip = new AdmZip(fs.readFileSync(zipPath));
+    expect(zip.getEntries().some((e) => e.entryName.startsWith("diffs/"))).toBe(false);
+  });
+
   it("exits non-zero with a clear error when the path doesn't exist", () => {
     new LiquidSamplerRunner("1").addDiffsFolderToZip("/no/such/results.zip");
 
