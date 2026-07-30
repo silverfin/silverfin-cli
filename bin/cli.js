@@ -625,9 +625,23 @@ program
 program
   .command("stats")
   .description("Generate an overview with some statistics")
-  .requiredOption("-s, --since <date>, Specify the date which is going to be used to filter the data from (format: YYYY-MM-DD) (mandatory)")
-  .action((options) => {
-    stats.generateOverview(options.since);
+  .requiredOption("-s, --since <date>", "Specify the date which is going to be used to filter the data from (format: YYYY-MM-DD) (mandatory)")
+  .option("-w, --workflow [handle]", "Filter the statistics by workflow. Without a handle, every workflow stored in the workflows folder is used (optional)")
+  .action(async (options) => {
+    cliUtils.checkDateFormat(options.since);
+    // Commander sets workflow to true when the flag is used without a value
+    if (typeof options.workflow === "undefined") {
+      await stats.generateOverview(options.since);
+      return;
+    }
+    // A blank handle (e.g. an unset --workflow "$HANDLE") is falsy, so it would otherwise be read as "no handle given" and include every workflow
+    if (typeof options.workflow === "string" && options.workflow.trim() === "") {
+      consola.error(`An empty workflow handle was provided. Please pass a handle (--workflow <handle>) or use --workflow on its own to include every workflow`);
+      process.exit(1);
+    }
+    // When a handle was typed we pass it on without any surrounding spaces, otherwise the flag was used on its own (Commander gives true instead of text) and undefined means "every workflow"
+    const workflowHandle = typeof options.workflow === "string" ? options.workflow.trim() : undefined;
+    await stats.generateWorkflowOverview(options.since, workflowHandle);
   });
 
 // Set/Get FIRM ID
