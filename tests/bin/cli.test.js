@@ -15,6 +15,21 @@ function runCli(args) {
   }
 }
 
+// Runs the CLI and returns only the exit code, discarding output. Used to assert the process
+// exit-code contract: a failing command must not exit 0, or scripts/CI read failure as success.
+function runCliExitCode(args) {
+  try {
+    execSync(`node bin/cli.js ${args}`, {
+      cwd: repoRoot,
+      stdio: "ignore",
+      env: { ...process.env, NODE_ENV: "test", SF_API_CLIENT_ID: "test", SF_API_SECRET: "test" },
+    });
+    return 0;
+  } catch (err) {
+    return err.status;
+  }
+}
+
 describe("bin/cli.js Commander wiring", () => {
   describe("silverfin --help", () => {
     let helpOutput;
@@ -109,6 +124,20 @@ describe("bin/cli.js Commander wiring", () => {
 
     it("output contains --source-ledger-ids option", () => {
       expect(helpOutput).toMatch(/--source-ledger-ids/);
+    });
+  });
+
+  describe("silverfin company-data-copier exit codes", () => {
+    it("exits 1 on an invalid source company id", () => {
+      expect(runCliExitCode("company-data-copier -c abc -l 33417839 -f 13692")).toBe(1);
+    });
+
+    it("exits 1 on an invalid source ledger id", () => {
+      expect(runCliExitCode("company-data-copier -c 1224550 -l xyz -f 13692")).toBe(1);
+    });
+
+    it("exits 1 when a required option is missing", () => {
+      expect(runCliExitCode("company-data-copier -f 13692")).toBe(1);
     });
   });
 });

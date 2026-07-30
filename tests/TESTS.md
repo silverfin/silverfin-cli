@@ -154,6 +154,9 @@ Source: `bin/cli.js` (Commander program)
 | silverfin company-data-copier --help output contains --firm option | Verifies `--firm` is declared for the company-data-copier command. |
 | silverfin company-data-copier --help output contains --source-company-id option | Verifies `--source-company-id` is declared. |
 | silverfin company-data-copier --help output contains --source-ledger-ids option | Verifies `--source-ledger-ids` is declared. |
+| silverfin company-data-copier exit codes exits 1 on an invalid source company id | Verifies a non-integer `--source-company-id` terminates the process with exit code 1. |
+| silverfin company-data-copier exit codes exits 1 on an invalid source ledger id | Verifies a non-integer `--source-ledger-ids` value terminates the process with exit code 1. |
+| silverfin company-data-copier exit codes exits 1 when a required option is missing | Verifies Commander's required-option check terminates the process with exit code 1. |
 
 ---
 

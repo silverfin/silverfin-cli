@@ -795,7 +795,13 @@ program
       process.exit(1);
     }
 
-    await toolkit.copyCompanyData(options.firm, sourceCompanyId, sourceLedgerIds);
+    // copyCompanyData returns false on failure (e.g. a 404/400 that responseErrorHandler swallows
+    // without exiting), so the exit code has to be set here or scripts/CI read a failed copy as success.
+    const result = await toolkit.copyCompanyData(options.firm, sourceCompanyId, sourceLedgerIds);
+
+    if (!result) {
+      process.exit(1);
+    }
   });
 
 // Update the CLI
