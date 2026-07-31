@@ -116,12 +116,11 @@ describe("liquidSamplerCompact - diffResultsRegister", () => {
   });
 
   it("names which indices turned on/off when a flag-array reorder keeps the same triggered count", () => {
-    // Same 1/2 triggered on both sides - without naming direction this
-    // rendered identically on both sides and looked like a no-op, and
-    // collapsed distinct reorders into one deduped change (see the
-    // dedup-key tests below).
+    // Same 1/2 triggered on both sides - the suffix goes on `after` only, so
+    // the line reads "1/2 triggered -> 1/2 triggered (0 off, 1 on)" instead
+    // of an identical-looking string on both sides.
     const diff = diffResultsRegister(["1.0", "0.0"], ["0.0", "1.0"]);
-    expect(diff.before).toBe("1/2 triggered (0 off, 1 on)");
+    expect(diff.before).toBe("1/2 triggered");
     expect(diff.after).toBe("1/2 triggered (0 off, 1 on)");
   });
 
@@ -148,7 +147,7 @@ describe("liquidSamplerCompact - diffResultsRegister", () => {
     const diffA = diffResultsRegister(before, afterA);
     const diffB = diffResultsRegister(before, afterB);
 
-    expect(diffA.before.length).toBeLessThan(100);
+    expect(diffA.after.length).toBeLessThan(100);
     expect(diffA).not.toEqual(diffB);
   });
 
