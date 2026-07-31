@@ -350,6 +350,22 @@ describe("LiquidSamplerRunner - add diffs folder to a local zip (--add-diffs-fol
     expect(consola.success).toHaveBeenCalledWith(expect.stringContaining("2 view.html file(s) across 1 entry"));
   });
 
+  it("counts only entries that actually got a view.html, not every flagged entry", () => {
+    writeZip([
+      ["output/reconciliation_entries/1/before/registers.json", JSON.stringify({ named_results: { a: "before" } })],
+      ["output/reconciliation_entries/1/after/registers.json", JSON.stringify({ named_results: { a: "after" } })],
+      ["output/reconciliation_entries/1/before/view.html", "<div>1 old</div>"],
+      ["output/reconciliation_entries/1/after/view.html", "<div>1 new</div>"],
+      // Entry 2 also differs, but has no view.html - it must not inflate the entry count.
+      ["output/reconciliation_entries/2/before/registers.json", JSON.stringify({ named_results: { a: "before" } })],
+      ["output/reconciliation_entries/2/after/registers.json", JSON.stringify({ named_results: { a: "after" } })],
+    ]);
+
+    new LiquidSamplerRunner("1").addDiffsFolderToZip(zipPath);
+
+    expect(consola.success).toHaveBeenCalledWith(expect.stringContaining("2 view.html file(s) across 1 entry"));
+  });
+
   it("reports and leaves the zip untouched when no entries differ", () => {
     writeZip([
       ["output/reconciliation_entries/1/before/registers.json", JSON.stringify({ named_results: { a: "same" } })],

@@ -115,6 +115,22 @@ describe("liquidSamplerCompact - diffResultsRegister", () => {
     expect(diffResultsRegister(["0.0", "0.0"], ["1.0", "0.0"])).toEqual({ before: "0/2 triggered", after: "1/2 triggered" });
   });
 
+  it("names the flipped indices when a flag-array reorder keeps the same triggered count", () => {
+    // Same 1/2 triggered on both sides - without the flipped-index suffix
+    // this rendered identically on both sides and looked like a no-op, and
+    // collapsed distinct reorders into one deduped change (see the
+    // dedup-key test below).
+    const diff = diffResultsRegister(["1.0", "0.0"], ["0.0", "1.0"]);
+    expect(diff.before).toBe("1/2 triggered (indices 0,1 flipped)");
+    expect(diff.after).toBe("1/2 triggered (indices 0,1 flipped)");
+  });
+
+  it("does not dedupe two entries whose flag-array reorders flip different indices into one change", () => {
+    const a = diffResultsRegister(["1.0", "0.0", "0.0", "0.0"], ["0.0", "1.0", "0.0", "0.0"]);
+    const b = diffResultsRegister(["0.0", "0.0", "1.0", "0.0"], ["0.0", "0.0", "0.0", "1.0"]);
+    expect(a).not.toEqual(b);
+  });
+
   it("falls back to the raw value for non-flag (raw numeric) results arrays", () => {
     const diff = diffResultsRegister(["996.08", "0.0"], ["996.08", "27171.4"]);
     expect(diff.before).toBe('["996.08","0.0"]');
@@ -247,6 +263,14 @@ describe("liquidSamplerCompact - describeVisualChange", () => {
     const after = `<input data-name="company_name" value="Foo &amp; Baz" />`;
     const notes = describeVisualChange(before, after);
     expect(notes).toEqual(['field `company_name` value: "Foo & Bar" → "Foo & Baz"']);
+  });
+
+  it("reports a changed radio-group selection by which option is checked, not the last input in the group", () => {
+    const radioGroup = (checkedValue) =>
+      `<input type="radio" data-name="filing_type" value="vol" ${checkedValue === "vol" ? "checked" : ""} />` +
+      `<input type="radio" data-name="filing_type" value="vkt" ${checkedValue === "vkt" ? "checked" : ""} />`;
+    const notes = describeVisualChange(radioGroup("vol"), radioGroup("vkt"));
+    expect(notes).toEqual(['field `filing_type` value: "vol" → "vkt"']);
   });
 });
 
