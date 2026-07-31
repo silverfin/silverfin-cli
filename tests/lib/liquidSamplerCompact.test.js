@@ -115,20 +115,41 @@ describe("liquidSamplerCompact - diffResultsRegister", () => {
     expect(diffResultsRegister(["0.0", "0.0"], ["1.0", "0.0"])).toEqual({ before: "0/2 triggered", after: "1/2 triggered" });
   });
 
-  it("names the flipped indices when a flag-array reorder keeps the same triggered count", () => {
-    // Same 1/2 triggered on both sides - without the flipped-index suffix
-    // this rendered identically on both sides and looked like a no-op, and
+  it("names which indices turned on/off when a flag-array reorder keeps the same triggered count", () => {
+    // Same 1/2 triggered on both sides - without naming direction this
+    // rendered identically on both sides and looked like a no-op, and
     // collapsed distinct reorders into one deduped change (see the
-    // dedup-key test below).
+    // dedup-key tests below).
     const diff = diffResultsRegister(["1.0", "0.0"], ["0.0", "1.0"]);
-    expect(diff.before).toBe("1/2 triggered (indices 0,1 flipped)");
-    expect(diff.after).toBe("1/2 triggered (indices 0,1 flipped)");
+    expect(diff.before).toBe("1/2 triggered (0 off, 1 on)");
+    expect(diff.after).toBe("1/2 triggered (0 off, 1 on)");
   });
 
   it("does not dedupe two entries whose flag-array reorders flip different indices into one change", () => {
     const a = diffResultsRegister(["1.0", "0.0", "0.0", "0.0"], ["0.0", "1.0", "0.0", "0.0"]);
     const b = diffResultsRegister(["0.0", "0.0", "1.0", "0.0"], ["0.0", "0.0", "0.0", "1.0"]);
     expect(a).not.toEqual(b);
+  });
+
+  it("does not dedupe two entries with opposite same-index reorders (naming direction, not just position)", () => {
+    // Both touch indices 0 and 1 - a position-only suffix (e.g. "indices
+    // 0,1 flipped") would render identically for both directions and still
+    // collapse them into one deduped change.
+    const a = diffResultsRegister(["1.0", "0.0"], ["0.0", "1.0"]);
+    const b = diffResultsRegister(["0.0", "1.0"], ["1.0", "0.0"]);
+    expect(a).not.toEqual(b);
+  });
+
+  it("caps the flip suffix and fingerprints the elided flips, so two long vectors don't collapse", () => {
+    const before = Array.from({ length: 20 }, (_, i) => (i % 2 === 0 ? "1.0" : "0.0"));
+    const afterA = before.map((v, i) => (i < 10 ? (v === "1.0" ? "0.0" : "1.0") : v));
+    const afterB = before.map((v, i) => (i >= 10 ? (v === "1.0" ? "0.0" : "1.0") : v));
+
+    const diffA = diffResultsRegister(before, afterA);
+    const diffB = diffResultsRegister(before, afterB);
+
+    expect(diffA.before.length).toBeLessThan(100);
+    expect(diffA).not.toEqual(diffB);
   });
 
   it("falls back to the raw value for non-flag (raw numeric) results arrays", () => {
@@ -269,6 +290,18 @@ describe("liquidSamplerCompact - describeVisualChange", () => {
     const radioGroup = (checkedValue) =>
       `<input type="radio" data-name="filing_type" value="vol" ${checkedValue === "vol" ? "checked" : ""} />` +
       `<input type="radio" data-name="filing_type" value="vkt" ${checkedValue === "vkt" ? "checked" : ""} />`;
+    const notes = describeVisualChange(radioGroup("vol"), radioGroup("vkt"));
+    expect(notes).toEqual(['field `filing_type` value: "vol" → "vkt"']);
+  });
+
+  it("does not mistake aria-checked for checked (which would make every radio look selected)", () => {
+    const radioGroup = (selectedValue) =>
+      `<input data-type="radio" type="radio" data-name="filing_type" value="vol" aria-checked="${selectedValue === "vol"}" ${
+        selectedValue === "vol" ? "checked" : ""
+      } />` +
+      `<input data-type="radio" type="radio" data-name="filing_type" value="vkt" aria-checked="${selectedValue === "vkt"}" ${
+        selectedValue === "vkt" ? "checked" : ""
+      } />`;
     const notes = describeVisualChange(radioGroup("vol"), radioGroup("vkt"));
     expect(notes).toEqual(['field `filing_type` value: "vol" → "vkt"']);
   });
