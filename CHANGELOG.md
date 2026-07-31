@@ -2,8 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.57.0] (09/07/2026)
+## [1.58.0] (31/07/2026)
 Added the `company-data-copier` command, which triggers the platform Data Copier to copy a source company's data (account values incl. adjustments, text properties, people/company drop and configuration) into a brand-new company in a destination development firm. Intended for BSO developers to reproduce a client's situation in a dev firm without touching the production firm. Only *data* is copied, not template *code* — templates must already exist in the destination firm to be populated.
+
+## [1.57.2] (30/07/2026)
+Cap the liquid-test polling interval at 5 seconds. The delay between result polls grew 5% per poll without a limit, so long test runs (~10 minutes) were only checked every 30-60 seconds and a finished run could sit unnoticed for up to a minute.
+
+## [1.57.1] (15/07/2026)
+Improve `silverfin run-sampler` by adding a compact output mode.
+
+## [1.57.0] (14/07/2026)
+Added a new `silverfin run-sampler` command to run the Liquid Sampler for partner templates. Specify a partner with `-p` and one or more reconciliation text handles (`-h`), account detail template names (`-at`), and/or shared part names (`-s`), optionally scoping the run to specific firms with `--firm-ids`. Pass `--id <sampler-id>` to fetch and display the results of an existing sampler run instead.
 
 ## [1.56.3] (03/07/2026)
 Improve `run-test --status` output for CI: surface the underlying error message when a run ends in `test_error`/`internal_error` (previously reported as a bare `FAILED` with no reason), and suppress the progress spinner when stdout is not a TTY (it flooded CI logs with hundreds of "Running tests.." frames).

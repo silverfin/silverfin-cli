@@ -219,6 +219,41 @@ describe("runTests", () => {
     expect(result.testRun.tests).toEqual(makePassedTests());
   });
 
+  it("should cap the polling interval at 5 seconds on long test runs", async () => {
+    const handle = "reconciliation_text_1";
+    setupFsUtilsMocks(handle);
+
+    const testDir = path.join(tempDir, "reconciliation_texts", handle, "tests");
+    fs.mkdirSync(testDir, { recursive: true });
+    fs.writeFileSync(path.join(testDir, `${handle}_liquid_test.yml`), SIMPLE_YAML);
+
+    ReconciliationText.read.mockReturnValue({
+      handle,
+      text: "{% assign x = 1 %}",
+      text_parts: [],
+    });
+
+    SF.createTestRun = jest.fn().mockResolvedValue({ data: 42 });
+    // Keep the run "started" for 60 polls - enough for the uncapped 5% growth to pass
+    // 5s (1000 * 1.05^33 ≈ 5000) - then complete.
+    let polls = 0;
+    SF.readTestRun = jest.fn().mockImplementation(async () => {
+      polls += 1;
+      return { data: makeTestRun(polls < 60 ? "started" : "completed", makePassedTests()) };
+    });
+    const setTimeoutSpy = jest.spyOn(global, "setTimeout");
+
+    const promise = runTests(1001, "reconciliationText", handle, "", false, "none");
+    await jest.runAllTimersAsync();
+    const result = await promise;
+
+    expect(result.testRun.status).toBe("completed");
+    const delays = setTimeoutSpy.mock.calls.map((call) => call[1]).filter((delay) => typeof delay === "number");
+    // The cap must actually be reached, and never exceeded.
+    expect(Math.max(...delays)).toBe(5000);
+    setTimeoutSpy.mockRestore();
+  });
+
   it("should log info and return undefined when YAML file is empty (single line)", async () => {
     const handle = "reconciliation_text_1";
     setupFsUtilsMocks(handle);
