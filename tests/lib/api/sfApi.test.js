@@ -587,4 +587,33 @@ describe("sfApi", () => {
       expect(result.data).toEqual(periodsData);
     });
   });
+
+  // ─── runCompanyDataCopier ─────────────────────────────────────────────────
+
+  describe("runCompanyDataCopier", () => {
+    const attributes = { source_company_id: 1224550, source_ledger_ids: [33417839, 32116688] };
+
+    it("should POST to the firm-scoped company_data_copier/run route with the attributes and return the response", async () => {
+      const responseData = { status: "enqueued" };
+      axiosMock.onPost("company_data_copier/run").reply(202, responseData);
+
+      const result = await SF.runCompanyDataCopier("firm", 100, attributes);
+
+      expect(result.data).toEqual(responseData);
+      // The Data Copier is firm-scoped: it must hit the firm instance's /api/v4/f/:id baseURL via the
+      // relative "company_data_copier/run" path, NOT an absolute public-v3 URL. The destination firm is
+      // the :id in that baseURL.
+      expect(axiosMock.history.post[0].url).toBe("company_data_copier/run");
+      expect(JSON.parse(axiosMock.history.post[0].data)).toEqual(attributes);
+    });
+
+    it("should delegate to the error handler on failure", async () => {
+      axiosMock.onPost("company_data_copier/run").reply(422, { error: "invalid" });
+
+      const result = await SF.runCompanyDataCopier("firm", 100, attributes);
+
+      // responseErrorHandler is mocked to resolve undefined
+      expect(result).toBeUndefined();
+    });
+  });
 });

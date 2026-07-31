@@ -265,6 +265,38 @@ silverfin development-mode --handle <handle>
 silverfin development-mode --update-templates
 ```
 
+### Copy company data (Data Copier)
+
+The `company-data-copier` command triggers the platform's Data Copier to copy a source company's data into a brand-new company in a destination (development) firm. This lets you reproduce a client's situation in a dev firm to debug templates against realistic data, without ever touching the production firm.
+
+It copies **data only** — account values (including adjustments), text properties, people/company drop and configuration. It does **not** copy template code: a template is only populated if it already exists in the destination firm.
+
+```bash
+silverfin company-data-copier --source-company-id <company_id> --source-ledger-ids <period_id_1> <period_id_2> --firm <destination_firm_id>
+```
+
+- `--source-company-id` / `-c`: the company id to copy data from (in the source firm).
+- `--source-ledger-ids` / `-l`: one or more period ids to copy, space-separated. You can find each id in the source company URL between `ledgers/` and `/workflows`.
+- `--firm` / `-f`: the destination firm whose token authenticates the request and where the copied company will be created (defaults to your configured default firm).
+
+**This is fire-and-forget.** The command only *requests* the copy: the platform returns `202 enqueued` immediately and the copy then runs asynchronously in a background job. The command does **not** wait for it, and there is **no way to poll the status**. After a few minutes, check the destination firm:
+
+- A new company named like `Company_<source-id>_<hex>` (e.g. `Company_42_a3f1b9d4`) means the copy succeeded.
+- A company whose name ends in `_FAILED` (e.g. `Company_42_a3f1b9d4_FAILED`) means the background copy failed. The job does not retry — delete the `_FAILED` company and run the command again.
+
+#### Prerequisites and gotchas
+
+The backend rejects or silently skips several situations. To avoid confusion:
+
+- **The destination firm must be a demo firm.** Trial, customer, junk and churn firms are rejected (`422`).
+- **The source firm must differ from the destination firm** (`422`).
+- **All `--source-ledger-ids` must belong to `--source-company-id`** (`422`).
+- **Templates must already exist in the destination firm.** Reconciliation texts are matched by `handle` and account detail templates by their Dutch name (`name_nl`). If a template's handle / ADT Dutch name does not already exist in the destination firm, its data is **silently skipped** — no error. So the template you want to debug must already be present in the destination firm before you run the copier.
+- **You must have the right to run it:** either a Silverfin support user, or a firm admin in the source firm.
+- **One copy per destination firm at a time.** The backend holds a mutex (5-minute TTL) per destination firm. If you fire the command again at the same destination firm while a copy is still in flight, the second request **silently does nothing** (no new company, no `_FAILED`). Don't run it repeatedly — wait and check the destination firm.
+
+> **Note:** the Data Copier is deployed to specific environments. Point the CLI at the right host first with `silverfin config --set-host <url>` (or the `SF_HOST` env var).
+
 ## Contributing
 
 If you find any bug or you have any suggestion, please feel free to open an issue in this repository.
