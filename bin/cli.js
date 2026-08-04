@@ -546,7 +546,7 @@ program
   .option("--compact", "Download the result and print a compact diff (named_results/results, dependencies, vanished renders, visual-only changes) grouped by template - review-friendly and safe in CI")
   .option(
     "--add-diffs-folder",
-    "With --from-zip: add a diffs/ folder to the zip containing before/after pairs only for the entries the compact diff flagged (data/scope/vanished-output/visual-only changes), instead of every sampled entry"
+    "With --from-zip: add a diffs/ folder to the zip containing before/after pairs for the entries the compact diff flagged (data/scope/vanished-output/visual-only changes) whose renders actually differ, instead of every sampled entry"
   )
   .action(async (options) => {
     // Commander sets options.open = false when --no-open is passed.

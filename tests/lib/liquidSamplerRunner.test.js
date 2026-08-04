@@ -379,6 +379,55 @@ describe("LiquidSamplerRunner - add diffs folder to a local zip (--add-diffs-fol
     expect(zip.getEntries().some((e) => e.entryName.startsWith("diffs/"))).toBe(false);
   });
 
+  it("skips flagged entries whose before/after renders are byte-identical", () => {
+    writeZip([
+      // Flagged on a named_results change the render doesn't show (e.g. a
+      // timestamp-derived result): identical view.html, so a diffs/ pair for it
+      // would give the reviewer two files with nothing to compare.
+      ["output/reconciliation_entries/1/before/registers.json", JSON.stringify({ named_results: { a: "before" } })],
+      ["output/reconciliation_entries/1/after/registers.json", JSON.stringify({ named_results: { a: "after" } })],
+      ["output/reconciliation_entries/1/before/view.html", "<div>same render</div>"],
+      ["output/reconciliation_entries/1/after/view.html", "<div>same render</div>"],
+      // Flagged AND visibly different - this one belongs in diffs/.
+      ["output/reconciliation_entries/2/before/registers.json", JSON.stringify({ named_results: { a: "before" } })],
+      ["output/reconciliation_entries/2/after/registers.json", JSON.stringify({ named_results: { a: "after" } })],
+      ["output/reconciliation_entries/2/before/view.html", "<div>2 old</div>"],
+      ["output/reconciliation_entries/2/after/view.html", "<div>2 new</div>"],
+    ]);
+
+    new LiquidSamplerRunner("1").addDiffsFolderToZip(zipPath);
+
+    const names = new AdmZip(fs.readFileSync(zipPath)).getEntries().map((e) => e.entryName);
+    expect(names).not.toContain("diffs/reconciliation_entries/1/before/view.html");
+    expect(names).not.toContain("diffs/reconciliation_entries/1/after/view.html");
+    expect(names).toContain("diffs/reconciliation_entries/2/before/view.html");
+    expect(names).toContain("diffs/reconciliation_entries/2/after/view.html");
+    // The skip is reported, not silent.
+    expect(consola.success).toHaveBeenCalledWith(expect.stringContaining("2 view.html file(s) across 1 entry"));
+    expect(consola.success).toHaveBeenCalledWith(expect.stringContaining("1 flagged entry had identical before/after renders"));
+  });
+
+  it("reports and leaves the zip untouched when every flagged entry renders identically", () => {
+    writeZip([
+      ["output/reconciliation_entries/1/before/registers.json", JSON.stringify({ named_results: { a: "before" } })],
+      ["output/reconciliation_entries/1/after/registers.json", JSON.stringify({ named_results: { a: "after" } })],
+      ["output/reconciliation_entries/1/before/view.html", "<div>same</div>"],
+      ["output/reconciliation_entries/1/after/view.html", "<div>same</div>"],
+      ["output/reconciliation_entries/2/before/registers.json", JSON.stringify({ named_results: { b: "before" } })],
+      ["output/reconciliation_entries/2/after/registers.json", JSON.stringify({ named_results: { b: "after" } })],
+      ["output/reconciliation_entries/2/before/view.html", "<div>same too</div>"],
+      ["output/reconciliation_entries/2/after/view.html", "<div>same too</div>"],
+    ]);
+
+    new LiquidSamplerRunner("1").addDiffsFolderToZip(zipPath);
+
+    expect(consola.info).toHaveBeenCalledWith(expect.stringContaining("No visual differences among the flagged entries"));
+    expect(consola.info).toHaveBeenCalledWith(expect.stringContaining("2 flagged entries had identical before/after renders"));
+    expect(consola.success).not.toHaveBeenCalled();
+    const zip = new AdmZip(fs.readFileSync(zipPath));
+    expect(zip.getEntries().some((e) => e.entryName.startsWith("diffs/"))).toBe(false);
+  });
+
   it("reports and leaves the zip untouched when entries differ but none have a view.html", () => {
     writeZip([
       ["output/reconciliation_entries/1/before/registers.json", JSON.stringify({ named_results: { a: "before" } })],
