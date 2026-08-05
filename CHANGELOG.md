@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.59.0] (05/08/2026)
+Expand `silverfin run-sampler --compact`: diff the `results` register, group vanished output per template instead of listing every entry, add a scope-change tier (dependencies/rollforward/required keys) and a visual-only tier for `view.html` changes the data diff can't see, and truncate/cap long output. Also adds `run-sampler --from-zip <path>` to build the compact diff from an already-downloaded `results.zip`.
+
 ## [1.58.0] (31/07/2026)
 Added the `company-data-copier` command, which triggers the platform Data Copier to copy a source company's data (account values incl. adjustments, text properties, people/company drop and configuration) into a brand-new company in a destination development firm. Intended for BSO developers to reproduce a client's situation in a dev firm without touching the production firm. Only *data* is copied, not template *code* — templates must already exist in the destination firm to be populated.
 

@@ -140,4 +140,24 @@ describe("bin/cli.js Commander wiring", () => {
       expect(runCliExitCode("company-data-copier -f 13692")).toBe(1);
     });
   });
+
+  describe("silverfin run-sampler", () => {
+    it("--from-zip does not require -p/--partner (offline path, no partner API involved)", () => {
+      // No -p given; passing a non-existent zip path exercises the option
+      // parsing/validation only, before any partner-API-requiring code runs.
+      const output = runCli("run-sampler --from-zip /tmp/does-not-exist-cli-test.zip");
+      expect(output).not.toMatch(/You need to specify a partner/);
+      expect(output).toMatch(/Could not read zip/);
+    });
+
+    it("every other path still requires -p/--partner", () => {
+      const output = runCli("run-sampler -h some_handle");
+      expect(output).toMatch(/You need to specify a partner/);
+    });
+
+    it("--add-diffs-folder without --from-zip is rejected before touching the partner API", () => {
+      const output = runCli("run-sampler --add-diffs-folder");
+      expect(output).toMatch(/--add-diffs-folder requires --from-zip/);
+    });
+  });
 });

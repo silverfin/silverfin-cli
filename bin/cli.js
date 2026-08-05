@@ -519,7 +519,7 @@ program
 program
   .command("run-sampler", { hidden: true})
   .description("Run Liquid Sampler for partner templates (reconciliation texts, account detail templates, and/or shared parts)")
-  .requiredOption("-p, --partner <partner-id>", "Specify the partner to be used")
+  .option("-p, --partner <partner-id>", "Specify the partner to be used (required unless --from-zip is used)")
   .option("-h, --handle <handles...>", "Specify reconciliation text handle(s) - can specify multiple")
   .option("-at, --account-template <names...>", "Specify account detail template name(s) - can specify multiple")
   .option("-s, --shared-part <names...>", "Specify shared part name(s) - can specify multiple")
@@ -530,14 +530,51 @@ program
       "accountTemplate",
       "sharedPart",
       "firmIds",
+      "fromZip",
+    ])
+  )
+  .addOption(
+    new Option("--from-zip <path>", "Build the compact diff from an already-downloaded results.zip - no sampler run, no network call").conflicts([
+      "handle",
+      "accountTemplate",
+      "sharedPart",
+      "firmIds",
+      "id",
     ])
   )
   .option("--no-open", "Do not download/open the report locally; only print its URL (default in CI)")
-  .option("--compact", "Download the result and print a compact named_results diff (grouped by template) to stdout - review-friendly and safe in CI")
+  .option("--compact", "Download the result and print a compact diff (named_results/results, dependencies, vanished renders, visual-only changes) grouped by template - review-friendly and safe in CI")
+  .option(
+    "--add-diffs-folder",
+    "With --from-zip: add a diffs/ folder to the zip containing before/after pairs for the entries the compact diff flagged (data/scope/vanished-output/visual-only changes) whose renders actually differ, instead of every sampled entry"
+  )
   .action(async (options) => {
     // Commander sets options.open = false when --no-open is passed.
     // In CI, never open regardless of the flag.
     const runnerOptions = { openReport: options.open && !process.env.CI, compact: options.compact || false };
+
+    if (options.addDiffsFolder && !options.fromZip) {
+      consola.error("--add-diffs-folder requires --from-zip <path>");
+      process.exit(1);
+    }
+
+    // A local zip needs no partner API access at all - it's pure offline
+    // re-analysis of a result someone already has on disk.
+    if (options.fromZip) {
+      const runner = new LiquidSamplerRunner(options.partner, runnerOptions);
+      await runner.printCompactDiffFromZip(options.fromZip);
+      if (options.addDiffsFolder) {
+        runner.addDiffsFolderToZip(options.fromZip);
+      }
+      return;
+    }
+
+    // Every other path talks to the partner/sampler API, so -p/--partner is
+    // required there - it's just not required for --from-zip's offline path.
+    if (!options.partner) {
+      consola.error("You need to specify a partner using -p or --partner");
+      process.exit(1);
+    }
 
     // If an existing sampler ID is provided, fetch and display results
     if (options.id) {
