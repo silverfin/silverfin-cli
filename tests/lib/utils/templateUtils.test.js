@@ -125,6 +125,59 @@ describe("templateUtils", () => {
     });
   });
 
+  // ─── isSafeName ───────────────────────────────────────────────────────────
+
+  describe("isSafeName", () => {
+    it.each(["workflow_1", "Workflow-1", "my.workflow", "reconciliation_text_1", "Fixed assets (2024)"])("should accept the name %p", (name) => {
+      expect(templateUtils.isSafeName(name)).toBe(true);
+    });
+
+    it.each([
+      ["a relative parent", "../escape"],
+      ["a deeper traversal", "../../etc/passwd"],
+      ["a forward slash", "sub/handle"],
+      ["a back slash", "sub\\handle"],
+      ["an absolute path", "/etc/passwd"],
+      ["the parent folder", ".."],
+      ["the current folder", "."],
+      ["a hidden file", ".hidden"],
+      ["a traversal without a separator", "handle..name"],
+      ["a null byte", "handle\0.json"],
+      ["an empty string", ""],
+      ["only whitespace", "   "],
+    ])("should refuse %s (%p)", (_description, name) => {
+      expect(templateUtils.isSafeName(name)).toBe(false);
+    });
+
+    it.each([undefined, null, 42, {}, ["handle"]])("should refuse the non-string value %p", (value) => {
+      expect(templateUtils.isSafeName(value)).toBe(false);
+    });
+  });
+
+  // ─── fileNameProblem ──────────────────────────────────────────────────────────
+
+  describe("fileNameProblem", () => {
+    it.each(["workflow_1", "Workflow-1", "my.workflow", "reconciliation_text_1", "Fixed assets (2024)"])("should report no problem for the name %p", (name) => {
+      expect(templateUtils.fileNameProblem(name)).toBeNull();
+    });
+
+    // A missing name is told apart from a malformed one so callers can word their own message
+    it.each(["", "   ", undefined, null])("should report %p as blank", (value) => {
+      expect(templateUtils.fileNameProblem(value)).toBe(templateUtils.FILE_NAME_PROBLEMS.BLANK);
+    });
+
+    it.each(["../escape", "../../etc/passwd", "sub/handle", "sub\\handle", "/etc/passwd", "..", ".", ".hidden", "handle..name", "handle\0.json"])(
+      "should report %p as unsafe",
+      (name) => {
+        expect(templateUtils.fileNameProblem(name)).toBe(templateUtils.FILE_NAME_PROBLEMS.UNSAFE);
+      }
+    );
+
+    it.each([42, {}, ["handle"]])("should report the non-string value %p as blank", (value) => {
+      expect(templateUtils.fileNameProblem(value)).toBe(templateUtils.FILE_NAME_PROBLEMS.BLANK);
+    });
+  });
+
   // ─── filterParts ─────────────────────────────────────────────────────────
 
   describe("filterParts", () => {

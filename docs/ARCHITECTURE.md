@@ -133,15 +133,19 @@ Runs liquid tests against the API and renders the result. Public: `runTests`, `r
 ## `lib/utils/`
 
 ### `fsUtils.js`
-All filesystem access. Constants `FOLDERS`, `TEMPLATE_TYPES`, `WORKFLOWS_FOLDER`, `SILVERFIN_URL_PATHS`. Config I/O (`configExists`, `readConfig`, `writeConfig`, `createConfigIfMissing`, `getTemplateId`, `setTemplateId`); creation (`createFolder`, `createTemplateFolders`, `createSharedPartFolders`, `createTemplateFiles`, `createLiquidFile`, `createLiquidTestFiles`); discovery (`getAllTemplatesOfAType`, `findHandleByID`, `identifyTypeAndHandle`, `listExistingFiles`, `listExistingRelatedLiquidFiles`, `listSharedPartsUsedInTemplate`, `findTemplatesWithLiquidTests`, `scanTextParts`, `checkLiquidTestDependencies`); workflows (`getWorkflow`, `getAllWorkflowHandles`).
+All filesystem access. Constants `FOLDERS`, `TEMPLATE_TYPES`, `SILVERFIN_URL_PATHS`. Config I/O (`configExists`, `readConfig`, `writeConfig`, `createConfigIfMissing`, `getTemplateId`, `setTemplateId`); creation (`createFolder`, `createTemplateFolders`, `createSharedPartFolders`, `createTemplateFiles`, `createLiquidFile`, `createLiquidTestFiles`); discovery (`getAllTemplatesOfAType`, `findHandleByID`, `identifyTypeAndHandle`, `listExistingFiles`, `listExistingRelatedLiquidFiles`, `listSharedPartsUsedInTemplate`, `findTemplatesWithLiquidTests`, `scanTextParts`, `checkLiquidTestDependencies`); workflows (`getWorkflow`, `getAllWorkflowHandles`).
 **Contains:** every `fs` call in the codebase. If a new method needs to read or write a file, it goes here and is called from elsewhere.
+
+### `constants.js`
+`WORKFLOWS_FOLDER` — values more than one module in `lib/utils/` must agree on. `fsUtils.js` builds the workflow paths from it; `errorUtils.js` names it in its messages.
+**Contains:** plain values and nothing else. It requires no other module, so any module can require it without creating a cycle. A constant used by one file only stays in that file.
 
 ### `templateUtils.js`
 Template-type vocabulary and name validation: `TEMPLATES_NAME_ATTRIBUTE`, `TEMPLATE_TYPE_NAMES`, `TEMPLATE_MAP_TYPES`, `FILE_NAME_PROBLEMS`, `getTemplateName`, `checkValidName`, `fileNameProblem`, `isSafeName`, `filterParts`, `missingLiquidCode`, `missingNameNL`.
 **Contains:** the mapping between API type names and internal type keys. New template types are registered here first.
 
 ### `errorUtils.js`
-`uncaughtErrors`, `errorHandler`, `missingConfig`, `missing<Type>Id`, and `print<Type>BatchErrorSummary` for each of the four template types. Workflow failures: `invalidWorkflowHandle`, `missingWorkflow`, `unparsableWorkflow`, `invalidWorkflow`, `noWorkflowsStored`, `workflowStatisticsNotSaved`, `printWorkflowBatchErrorSummary`.
+`uncaughtErrors`, `errorHandler`, `missingConfig`, `missing<Type>Id`, and `print<Type>BatchErrorSummary` for each of the four template types. Command line input: `missingHandle`, `invalidHandleFormat`. Workflow failures: `invalidWorkflowHandle`, `missingWorkflow`, `unparsableWorkflow`, `invalidWorkflow`, `noWorkflowsStored`, `workflowStatisticsNotSaved`, `printWorkflowBatchErrorSummary`.
 **Contains:** every user-facing error message. New failure modes get a named function here rather than an inline `console.error`.
 
 ### `apiUtils.js`
