@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.59.0] (11/08/2026)
+Add a workflow filter to the stats command: use `--workflow <handle>` for one workflow or `--workflow` on its own to report on every workflow in the workflows folder.
+
 ## [1.58.0] (31/07/2026)
 Added the `company-data-copier` command, which triggers the platform Data Copier to copy a source company's data (account values incl. adjustments, text properties, people/company drop and configuration) into a brand-new company in a destination development firm. Intended for BSO developers to reproduce a client's situation in a dev firm without touching the production firm. Only *data* is copied, not template *code* — templates must already exist in the destination firm to be populated.
 
