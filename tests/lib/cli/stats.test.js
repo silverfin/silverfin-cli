@@ -312,6 +312,24 @@ describe("cli/stats", () => {
       expect(mockExit).not.toHaveBeenCalled();
     });
 
+    it("should report a write failure instead of throwing", async () => {
+      writeTemplate("reconciliation_texts", "reconciliation_text_1", { unitTests: 1 });
+      const appendSpy = jest.spyOn(fs, "appendFileSync").mockImplementation(() => {
+        const error = new Error("permission denied");
+        error.code = "EACCES";
+        throw error;
+      });
+
+      try {
+        await expect(stats.generateOverview("2024-01-01")).resolves.not.toThrow();
+        expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("stats/overview.csv"));
+        expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("no permission to write to it"));
+        expect(mockExit).not.toHaveBeenCalled();
+      } finally {
+        appendSpy.mockRestore();
+      }
+    });
+
     it("should append a row when run a second time", async () => {
       writeTemplate("reconciliation_texts", "reconciliation_text_1", { unitTests: 1 });
 
