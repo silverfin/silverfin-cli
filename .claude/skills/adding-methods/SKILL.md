@@ -54,6 +54,8 @@ Move a helper out only when one of these is true:
 
 "It has no test of its own" is not a reason to move it. A private helper is tested through the function that calls it.
 
+**Where it goes in the file:** directly above its first caller — `escapeForRegExp`, `buildTemplatePattern` and `percentageRoundTwo` in `lib/cli/stats.js`, `suggestValidHandle` in `lib/utils/errorUtils.js`. When two functions share the helper, it goes above the first of them so they stay adjacent; never between them, which separates the pair and shows the reader the helper before the reason for it. (`createLiquidFile` in `fsUtils.js` sits below its caller — an older exception, not the pattern to copy.)
+
 Applies equally to edits: if you are asked to make an existing method "also" do something, the answer is a second method plus a caller, not a longer method. Say that in your response rather than silently growing the function.
 
 ## Step 4 — Report
@@ -71,6 +73,7 @@ Then add the test in the mirrored `tests/` path, and run `npx jest <path>` befor
 - "I'll just add it to the file I'm already in" — said about a method other files will call
 - Exporting a private helper only so a test can reach it
 - "It's only a few lines, no need to check the doc"
+- A shared helper dropped between the two functions that call it
 - A new method with `fs` and `axios` both in scope
 - A parameter named `options` that switches behaviour between two unrelated jobs
 - A boolean parameter that selects which of two things the method does — that is two methods
