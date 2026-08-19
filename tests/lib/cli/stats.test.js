@@ -291,6 +291,68 @@ describe("cli/stats", () => {
     });
   });
 
+  // ─── several test files in one tests folder ────────────────────────────────
+
+  describe("a template with more than one liquid test file", () => {
+    // The counts are compared against a number of templates, so a template with two test
+    // files must not be counted twice
+    const writeExtraTestFile = (folder, handle, fileName, unitTests) => {
+      const testContent = Array.from({ length: unitTests }, (_, index) => `extra_unit_test_${index + 1}:\n  context:\n    period: 2024-12-31\n`).join("");
+      fs.writeFileSync(path.join(tempDir, folder, handle, "tests", fileName), testContent);
+    };
+
+    it("should count the template once and add up its unit tests in the repository overview", async () => {
+      writeTemplate("reconciliation_texts", "reconciliation_text_1", { unitTests: 2 });
+      writeExtraTestFile("reconciliation_texts", "reconciliation_text_1", "extra_liquid_test.yml", 3);
+
+      await stats.generateOverview("2024-01-01");
+
+      const values = fs.readFileSync(path.join(tempDir, "stats", "overview.csv"), "utf-8").trim().split("\r\n")[1].split(";");
+      // Reconciliations - templates, - templates with yaml tests, - unit tests
+      expect(values[8]).toBe("1");
+      expect(values[10]).toBe("1");
+      expect(values[11]).toBe("5");
+    });
+
+    it("should count the template once and add up its unit tests in a workflow overview", async () => {
+      writeTemplate("account_templates", "account_1", { unitTests: 1 });
+      writeExtraTestFile("account_templates", "account_1", "account_1_liquid_test_extra.yml", 1);
+      writeWorkflow("workflow_1", { name: "Workflow 1", templates: { reconciliations: [], accounts: ["account_1"], exports: [] } });
+
+      await stats.generateWorkflowOverview("2024-01-01", "workflow_1");
+
+      const values = fs.readFileSync(path.join(tempDir, "stats", "workflow_1_stats.csv"), "utf-8").trim().split("\r\n")[1].split(";");
+      // Account Templates - templates, - templates with yaml tests, - unit tests
+      expect(values[13]).toBe("1");
+      expect(values[15]).toBe("1");
+      expect(values[16]).toBe("2");
+    });
+
+    it("should count the template towards at least two tests on its combined total", async () => {
+      // One unit test per file, two files: the template has two unit tests
+      writeTemplate("reconciliation_texts", "reconciliation_text_1", { unitTests: 1 });
+      writeExtraTestFile("reconciliation_texts", "reconciliation_text_1", "extra_liquid_test.yml", 1);
+
+      await stats.generateOverview("2024-01-01");
+
+      const values = fs.readFileSync(path.join(tempDir, "stats", "overview.csv"), "utf-8").trim().split("\r\n")[1].split(";");
+      // Reconciliations - templates with at least two tests
+      expect(values[28]).toBe("1");
+    });
+
+    it("should never report more than 100% of the templates as covered", async () => {
+      writeTemplate("reconciliation_texts", "reconciliation_text_1", { unitTests: 1 });
+      writeExtraTestFile("reconciliation_texts", "reconciliation_text_1", "extra_liquid_test.yml", 1);
+      writeExtraTestFile("reconciliation_texts", "reconciliation_text_1", "another_liquid_test.yml", 1);
+
+      await stats.generateOverview("2024-01-01");
+
+      const values = fs.readFileSync(path.join(tempDir, "stats", "overview.csv"), "utf-8").trim().split("\r\n")[1].split(";");
+      // Reconciliations - templates with yaml tests (%)
+      expect(Number(values[26])).toBe(100);
+    });
+  });
+
   // ─── generateOverview (whole repository) ───────────────────────────────────
 
   describe("generateOverview", () => {
