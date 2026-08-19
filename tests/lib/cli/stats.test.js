@@ -291,6 +291,64 @@ describe("cli/stats", () => {
     });
   });
 
+  // ─── templates listed in a workflow but not stored ─────────────────────────
+
+  describe("a workflow listing a template which is not in the repository", () => {
+    it("should leave the missing template out of the counts", async () => {
+      writeTemplate("reconciliation_texts", "reconciliation_text_1", { unitTests: 1, externallyManaged: true });
+      writeWorkflow("workflow_1", {
+        name: "Workflow 1",
+        templates: { reconciliations: ["reconciliation_text_1", "reconciliation_text_typo"], accounts: [], exports: [] },
+      });
+
+      await stats.generateWorkflowOverview("2024-01-01", "workflow_1");
+
+      const values = fs.readFileSync(path.join(tempDir, "stats", "workflow_1_stats.csv"), "utf-8").trim().split("\r\n")[1].split(";");
+      // Reconciliations - templates, - externally managed
+      expect(values[9]).toBe("1");
+      expect(values[10]).toBe("1");
+    });
+
+    it("should name the missing templates", async () => {
+      writeTemplate("account_templates", "account_1", { unitTests: 1 });
+      writeWorkflow("workflow_1", {
+        name: "Workflow 1",
+        templates: { reconciliations: [], accounts: ["account_1", "account_typo"], exports: ["export_typo"] },
+      });
+
+      await stats.generateWorkflowOverview("2024-01-01", "workflow_1");
+
+      expect(consola.warn).toHaveBeenCalledWith(expect.stringContaining("account_typo, export_typo"));
+      expect(consola.warn).toHaveBeenCalledWith(expect.stringContaining("Workflow 1"));
+    });
+
+    it("should not create a folder or a config for the missing template", async () => {
+      writeTemplate("reconciliation_texts", "reconciliation_text_1", { unitTests: 1 });
+      writeWorkflow("workflow_1", {
+        name: "Workflow 1",
+        templates: { reconciliations: ["reconciliation_text_typo"], accounts: ["account_typo"], exports: [] },
+      });
+
+      await stats.generateWorkflowOverview("2024-01-01", "workflow_1");
+
+      expect(fs.existsSync(path.join(tempDir, "reconciliation_texts", "reconciliation_text_typo"))).toBe(false);
+      expect(fs.existsSync(path.join(tempDir, "account_templates", "account_typo"))).toBe(false);
+    });
+
+    it("should not report the workflow as skipped", async () => {
+      writeTemplate("reconciliation_texts", "reconciliation_text_1", { unitTests: 1 });
+      writeWorkflow("workflow_1", {
+        name: "Workflow 1",
+        templates: { reconciliations: ["reconciliation_text_1", "reconciliation_text_typo"], accounts: [], exports: [] },
+      });
+
+      const reported = await stats.generateWorkflowOverview("2024-01-01", "workflow_1");
+
+      expect(reported).toBe(true);
+      expect(mockExit).not.toHaveBeenCalled();
+    });
+  });
+
   // ─── several test files in one tests folder ────────────────────────────────
 
   describe("a template with more than one liquid test file", () => {
