@@ -43,6 +43,7 @@ tests/
     │   ├── changelogReader.test.js
     │   ├── cliUpdater.test.js
     │   ├── cwdValidator.test.js
+    │   ├── stats.test.js
     │   └── utils.test.js
     ├── templates/
     │   ├── reconciliationTexts.test.js
@@ -510,6 +511,43 @@ Source: `lib/cli/cwdValidator.js`
 
 ---
 
+### `tests/lib/cli/stats.test.js`
+Source: `lib/cli/stats.js`
+
+| Function | Test | Description |
+|---|---|---|
+| `generateWorkflowOverview` (no handle) | should inform the user and stop when the workflows folder is missing | Verifies that an error naming the `workflows` folder is logged and no `stats` folder is written when the folder does not exist. |
+| `generateWorkflowOverview` (no handle) | should inform the user and stop when the workflows folder is empty | Verifies that an empty `workflows` folder produces the same message and no exit. |
+| `generateWorkflowOverview` (no handle) | should ignore non-JSON files when discovering workflows | Verifies that a `README.md` in the `workflows` folder is not treated as a workflow. |
+| `generateWorkflowOverview` (no handle) | should skip a faulty workflow and still process the valid ones | Verifies that an unparsable workflow is skipped with a warning while the valid one still produces its CSV. |
+| `generateWorkflowOverview` (no handle) | should report a tally so a partial run is not mistaken for a complete one | Verifies that the number of skipped workflows and their handles are reported after the loop, and that a partial run still returns `true`. |
+| `generateWorkflowOverview` (no handle) | should report a failure when every workflow was skipped | Verifies that `false` is returned when not a single workflow could be reported on. |
+| `generateWorkflowOverview` (no handle) | should not report a tally when every workflow is valid | Verifies that no skip summary is printed when nothing was skipped. |
+| `generateWorkflowOverview` (handle) | should report a failure when the requested workflow does not exist | Verifies that `false` is returned, the handle is named, and the function does not exit the process itself. |
+| `generateWorkflowOverview` (handle) | should report a failure when the requested workflow is malformed | Verifies that the missing attribute is named and `false` is returned. |
+| `generateWorkflowOverview` (handle) | should report a failure on a handle which points outside the workflows folder | Verifies that a traversal handle (`../escape`) is refused and writes no file outside the repository. |
+| `generateWorkflowOverview` (handle) | should not skip the workflow it was asked for | Verifies that the batch "Skipping workflow" wording is not used when a single handle was requested. |
+| `generateWorkflowOverview` (handle) | should produce a CSV named after the workflow handle | Verifies that the statistics are written to `stats/<handle>_stats.csv`. |
+| `generateWorkflowOverview` (handle) | should count only the templates belonging to the workflow | Verifies that templates outside the workflow are excluded from the counts. |
+| `generateWorkflowOverview` (no templates) | should report zero without silently matching every template | Verifies that an empty template list does not fall back to the `.*` pattern used by the repository-wide overview. |
+| `generateWorkflowOverview` (no templates) | should explain that no YAML changes can be counted | Verifies that the user is told why the YAML activity counts are empty. |
+| `generateWorkflowOverview` (no templates) | should not run the git scan when there is nothing to match | Verifies that `git whatchanged` is not invoked when the workflow holds no templates. |
+| `generateWorkflowOverview` (regex characters) | should treat a quantifier in a name literally | Verifies that a template name containing `+` or `*` is escaped before being interpolated into the match pattern. |
+| `generateWorkflowOverview` (regex characters) | should not build an invalid regular expression from a name with brackets | Verifies that a name containing brackets does not throw when the pattern is compiled. |
+| `generateWorkflowOverview` (missing templates) | should leave the missing template out of the counts | Verifies that a handle listed in the workflow but not stored in the repository is excluded from the totals. |
+| `generateWorkflowOverview` (missing templates) | should name the missing templates | Verifies that the warning names the workflow and every handle which has no template folder. |
+| `generateWorkflowOverview` (missing templates) | should not create a folder or a config for the missing template | Verifies that reading the statistics never scaffolds a template folder or a `config.json` for an unknown handle. |
+| `generateWorkflowOverview` (missing templates) | should not report the workflow as skipped | Verifies that missing templates lower the totals but still count as a successful report. |
+| `countYamlFiles` (several test files) | should count the template once and add up its unit tests in the repository overview | Verifies that two liquid test files in one `tests` folder produce one template and the sum of their unit tests. |
+| `countYamlFiles` (several test files) | should count the template once and add up its unit tests in a workflow overview | Verifies the same grouping when the counts are filtered by a workflow. |
+| `countYamlFiles` (several test files) | should count the template towards at least two tests on its combined total | Verifies that two files holding one unit test each make the template count as having at least two tests. |
+| `countYamlFiles` (several test files) | should never report more than 100% of the templates as covered | Verifies that three test files for one template give a coverage percentage of 100, not 300. |
+| `generateOverview` | should count every template in the repository | Verifies that the repository-wide overview counts all templates and writes `stats/stats.csv`. |
+| `generateOverview` | should report a write failure instead of throwing | Verifies that a failing `appendFileSync` is reported with the CSV path and the reason, without exiting. |
+| `generateOverview` | should append a row when run a second time | Verifies that a second run adds a row rather than replacing the file. |
+
+---
+
 ### `tests/lib/cli/utils.test.js`
 Source: `lib/cli/utils.js`
 
@@ -524,6 +562,22 @@ Source: `lib/cli/utils.js`
 | `formatOption` | should convert camelCase to kebab-case with leading dash on uppercase | Verifies that `listAll` is converted to `list-all`. |
 | `formatOption` | should handle single word with no uppercase | Verifies that a single lowercase word is returned unchanged. |
 | `formatOption` | should convert multiple uppercase letters | Verifies that `importReconciliationText` is converted to `import-reconciliation-text`. |
+| `checkDateFormat` | should return true for a valid YYYY-MM-DD date | Verifies that a correctly formatted date is accepted. |
+| `checkDateFormat` | should accept a leap day in a leap year | Verifies that `2024-02-29` is accepted. |
+| `checkDateFormat` | should call process.exit(1) for a date in the wrong format | Verifies that a date which is not `YYYY-MM-DD` stops the command. |
+| `checkDateFormat` | should call process.exit(1) for a non-date string | Verifies that arbitrary text stops the command. |
+| `checkDateFormat` | should call process.exit(1) for an empty string | Verifies that an empty value stops the command. |
+| `checkDateFormat` | should call process.exit(1) when the value is not a string | Verifies that a non-string value stops the command instead of throwing. |
+| `checkDateFormat` | should reject a correctly formatted but impossible calendar date | Verifies that a well-formed but non-existent date is rejected. |
+| `checkDateFormat` | should reject a leap day outside a leap year | Verifies that `2023-02-29` is rejected. |
+| `checkDateFormat` | should reject a month outside the valid range | Verifies that a month above 12 is rejected. |
+| `checkDateFormat` | should reject input containing shell metacharacters | Verifies that the date cannot carry shell syntax into the `git` command built from it. |
+| `checkHandleFormat` | should return true for a handle which names a file | Verifies that an ordinary handle is accepted without exiting. |
+| `checkHandleFormat` | should call process.exit(1) for the handle %p | Verifies that separators, `..` and leading dots are reported through `errorUtils.invalidHandleFormat` and stop the command. |
+| `checkHandleFormat` | should report a blank handle %p as missing | Verifies that an empty or whitespace handle goes to `errorUtils.missingHandle` rather than being reported as malformed. |
+| `checkHandleFormat` | should report a missing handle as missing | Verifies that `undefined` goes to `errorUtils.missingHandle`. |
+| `checkHandleFormat` | should pass the suggested command on to the error message | Verifies that the command the caller offers reaches `errorUtils.invalidHandleFormat`. |
+| `checkHandleFormat` | should pass the suggested command on when the handle is missing | Verifies that the command the caller offers reaches `errorUtils.missingHandle`. |
 | `checkUniqueOption` | should return true when exactly one unique option is used | Verifies that `true` is returned and no error is logged when exactly one of the mutually exclusive options is set. |
 | `checkUniqueOption` | should call process.exit(1) when none of the unique options are used | Verifies that an error is logged and `process.exit(1)` is called when none of the required options are present. |
 | `checkUniqueOption` | should call process.exit(1) when more than one unique option is used | Verifies that an error about incompatible options is logged and `process.exit(1)` is called when multiple exclusive options are set. |
@@ -657,6 +711,25 @@ Source: `lib/utils/fsUtils.js` (`checkLiquidTestDependencies`)
 
 ---
 
+### `tests/lib/utils/errorUtils.test.js`
+Source: `lib/utils/errorUtils.js`
+
+| Function | Test | Description |
+|---|---|---|
+| `missingHandle` | should name the label and mention an unset variable | Verifies that the message names the kind of handle expected and points at an unset variable as the likely cause. |
+| `missingHandle` | should suggest the command which lists the handles available | Verifies that the caller's command is printed as the next step. |
+| `missingHandle` | should ask for a valid handle when no command is suggested | Verifies that the user is still told what to do when the caller offers no command. |
+| `missingHandle` | should return false | Verifies that the caller decides what happens next. |
+| `invalidHandleFormat` | should name the handle and the label | Verifies that the rejected handle appears in the message. |
+| `invalidHandleFormat` | should say what a handle cannot contain | Verifies that the message explains why the handle cannot be used as a file name. |
+| `invalidHandleFormat` | should suggest the command which lists the handles available | Verifies that the caller's command is printed as the next step. |
+| `invalidHandleFormat` | should ask for a valid handle when no command is suggested | Verifies that the user is still told what to do when the caller offers no command. |
+| `invalidHandleFormat` | should return false | Verifies that the caller decides what happens next. |
+| `noWorkflowsStored` | should point at the workflows folder fsUtils reads from | Verifies that the folder named in the message comes from `lib/utils/constants.js`, so it cannot drift from the folder `fsUtils` reads. |
+| `unparsableWorkflow` | should point at the workflow file inside that folder | Verifies that the file path offered to the user is built from the same shared constant. |
+
+---
+
 ### `tests/lib/utils/findTemplatesWithLiquidTests.test.js`
 Source: `lib/utils/fsUtils.js` (`findTemplatesWithLiquidTests`)
 
@@ -717,6 +790,24 @@ Source: `lib/utils/fsUtils.js`
 | `createConfigIfMissing` | should create a default config for exportFile when missing | Verifies that a default `config.json` with `name_nl` and `encoding` fields is created for an export file. |
 | `createConfigIfMissing` | should create a default config for accountTemplate when missing | Verifies that a default `config.json` with `name_nl` and `account_range` fields is created for an account template. |
 | `createConfigIfMissing` | should not overwrite an existing config | Verifies that calling `createConfigIfMissing` when a `config.json` already exists leaves the file unchanged. |
+| `getAllWorkflowHandles` | should return an empty array when the workflows folder does not exist | Verifies that a missing `workflows` folder is not an error. |
+| `getAllWorkflowHandles` | should return an empty array when the workflows folder is empty | Verifies that an empty folder returns no handles. |
+| `getAllWorkflowHandles` | should return the handles of every workflow file | Verifies that each `.json` file name is returned without its extension. |
+| `getAllWorkflowHandles` | should ignore files which are not JSON | Verifies that `README.md` and `.DS_Store` are excluded. |
+| `getWorkflow` | should return the parsed workflow when it is valid | Verifies that a valid workflow file is parsed and returned without any error. |
+| `getWorkflow` | should accept a workflow with empty template lists | Verifies that empty (but present) template arrays are valid. |
+| `getWorkflow` | should return undefined and warn when the workflow does not exist | Verifies that a missing workflow returns `undefined` and names the handle. |
+| `getWorkflow` | should list the available handles when the workflow does not exist | Verifies that the workflows actually stored are offered as alternatives. |
+| `getWorkflow` | should report when there are no workflows stored at all | Verifies that the message distinguishes "typo" from "nothing imported yet". |
+| `getWorkflow` | should return undefined and warn when the file is not valid JSON | Verifies that a parse failure is reported rather than thrown. |
+| `getWorkflow` | should return undefined and name the missing attribute when templates.accounts is absent | Verifies that the specific missing attribute is named. |
+| `getWorkflow` | should return undefined when templates is missing entirely | Verifies that a workflow without a `templates` object is refused. |
+| `getWorkflow` | should return undefined when name is missing | Verifies that a workflow without a `name` is refused. |
+| `getWorkflow` | should return undefined when a template attribute is not an array | Verifies that a string where an array is expected is refused. |
+| `getWorkflow` | should return undefined when the file holds a JSON array instead of an object | Verifies that a top-level array is refused. |
+| `getWorkflow` | should refuse the unsafe handle %p without reading any file | Verifies that a traversal handle is rejected before `readFileSync` is reached. |
+| `getWorkflow` | should accept a handle containing a dot | Verifies that a dot inside the name (as opposed to a leading dot or `..`) is allowed. |
+| `getWorkflow` | should not exit the process on any invalid workflow | Verifies that the helper leaves the exit decision to its caller. |
 
 ---
 
@@ -760,6 +851,13 @@ Source: `lib/utils/templateUtils.js`
 | `checkValidName` | should return true for empty string (reconciliationText) | Verifies that an empty string passes the reconciliation text regex (matches zero characters). |
 | `checkValidName` | should return false for string with unicode characters (reconciliationText) | Verifies that a handle with non-ASCII characters fails validation and a warning is logged. |
 | `checkValidName` | should return true for valid alphanumeric sharedPart name | Verifies that a shared part name with alphanumerics and underscores passes validation. |
+| `isSafeName` | should accept the name %p | Verifies that ordinary handles, including ones with dots, spaces and brackets, are accepted. |
+| `isSafeName` | should refuse the name %p | Verifies that separators, `..`, leading dots and null bytes are refused. |
+| `isSafeName` | should refuse the non-string value %p | Verifies that a non-string value is refused rather than throwing. |
+| `fileNameProblem` | should report no problem for the name %p | Verifies that `null` is returned for a usable name. |
+| `fileNameProblem` | should report %p as blank | Verifies that empty, whitespace, `undefined` and `null` are reported as `BLANK`. |
+| `fileNameProblem` | should report %p as unsafe | Verifies that a path-escaping name is reported as `UNSAFE`, so the caller can word a different message. |
+| `fileNameProblem` | should report the non-string value %p as blank | Verifies that non-string values fall into the `BLANK` case. |
 | `filterParts` | should reduce text_parts array to {name: content} object with 2 parts | Verifies that an array of `{ name, content }` objects is transformed into a `{ name: content }` map. |
 | `filterParts` | should return empty object for empty array | Verifies that an empty `text_parts` array produces an empty object. |
 | `filterParts` | should include part with empty name as key | Verifies that a text part with an empty string name is included in the output with `""` as the key. |

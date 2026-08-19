@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.59.0] (19/08/2026)
+Add a workflow filter to the stats command: use `--workflow <handle>` for one workflow or `--workflow` on its own to report on every workflow in the workflows folder.
+- Workflow statistics cover the templates the workflow file lists which are stored in this repository, excluding shared parts. A listed template you have not imported is left out of the totals and named in a warning, instead of being counted and having a template folder created for it.
+- The YAML columns now count templates rather than test files: a template holding several liquid test files is counted once, its unit tests are added up, and the coverage percentages can no longer exceed 100%. The affected column headings were renamed, so the YAML columns of rows written before this release are not comparable with the ones written from now on.
+- A CSV file which cannot be written (open in another program, no permission) is now reported with its path, and the statistics are still shown in the terminal. Previously the command ended in a stack trace.
+
 ## [1.58.0] (31/07/2026)
 Added the `company-data-copier` command, which triggers the platform Data Copier to copy a source company's data (account values incl. adjustments, text properties, people/company drop and configuration) into a brand-new company in a destination development firm. Intended for BSO developers to reproduce a client's situation in a dev firm without touching the production firm. Only *data* is copied, not template *code* — templates must already exist in the destination firm to be populated.
 

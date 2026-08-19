@@ -5,6 +5,8 @@ const fsUtils = require("../../../lib/utils/fsUtils");
 
 jest.mock("consola");
 
+const { consola } = require("consola");
+
 describe("fsUtils", () => {
   let tempDir;
   let originalCwd;
@@ -418,6 +420,172 @@ describe("fsUtils", () => {
       const config = JSON.parse(fs.readFileSync(path.join(dirPath, "config.json"), "utf-8"));
       expect(config.custom).toBe("value");
       expect(config.id[100]).toBe(12345);
+    });
+  });
+
+  // ─── getAllWorkflowHandles ─────────────────────────────────────────────────
+
+  describe("getAllWorkflowHandles", () => {
+    const writeWorkflowFile = (fileName, content) => {
+      const workflowsPath = path.join(tempDir, "workflows");
+      fs.mkdirSync(workflowsPath, { recursive: true });
+      fs.writeFileSync(path.join(workflowsPath, fileName), typeof content === "string" ? content : JSON.stringify(content));
+    };
+
+    it("should return an empty array when the workflows folder does not exist", () => {
+      expect(fsUtils.getAllWorkflowHandles()).toEqual([]);
+    });
+
+    it("should return an empty array when the workflows folder is empty", () => {
+      fs.mkdirSync(path.join(tempDir, "workflows"), { recursive: true });
+      expect(fsUtils.getAllWorkflowHandles()).toEqual([]);
+    });
+
+    it("should return the handles of every workflow file", () => {
+      writeWorkflowFile("workflow_a.json", { name: "A" });
+      writeWorkflowFile("workflow_b.json", { name: "B" });
+
+      const result = fsUtils.getAllWorkflowHandles();
+
+      expect(result).toHaveLength(2);
+      expect(result).toEqual(expect.arrayContaining(["workflow_a", "workflow_b"]));
+    });
+
+    it("should ignore files which are not JSON", () => {
+      writeWorkflowFile("workflow_a.json", { name: "A" });
+      writeWorkflowFile("README.md", "# not a workflow");
+      writeWorkflowFile(".DS_Store", "binary junk");
+
+      expect(fsUtils.getAllWorkflowHandles()).toEqual(["workflow_a"]);
+    });
+  });
+
+  // ─── getWorkflow ───────────────────────────────────────────────────────────
+
+  describe("getWorkflow", () => {
+    const validWorkflow = {
+      name: "Workflow 1",
+      templates: {
+        reconciliations: ["reconciliation_text_1"],
+        accounts: ["account_1"],
+        exports: ["export_1"],
+      },
+    };
+
+    const writeWorkflow = (handle, content) => {
+      const workflowsPath = path.join(tempDir, "workflows");
+      fs.mkdirSync(workflowsPath, { recursive: true });
+      fs.writeFileSync(path.join(workflowsPath, `${handle}.json`), typeof content === "string" ? content : JSON.stringify(content));
+    };
+
+    it("should return the parsed workflow when it is valid", () => {
+      writeWorkflow("workflow_1", validWorkflow);
+
+      expect(fsUtils.getWorkflow("workflow_1")).toEqual(validWorkflow);
+      expect(consola.error).not.toHaveBeenCalled();
+    });
+
+    it("should accept a workflow with empty template lists", () => {
+      writeWorkflow("workflow_empty", { name: "Empty", templates: { reconciliations: [], accounts: [], exports: [] } });
+
+      expect(fsUtils.getWorkflow("workflow_empty")).toBeDefined();
+      expect(consola.error).not.toHaveBeenCalled();
+    });
+
+    it("should return undefined and warn when the workflow does not exist", () => {
+      writeWorkflow("workflow_1", validWorkflow);
+
+      expect(fsUtils.getWorkflow("no_such_workflow")).toBeUndefined();
+      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("no_such_workflow"));
+    });
+
+    it("should list the available handles when the workflow does not exist", () => {
+      writeWorkflow("workflow_1", validWorkflow);
+      writeWorkflow("workflow_2", validWorkflow);
+
+      fsUtils.getWorkflow("typo_handle");
+
+      expect(consola.log).toHaveBeenCalledWith(expect.stringContaining("workflow_1"));
+      expect(consola.log).toHaveBeenCalledWith(expect.stringContaining("workflow_2"));
+    });
+
+    it("should report when there are no workflows stored at all", () => {
+      expect(fsUtils.getWorkflow("anything")).toBeUndefined();
+      expect(consola.log).toHaveBeenCalledWith(expect.stringContaining("no workflows stored"));
+    });
+
+    it("should return undefined and warn when the file is not valid JSON", () => {
+      writeWorkflow("broken", '{ "name": "Broken", ');
+
+      expect(fsUtils.getWorkflow("broken")).toBeUndefined();
+      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("could not be parsed as JSON"));
+    });
+
+    it("should return undefined and name the missing attribute when templates.accounts is absent", () => {
+      writeWorkflow("missing_accounts", { name: "Missing", templates: { reconciliations: [], exports: [] } });
+
+      expect(fsUtils.getWorkflow("missing_accounts")).toBeUndefined();
+      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("templates.accounts"));
+    });
+
+    it("should return undefined when templates is missing entirely", () => {
+      writeWorkflow("no_templates", { name: "No templates" });
+
+      expect(fsUtils.getWorkflow("no_templates")).toBeUndefined();
+      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining(String.raw`"templates" is missing`));
+    });
+
+    it("should return undefined when name is missing", () => {
+      writeWorkflow("no_name", { templates: { reconciliations: [], accounts: [], exports: [] } });
+
+      expect(fsUtils.getWorkflow("no_name")).toBeUndefined();
+      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining(String.raw`"name" is missing`));
+    });
+
+    it("should return undefined when a template attribute is not an array", () => {
+      writeWorkflow("wrong_type", { name: "Wrong", templates: { reconciliations: "reconciliation_text_1", accounts: [], exports: [] } });
+
+      expect(fsUtils.getWorkflow("wrong_type")).toBeUndefined();
+      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("templates.reconciliations"));
+    });
+
+    it("should return undefined when the file holds a JSON array instead of an object", () => {
+      writeWorkflow("array_workflow", ["reconciliation_text_1"]);
+
+      expect(fsUtils.getWorkflow("array_workflow")).toBeUndefined();
+      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("JSON object"));
+    });
+
+    it.each(["../escape", "../../etc/passwd", "sub/handle", "sub\\handle", "..", ".", ".hidden", "/absolute", ""])(
+      "should refuse the unsafe handle %p without reading any file",
+      (unsafeHandle) => {
+        writeWorkflow("workflow_1", validWorkflow);
+        const readSpy = jest.spyOn(fs, "readFileSync");
+
+        expect(fsUtils.getWorkflow(unsafeHandle)).toBeUndefined();
+        expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("is not valid"));
+        expect(readSpy).not.toHaveBeenCalled();
+
+        readSpy.mockRestore();
+      }
+    );
+
+    it("should accept a handle containing a dot", () => {
+      writeWorkflow("my.workflow", validWorkflow);
+
+      expect(fsUtils.getWorkflow("my.workflow")).toEqual(validWorkflow);
+      expect(consola.error).not.toHaveBeenCalled();
+    });
+
+    it("should not exit the process on any invalid workflow", () => {
+      const mockExit = jest.spyOn(process, "exit").mockImplementation(() => {});
+      writeWorkflow("broken", "{ nope");
+
+      fsUtils.getWorkflow("broken");
+      fsUtils.getWorkflow("does_not_exist");
+
+      expect(mockExit).not.toHaveBeenCalled();
+      mockExit.mockRestore();
     });
   });
 });

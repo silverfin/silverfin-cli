@@ -625,9 +625,37 @@ program
 program
   .command("stats")
   .description("Generate an overview with some statistics")
-  .requiredOption("-s, --since <date>, Specify the date which is going to be used to filter the data from (format: YYYY-MM-DD) (mandatory)")
-  .action((options) => {
-    stats.generateOverview(options.since);
+  .requiredOption("-s, --since <date>", "Specify the date which is going to be used to filter the data from (format: YYYY-MM-DD) (mandatory)")
+  .option(
+    "-w, --workflow [handle]",
+    "Filter the statistics by workflow. Pass a handle (--workflow <handle>) to report on a single workflow, or use --workflow on its own to report on every workflow stored in the workflows folder (optional)"
+  )
+  .action(async (options) => {
+    // Check if the since date is in the correct format
+    cliUtils.checkDateFormat(options.since);
+    // Commander gives three distinct values: undefined when the workflow flag is absent,
+    // true when it is used without a value, and the text when a handle is given
+    if (options.workflow === undefined) {
+      await stats.generateOverview(options.since);
+      return;
+    }
+    // The workflow flag was used on its own, so no handle is passed on and the statistics
+    // cover every workflow stored in the workflows folder
+    let workflowHandle;
+    if (options.workflow !== true) {
+      // A handle was typed. Surrounding spaces are a quoting accident, and a blank handle must
+      // never be read as "no handle given", so it is checked before it reaches the statistics
+      workflowHandle = options.workflow.trim();
+      // The same command without a handle reports on every workflow stored, which is the
+      // quickest way for the user to see which handles exist
+      cliUtils.checkHandleFormat(workflowHandle, "workflow handle", `silverfin stats --since ${options.since} --workflow`);
+    }
+    const reported = await stats.generateWorkflowOverview(options.since, workflowHandle);
+    // Not a single workflow could be reported on. This is the end of the run, so it is
+    // where the command stops
+    if (!reported) {
+      process.exit(1);
+    }
   });
 
 // Set/Get FIRM ID

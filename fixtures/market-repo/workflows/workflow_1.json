@@ -1,0 +1,8 @@
+{
+  "name": "Workflow 1",
+  "templates": {
+    "reconciliations": ["reconciliation_text_1", "reconciliation_text_2"],
+    "accounts": ["account_1"],
+    "exports": ["export_1"]
+  }
+}

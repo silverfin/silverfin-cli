@@ -8,12 +8,15 @@ jest.mock("../../../lib/api/firmCredentials", () => ({
 }));
 jest.mock("../../../lib/utils/errorUtils", () => ({
   uncaughtErrors: jest.fn(),
+  missingHandle: jest.fn(),
+  invalidHandleFormat: jest.fn(),
 }));
 // Mock prompt-sync so no interactive prompts run in tests
 jest.mock("prompt-sync", () => () => jest.fn());
 
 const { consola } = require("consola");
 const { firmCredentials } = require("../../../lib/api/firmCredentials");
+const errorUtils = require("../../../lib/utils/errorUtils");
 const cliUtils = require("../../../lib/cli/utils");
 
 describe("cli/utils", () => {
@@ -90,6 +93,111 @@ describe("cli/utils", () => {
 
     it("should convert multiple uppercase letters", () => {
       expect(cliUtils.formatOption("importReconciliationText")).toBe("import-reconciliation-text");
+    });
+  });
+
+  // ─── checkDateFormat ───────────────────────────────────────────────────────
+
+  describe("checkDateFormat", () => {
+    it("should return true for a valid YYYY-MM-DD date", () => {
+      const result = cliUtils.checkDateFormat("2024-01-31");
+      expect(result).toBe(true);
+      expect(mockExit).not.toHaveBeenCalled();
+    });
+
+    it("should accept a leap day in a leap year", () => {
+      const result = cliUtils.checkDateFormat("2024-02-29");
+      expect(result).toBe(true);
+      expect(mockExit).not.toHaveBeenCalled();
+    });
+
+    it("should call process.exit(1) for a date in the wrong format", () => {
+      cliUtils.checkDateFormat("31-01-2024");
+      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("YYYY-MM-DD"));
+      expect(mockExit).toHaveBeenCalledWith(1);
+    });
+
+    it("should call process.exit(1) for a non-date string", () => {
+      cliUtils.checkDateFormat("not-a-date");
+      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("YYYY-MM-DD"));
+      expect(mockExit).toHaveBeenCalledWith(1);
+    });
+
+    it("should call process.exit(1) for an empty string", () => {
+      cliUtils.checkDateFormat("");
+      expect(mockExit).toHaveBeenCalledWith(1);
+    });
+
+    it("should call process.exit(1) when the value is not a string", () => {
+      cliUtils.checkDateFormat(undefined);
+      expect(mockExit).toHaveBeenCalledWith(1);
+    });
+
+    it("should reject a correctly formatted but impossible calendar date", () => {
+      cliUtils.checkDateFormat("2024-02-31");
+      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("not an existing calendar date"));
+      expect(mockExit).toHaveBeenCalledWith(1);
+    });
+
+    it("should reject a leap day outside a leap year", () => {
+      cliUtils.checkDateFormat("2023-02-29");
+      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("not an existing calendar date"));
+      expect(mockExit).toHaveBeenCalledWith(1);
+    });
+
+    it("should reject a month outside the valid range", () => {
+      cliUtils.checkDateFormat("2024-13-01");
+      expect(mockExit).toHaveBeenCalledWith(1);
+    });
+
+    it("should reject input containing shell metacharacters", () => {
+      cliUtils.checkDateFormat('2024-01-01"; rm -rf /; echo "');
+      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("YYYY-MM-DD"));
+      expect(mockExit).toHaveBeenCalledWith(1);
+    });
+  });
+
+  // ─── checkHandleFormat ─────────────────────────────────────────────────────
+
+  describe("checkHandleFormat", () => {
+    it("should return true for a handle which names a file", () => {
+      const result = cliUtils.checkHandleFormat("workflow_1", "workflow handle");
+      expect(result).toBe(true);
+      expect(mockExit).not.toHaveBeenCalled();
+    });
+
+    it.each(["../escape", "../../etc/passwd", "sub/handle", "sub\\handle", "..", ".", ".hidden", "/absolute"])(
+      "should call process.exit(1) for the handle %p",
+      (unsafeHandle) => {
+        cliUtils.checkHandleFormat(unsafeHandle, "workflow handle");
+        expect(errorUtils.invalidHandleFormat).toHaveBeenCalledWith(unsafeHandle, "workflow handle", undefined);
+        expect(mockExit).toHaveBeenCalledWith(1);
+      }
+    );
+
+    // A blank handle is reported as missing rather than as malformed, since it usually
+    // means an unset variable was passed on rather than a badly chosen name
+    it.each(["", "   "])("should report a blank handle %p as missing", (blankHandle) => {
+      cliUtils.checkHandleFormat(blankHandle, "workflow handle");
+      expect(errorUtils.missingHandle).toHaveBeenCalledWith("workflow handle", undefined);
+      expect(errorUtils.invalidHandleFormat).not.toHaveBeenCalled();
+      expect(mockExit).toHaveBeenCalledWith(1);
+    });
+
+    it("should report a missing handle as missing", () => {
+      cliUtils.checkHandleFormat(undefined, "workflow handle");
+      expect(errorUtils.missingHandle).toHaveBeenCalledWith("workflow handle", undefined);
+      expect(mockExit).toHaveBeenCalledWith(1);
+    });
+
+    it("should pass the suggested command on to the error message", () => {
+      cliUtils.checkHandleFormat("../escape", "workflow handle", "silverfin stats --since 2024-01-31 --workflow");
+      expect(errorUtils.invalidHandleFormat).toHaveBeenCalledWith("../escape", "workflow handle", "silverfin stats --since 2024-01-31 --workflow");
+    });
+
+    it("should pass the suggested command on when the handle is missing", () => {
+      cliUtils.checkHandleFormat("", "workflow handle", "silverfin stats --since 2024-01-31 --workflow");
+      expect(errorUtils.missingHandle).toHaveBeenCalledWith("workflow handle", "silverfin stats --since 2024-01-31 --workflow");
     });
   });
 
