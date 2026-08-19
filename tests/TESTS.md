@@ -534,7 +534,16 @@ Source: `lib/cli/stats.js`
 | `generateWorkflowOverview` (no templates) | should not run the git scan when there is nothing to match | Verifies that `git whatchanged` is not invoked when the workflow holds no templates. |
 | `generateWorkflowOverview` (regex characters) | should treat a quantifier in a name literally | Verifies that a template name containing `+` or `*` is escaped before being interpolated into the match pattern. |
 | `generateWorkflowOverview` (regex characters) | should not build an invalid regular expression from a name with brackets | Verifies that a name containing brackets does not throw when the pattern is compiled. |
+| `generateWorkflowOverview` (missing templates) | should leave the missing template out of the counts | Verifies that a handle listed in the workflow but not stored in the repository is excluded from the totals. |
+| `generateWorkflowOverview` (missing templates) | should name the missing templates | Verifies that the warning names the workflow and every handle which has no template folder. |
+| `generateWorkflowOverview` (missing templates) | should not create a folder or a config for the missing template | Verifies that reading the statistics never scaffolds a template folder or a `config.json` for an unknown handle. |
+| `generateWorkflowOverview` (missing templates) | should not report the workflow as skipped | Verifies that missing templates lower the totals but still count as a successful report. |
+| `countYamlFiles` (several test files) | should count the template once and add up its unit tests in the repository overview | Verifies that two liquid test files in one `tests` folder produce one template and the sum of their unit tests. |
+| `countYamlFiles` (several test files) | should count the template once and add up its unit tests in a workflow overview | Verifies the same grouping when the counts are filtered by a workflow. |
+| `countYamlFiles` (several test files) | should count the template towards at least two tests on its combined total | Verifies that two files holding one unit test each make the template count as having at least two tests. |
+| `countYamlFiles` (several test files) | should never report more than 100% of the templates as covered | Verifies that three test files for one template give a coverage percentage of 100, not 300. |
 | `generateOverview` | should count every template in the repository | Verifies that the repository-wide overview counts all templates and writes `stats/stats.csv`. |
+| `generateOverview` | should report a write failure instead of throwing | Verifies that a failing `appendFileSync` is reported with the CSV path and the reason, without exiting. |
 | `generateOverview` | should append a row when run a second time | Verifies that a second run adds a row rather than replacing the file. |
 
 ---

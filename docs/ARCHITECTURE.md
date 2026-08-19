@@ -93,7 +93,7 @@ Pre-flight checks shared by commands: `loadDefaultFirmId`, `checkDefaultFirm`, `
 **Contains:** validation that ends in a clear message + `process.exit` on failure. All new option validation goes here so `bin/cli.js` stays declarative.
 
 ### `stats.js`
-Coverage reporting over the local template repo. Entry points `generateOverview(sinceDate)` and `generateWorkflowOverview(sinceDate, workflowHandle)` — the latter returns `false` when nothing could be reported on, leaving the exit to `bin/cli.js`. The rest are internal — workflow selection (`reportOnWorkflow`, `reportOnAllWorkflows`), counting templates and YAML tests (`getTemplatesSummary`, `getWorkflowTemplateSummary`, `yamlFilesActivity`, `countYamlFiles`), formatting (`displayOverview`, `createRow`, `percentageRoundTwo`) and CSV persistence (`saveOverviewToFile`, `saveWorkflowOverviewToFile`).
+Coverage reporting over the local template repo. Entry points `generateOverview(sinceDate)` and `generateWorkflowOverview(sinceDate, workflowHandle)` — the latter returns `false` when nothing could be reported on, leaving the exit to `bin/cli.js`. The rest are internal — workflow selection (`reportOnWorkflow`, `reportOnAllWorkflows`, `narrowWorkflowToRepository`), counting templates and YAML tests (`getTemplatesSummary`, `getWorkflowTemplateSummary`, `yamlFilesActivity`, `countYamlFiles`, `buildTemplatePattern`), formatting (`displayOverview`, `createRow`, `percentageRoundTwo`) and CSV persistence (`saveOverviewToFile`, `saveWorkflowOverviewToFile`, `writeStatisticsRow`).
 **Contains:** metrics and their presentation. Only the two `generate*` functions should be exported.
 
 ### `devMode.js`
@@ -145,7 +145,7 @@ Template-type vocabulary and name validation: `TEMPLATES_NAME_ATTRIBUTE`, `TEMPL
 **Contains:** the mapping between API type names and internal type keys. New template types are registered here first.
 
 ### `errorUtils.js`
-`uncaughtErrors`, `errorHandler`, `missingConfig`, `missing<Type>Id`, and `print<Type>BatchErrorSummary` for each of the four template types. Command line input: `missingHandle`, `invalidHandleFormat`. Workflow failures: `invalidWorkflowHandle`, `missingWorkflow`, `unparsableWorkflow`, `invalidWorkflow`, `noWorkflowsStored`, `workflowStatisticsNotSaved`, `printWorkflowBatchErrorSummary`.
+`uncaughtErrors`, `errorHandler`, `missingConfig`, `missing<Type>Id`, and `print<Type>BatchErrorSummary` for each of the four template types. Command line input: `missingHandle`, `invalidHandleFormat`. Workflow failures: `invalidWorkflowHandle`, `missingWorkflow`, `unparsableWorkflow`, `invalidWorkflow`, `noWorkflowsStored`, `workflowStatisticsNotSaved`, `workflowTemplatesMissing`, `printWorkflowBatchErrorSummary`. Statistics: `statisticsNotWritten`.
 **Contains:** every user-facing error message. New failure modes get a named function here rather than an inline `console.error`.
 
 ### `apiUtils.js`

@@ -329,6 +329,8 @@ silverfin stats --since 2024-01-01
 
 This writes to `./stats/overview.csv` and covers every template in the repository, Shared Parts included.
 
+A template counts once towards the YAML columns no matter how many Liquid Test files sit in its `tests` folder: `templates with yaml tests` counts the templates holding at least one non-empty test file, `unit tests` adds up every unit test found, and `templates with at least two tests` uses each template's combined total across its test files.
+
 To report per workflow instead, use `--workflow`. See [Workflows](#workflows) for the expected file format.
 
 ```bash
@@ -340,6 +342,11 @@ silverfin stats --since 2024-01-01 --workflow
 ```
 
 Each workflow gets its own file, `./stats/<handle>_stats.csv`. When a handle is passed explicitly and it cannot be found or read, the command reports the problem and stops. When every workflow is included, a faulty workflow file is skipped with a warning and the remaining ones are still processed, followed by a summary of what was skipped.
+
+Workflow totals and repository totals count different things, so do not compare them directly:
+
+- The repository overview counts every non-empty template it finds, Shared Parts included.
+- A workflow overview counts the templates its workflow file lists, excluding Shared Parts. A listed template which is not stored in the repository is left out of the totals and named in a warning, so the numbers only ever describe templates you actually have.
 
 ## Contributing
 
