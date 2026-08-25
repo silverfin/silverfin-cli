@@ -578,6 +578,15 @@ Source: `lib/cli/utils.js`
 | `checkHandleFormat` | should report a missing handle as missing | Verifies that `undefined` goes to `errorUtils.missingHandle`. |
 | `checkHandleFormat` | should pass the suggested command on to the error message | Verifies that the command the caller offers reaches `errorUtils.invalidHandleFormat`. |
 | `checkHandleFormat` | should pass the suggested command on when the handle is missing | Verifies that the command the caller offers reaches `errorUtils.missingHandle`. |
+| `checkNumericIdFormat` | should return true for an id given as a string | Verifies that an ordinary id is accepted without exiting. |
+| `checkNumericIdFormat` | should return true for an id given as a number | Verifies that a value which Commander has already converted is accepted. |
+| `checkNumericIdFormat` | should return true without exiting when the id is %p | Verifies that `undefined` and `null` pass through, since whether an id is required is `checkRequiredFirmOrPartner`'s decision. |
+| `checkNumericIdFormat` | should call process.exit(1) for the id %p | Verifies that text, decimals, exponents, signs, zero, leading zeros, padding and an unexpanded shell variable are reported through `errorUtils.invalidNumericId` and stop the command. |
+| `checkNumericIdFormat` | should pass the label on to the error message | Verifies that the caller's label reaches `errorUtils.invalidNumericId`, so one message serves firm, partner, company, period and sampler ids. |
+| `runCommandChecks` | should stop the command when the firm id is not a number | Verifies that the id check is wired into the function ~20 commands funnel through. |
+| `runCommandChecks` | should stop the command when the partner id is not a number | Verifies that a partner id is checked on the same path as a firm id. |
+| `runCommandChecks` | should let a numeric firm id through and return the command settings | Verifies that a valid firm id is unaffected by the new check. |
+| `runCommandChecks` | should let a numeric partner id through and return the command settings | Verifies that a valid partner id is unaffected by the new check. |
 | `checkUniqueOption` | should return true when exactly one unique option is used | Verifies that `true` is returned and no error is logged when exactly one of the mutually exclusive options is set. |
 | `checkUniqueOption` | should call process.exit(1) when none of the unique options are used | Verifies that an error is logged and `process.exit(1)` is called when none of the required options are present. |
 | `checkUniqueOption` | should call process.exit(1) when more than one unique option is used | Verifies that an error about incompatible options is logged and `process.exit(1)` is called when multiple exclusive options are set. |
@@ -729,6 +738,10 @@ Source: `lib/utils/errorUtils.js`
 | `invalidNumericId` | should say what an id looks like | Verifies that the message states the rule rather than only that the value is wrong. |
 | `invalidNumericId` | should mention an unset variable, which is the other way a bad id arrives | Verifies that an empty id points at an unset shell variable as the likely cause. |
 | `invalidNumericId` | should use the label it is given rather than assuming a firm | Verifies that the same message serves partner, company, period and sampler ids. |
+| `invalidNumericId` | should suggest the unpadded id when the value only has leading zeros | Verifies that `007` is answered with the id it names, since tokens are keyed by the exact string and a padded id would otherwise be refused with no way forward. |
+| `invalidNumericId` | should suggest the unpadded id for a longer padded value | Verifies that the suggestion is derived from the value rather than assuming a single zero. |
+| `invalidNumericId` | should not suggest an unpadded id when the value is not a padded number | Verifies that ordinary typos still get the unset-variable hint instead of a meaningless suggestion. |
+| `invalidNumericId` | should not suggest an unpadded id for %p | Verifies that `0` and `000` produce no suggestion, since no positive id is hiding in them. |
 | `invalidNumericId` | should return false | Verifies that the caller decides what happens next. |
 | `invalidDateFormat` | should name the date and the format expected | Verifies that the rejected date and `YYYY-MM-DD` both appear in the message. |
 | `invalidDateFormat` | should return false | Verifies that the caller decides what happens next. |
