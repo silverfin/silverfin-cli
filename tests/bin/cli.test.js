@@ -1,5 +1,7 @@
 const { execSync } = require("child_process");
 const path = require("path");
+const fs = require("fs");
+const os = require("os");
 
 const repoRoot = path.resolve(__dirname, "../..");
 
@@ -167,6 +169,83 @@ describe("bin/cli.js Commander wiring", () => {
     // covered in tests/lib/utils/errorUtils.test.js
     it("reports the invalid id rather than failing later", () => {
       expect(runCli("run-test -h some_handle -f 007")).toMatch(/Invalid firm id "007"/);
+    });
+  });
+
+  // Every remaining id the CLI accepts. These are not firm ids, but they reach the API the same
+  // way and a bad one is the same typo, so they are checked by the same function
+  describe("the other ids accepted on the command line", () => {
+    // The message is asserted, not just the exit code: these commands exit 1 on a network failure
+    // too, so an exit code alone cannot tell "the CLI rejected the id" from "the API refused it
+    // later", which is the whole difference this change makes
+    it.each([
+      ["company id", "generate-export-file -f 13827 -c abc -p 1 -e 1", "abc"],
+      ["period id", "generate-export-file -f 13827 -c 1 -p abc -e 1", "abc"],
+      ["export file id", "generate-export-file -f 13827 -c 1 -p 1 -e abc", "abc"],
+      ["company id", "company-data-copier -f 13827 -c abc -l 33417839", "abc"],
+      ["period id", "company-data-copier -f 13827 -c 1224550 -l xyz", "xyz"],
+      ["period id", "company-data-copier -f 13827 -c 1224550 -l 33417839 xyz", "xyz"],
+      ["sampler id", "run-sampler -p 500 --id abc", "abc"],
+    ])("reports an invalid %s", (label, args, value) => {
+      expect(runCli(args)).toMatch(new RegExp(`Invalid ${label} "${value}"`));
+      expect(runCliExitCode(args)).toBe(1);
+    });
+
+    // The three checks these replace used Number(), which accepts a padded id and then passes the
+    // raw string on - so the value that was validated was not the value that got used
+    it.each([
+      ["company id", "company-data-copier -f 13827 -c 007 -l 33417839", "007"],
+      ["period id", "company-data-copier -f 13827 -c 1224550 -l 007", "007"],
+      ["sampler id", "run-sampler -p 500 --id 007", "007"],
+    ])("reports a zero-padded %s", (label, args, value) => {
+      expect(runCli(args)).toMatch(new RegExp(`Invalid ${label} "${value}"`));
+      expect(runCliExitCode(args)).toBe(1);
+    });
+  });
+
+  // These commands write to the credentials file, so they run against a throwaway HOME. Without
+  // it a rejected value would be stored in the developer's own ~/.silverfin/config.json
+  describe("ids on the commands which store credentials", () => {
+    let isolatedHome;
+
+    beforeAll(() => {
+      isolatedHome = fs.mkdtempSync(path.join(os.tmpdir(), "silverfin-cli-home-"));
+    });
+
+    afterAll(() => {
+      fs.rmSync(isolatedHome, { recursive: true, force: true });
+    });
+
+    function runIsolated(args) {
+      const env = { ...process.env, HOME: isolatedHome, NODE_ENV: "test", SF_API_CLIENT_ID: "test", SF_API_SECRET: "test" };
+      try {
+        const output = execSync(`node bin/cli.js ${args} 2>&1`, { cwd: repoRoot, env }).toString();
+        return { code: 0, output };
+      } catch (err) {
+        return { code: err.status, output: (err.stdout || Buffer.alloc(0)).toString() };
+      }
+    }
+
+    // As above, the message is what proves the CLI rejected the id: --refresh-token and
+    // --update-name already exited 1 on a bad id, but only after trying to reach the API with it
+    it.each([
+      ["config --set-firm", "config --set-firm abc", "firm id"],
+      ["config --update-name", "config --update-name abc", "firm id"],
+      ["config --refresh-token", "config --refresh-token abc", "firm id"],
+      ["config --refresh-partner-token", "config --refresh-partner-token abc", "partner id"],
+      ["authorize-partner", "authorize-partner -i abc -k some-key", "partner id"],
+    ])("%s reports an id which is not a number", (_name, args, label) => {
+      const { code, output } = runIsolated(args);
+      expect(output).toMatch(new RegExp(`Invalid ${label} "abc"`));
+      expect(code).toBe(1);
+    });
+
+    // The value is rejected before it is written, so nothing reaches the credentials file
+    it("does not store a firm id which was rejected", () => {
+      runIsolated("config --set-firm abc");
+      const credentialsPath = path.join(isolatedHome, ".silverfin", "config.json");
+      const stored = fs.existsSync(credentialsPath) ? fs.readFileSync(credentialsPath, "utf-8") : "";
+      expect(stored).not.toMatch(/abc/);
     });
   });
 

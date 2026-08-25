@@ -551,10 +551,7 @@ program
 
     // If an existing sampler ID is provided, fetch and display results
     if (options.id) {
-      if (!/^\d+$/.test(options.id)) {
-        consola.error("Invalid sampler ID: must be a numeric value");
-        process.exit(1);
-      }
+      cliUtils.checkNumericIdFormat(options.id, "sampler id");
       await new LiquidSamplerRunner(options.partner, runnerOptions).checkStatus(options.id);
       return;
     }
@@ -624,6 +621,8 @@ program
   .requiredOption("-k, --api-key <api-key>", "Specify the api key of the partner environment to be added")
   .option("-n, --partner-name <partner-name>", "Specify the partner environment name to be added")
   .action((options) => {
+    cliUtils.checkNumericIdFormat(options.partnerId, "partner id");
+
     const stored = firmCredentials.storePartnerApiKey(options.partnerId, options.apiKey, options.partnerName);
 
     if (stored) {
@@ -684,6 +683,9 @@ program
   .action(async (options) => {
     cliUtils.checkUniqueOption(["setFirm", "getFirm", "listAll", "updateName", "refreshToken", "refreshPartnerToken", "setHost", "getHost", "setAutocompletion"], options);
     if (options.setFirm) {
+      // Checked before it is stored, so a bad id cannot be written into the credentials file and
+      // then be rejected by every command which reads it back
+      cliUtils.checkNumericIdFormat(options.setFirm, "firm id");
       firmCredentials.setDefaultFirmId(options.setFirm);
       const currentDirectory = path.basename(process.cwd());
       consola.success(`${currentDirectory}: firm id set to ${options.setFirm}`);
@@ -711,10 +713,12 @@ program
       }
     }
     if (options.updateName) {
+      cliUtils.checkNumericIdFormat(options.updateName, "firm id");
       cliUtils.checkDefaultFirm(options.updateName, firmIdDefault);
       toolkit.updateFirmName(options.updateName);
     }
     if (options.refreshToken) {
+      cliUtils.checkNumericIdFormat(options.refreshToken, "firm id");
       cliUtils.checkDefaultFirm(options.refreshToken, firmIdDefault);
       const refreshedTokens = await SF.refreshFirmTokens(options.refreshToken);
 
@@ -723,6 +727,7 @@ program
       }
     }
     if (options.refreshPartnerToken) {
+      cliUtils.checkNumericIdFormat(options.refreshPartnerToken, "partner id");
       const refreshedTokens = await SF.refreshPartnerToken(options.refreshPartnerToken);
 
       if (refreshedTokens) {
@@ -862,6 +867,9 @@ program
   .requiredOption("-e, --export-file <export-file-id>", "Specify the export file template to be used")
   .action(async (options) => {
     cliUtils.checkNumericIdFormat(options.firm, "firm id");
+    cliUtils.checkNumericIdFormat(options.company, "company id");
+    cliUtils.checkNumericIdFormat(options.period, "period id");
+    cliUtils.checkNumericIdFormat(options.exportFile, "export file id");
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     const generator = new ExportFileInstanceGenerator(options.firm, options.company, options.period, options.exportFile);
     await generator.generateAndOpenFile();
@@ -878,19 +886,14 @@ program
     cliUtils.checkNumericIdFormat(options.firm, "firm id");
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
 
+    cliUtils.checkNumericIdFormat(options.sourceCompanyId, "company id");
+    // Commander collects the variadic option into an array of strings (e.g. "-l 123 456"), so each
+    // id is checked in turn and the one which is wrong is named rather than the whole list
+    options.sourceLedgerIds.forEach((ledgerId) => cliUtils.checkNumericIdFormat(ledgerId, "period id"));
+
+    // copyCompanyData takes numbers, and they are safe to convert now they have been checked
     const sourceCompanyId = Number(options.sourceCompanyId);
-    if (!Number.isInteger(sourceCompanyId) || sourceCompanyId <= 0) {
-      consola.error(`Invalid source company id: "${options.sourceCompanyId}". It must be a positive integer.`);
-      process.exit(1);
-    }
-
-    // Commander collects the variadic option into an array of strings (e.g. "-l 123 456").
     const sourceLedgerIds = options.sourceLedgerIds.map((value) => Number(value));
-
-    if (sourceLedgerIds.some((id) => !Number.isInteger(id) || id <= 0)) {
-      consola.error(`Invalid source ledger (period) id in: "${options.sourceLedgerIds.join(" ")}". Each id must be a positive integer.`);
-      process.exit(1);
-    }
 
     // copyCompanyData returns false on failure (e.g. a 404/400 that responseErrorHandler swallows
     // without exiting), so the exit code has to be set here or scripts/CI read a failed copy as success.
