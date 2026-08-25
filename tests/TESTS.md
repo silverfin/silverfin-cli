@@ -725,6 +725,15 @@ Source: `lib/utils/errorUtils.js`
 | `invalidHandleFormat` | should suggest the command which lists the handles available | Verifies that the caller's command is printed as the next step. |
 | `invalidHandleFormat` | should ask for a valid handle when no command is suggested | Verifies that the user is still told what to do when the caller offers no command. |
 | `invalidHandleFormat` | should return false | Verifies that the caller decides what happens next. |
+| `invalidNumericId` | should name the value and the label | Verifies that the rejected id appears in the message. |
+| `invalidNumericId` | should say what an id looks like | Verifies that the message states the rule rather than only that the value is wrong. |
+| `invalidNumericId` | should mention an unset variable, which is the other way a bad id arrives | Verifies that an empty id points at an unset shell variable as the likely cause. |
+| `invalidNumericId` | should use the label it is given rather than assuming a firm | Verifies that the same message serves partner, company, period and sampler ids. |
+| `invalidNumericId` | should return false | Verifies that the caller decides what happens next. |
+| `invalidDateFormat` | should name the date and the format expected | Verifies that the rejected date and `YYYY-MM-DD` both appear in the message. |
+| `invalidDateFormat` | should return false | Verifies that the caller decides what happens next. |
+| `impossibleDate` | should name the date and say it is not a real one | Verifies that a well-formed but non-existent date is distinguished from a malformed one. |
+| `impossibleDate` | should return false | Verifies that the caller decides what happens next. |
 | `noWorkflowsStored` | should point at the workflows folder fsUtils reads from | Verifies that the folder named in the message comes from `lib/utils/constants.js`, so it cannot drift from the folder `fsUtils` reads. |
 | `unparsableWorkflow` | should point at the workflow file inside that folder | Verifies that the file path offered to the user is built from the same shared constant. |
 

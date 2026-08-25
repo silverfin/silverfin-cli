@@ -63,6 +63,62 @@ describe("utils/errorUtils", () => {
     });
   });
 
+  // ─── invalidNumericId ──────────────────────────────────────────────────────
+
+  describe("invalidNumericId", () => {
+    it("should name the value and the label", () => {
+      errorUtils.invalidNumericId("my-firm", "firm id");
+      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining('Invalid firm id "my-firm"'));
+    });
+
+    it("should say what an id looks like", () => {
+      errorUtils.invalidNumericId("my-firm", "firm id");
+      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("is a number"));
+    });
+
+    it("should mention an unset variable, which is the other way a bad id arrives", () => {
+      errorUtils.invalidNumericId("", "firm id");
+      expect(consola.log).toHaveBeenCalledWith(expect.stringContaining("variable you passed is set"));
+    });
+
+    it("should use the label it is given rather than assuming a firm", () => {
+      errorUtils.invalidNumericId("abc", "partner id");
+      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining('Invalid partner id "abc"'));
+    });
+
+    it("should return false", () => {
+      expect(errorUtils.invalidNumericId("my-firm", "firm id")).toBe(false);
+    });
+  });
+
+  // ─── invalidDateFormat ─────────────────────────────────────────────────────
+
+  describe("invalidDateFormat", () => {
+    it("should name the date and the format expected", () => {
+      errorUtils.invalidDateFormat("31-01-2024");
+      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining('Invalid date "31-01-2024"'));
+      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("YYYY-MM-DD"));
+    });
+
+    it("should return false", () => {
+      expect(errorUtils.invalidDateFormat("31-01-2024")).toBe(false);
+    });
+  });
+
+  // ─── impossibleDate ────────────────────────────────────────────────────────
+
+  describe("impossibleDate", () => {
+    it("should name the date and say it is not a real one", () => {
+      errorUtils.impossibleDate("2024-02-31");
+      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining('Invalid date "2024-02-31"'));
+      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("not an existing calendar date"));
+    });
+
+    it("should return false", () => {
+      expect(errorUtils.impossibleDate("2024-02-31")).toBe(false);
+    });
+  });
+
   // ─── Workflow folder naming ────────────────────────────────────────────────
 
   // The folder the messages point the user at must stay the folder fsUtils reads from,
