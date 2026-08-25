@@ -155,6 +155,11 @@ Source: `bin/cli.js` (Commander program)
 | silverfin company-data-copier --help output contains --firm option | Verifies `--firm` is declared for the company-data-copier command. |
 | silverfin company-data-copier --help output contains --source-company-id option | Verifies `--source-company-id` is declared. |
 | silverfin company-data-copier --help output contains --source-ledger-ids option | Verifies `--source-ledger-ids` is declared. |
+| firm and partner id validation %s exits 1 on a non-numeric firm id | Verifies that `run-test`, `development-mode`, `create-all-templates`, `update-all-templates`, `generate-export-file` and `company-data-copier` reject a malformed firm id, since none of them go through `runCommandChecks`. |
+| firm and partner id validation %s exits 1 on a zero-padded firm id | Verifies the same six commands reject `007`, which previously reached the API as an unauthorized firm. |
+| firm and partner id validation run-sampler exits 1 on a non-numeric partner id | Verifies the sampler's partner id is checked on the same path. |
+| firm and partner id validation run-sampler exits 1 when any of the variadic firm ids is not a number | Verifies each `--firm-ids` value is checked in turn, not just the first. |
+| firm and partner id validation reports the invalid id rather than failing later | Verifies the id is named in the output. Only the `consola.error` line is assertable here: `NODE_ENV=test` puts consola at level 1, so the `consola.log` follow-up is dropped in this harness. |
 | silverfin company-data-copier exit codes exits 1 on an invalid source company id | Verifies a non-integer `--source-company-id` terminates the process with exit code 1. |
 | silverfin company-data-copier exit codes exits 1 on an invalid source ledger id | Verifies a non-integer `--source-ledger-ids` value terminates the process with exit code 1. |
 | silverfin company-data-copier exit codes exits 1 when a required option is missing | Verifies Commander's required-option check terminates the process with exit code 1. |

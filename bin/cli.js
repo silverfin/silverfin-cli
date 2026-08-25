@@ -410,6 +410,8 @@ program
   .option("-f, --firm <firm-id>", "Specify the firm to be used", firmIdDefault)
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
+    cliUtils.checkNumericIdFormat(options.firm, "firm id");
+
     const settings = cliUtils.getCommandSettings(options);
     if (settings.type == "firm") {
       cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
@@ -434,6 +436,8 @@ program
   .option('-m, --message "<message>"', "Add a message to Silverfin's changelog (optional) | Make sure to always enclose the message in double quotes", undefined)
   .option("--yes", "Skip the prompt confirmation (optional)")
   .action((options) => {
+    cliUtils.checkNumericIdFormat(options.firm, "firm id");
+
     const settings = cliUtils.getCommandSettings(options);
     if (settings.type == "firm") {
       cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
@@ -465,6 +469,8 @@ program
   .option("-p, --pattern <pattern>", "Run all tests that match this pattern (optional)", "")
 
   .action(async (options) => {
+    cliUtils.checkNumericIdFormat(options.firm, "firm id");
+
     if (!options.handle && !options.accountTemplate) {
       consola.error("You need to specify either a reconciliation handle or an account template");
       process.exit(1);
@@ -535,6 +541,10 @@ program
   .option("--no-open", "Do not download/open the report locally; only print its URL (default in CI)")
   .option("--compact", "Download the result and print a compact named_results diff (grouped by template) to stdout - review-friendly and safe in CI")
   .action(async (options) => {
+    cliUtils.checkNumericIdFormat(options.partner, "partner id");
+    // --firm-ids is variadic, so each id is checked in turn rather than the list as a whole
+    (options.firmIds || []).forEach((firmId) => cliUtils.checkNumericIdFormat(firmId, "firm id"));
+
     // Commander sets options.open = false when --no-open is passed.
     // In CI, never open regardless of the flag.
     const runnerOptions = { openReport: options.open && !process.env.CI, compact: options.compact || false };
@@ -817,6 +827,7 @@ program
   .option("--yes", "Skip the prompt confirmation (optional)")
   .option("-p, --pattern <pattern>", `Run all tests that match this pattern (optional). It has to be used together with "--handle" or "--account-template"`, "")
   .action((options) => {
+    cliUtils.checkNumericIdFormat(options.firm, "firm id");
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     cliUtils.checkUniqueOption(["handle", "updateTemplates", "accountTemplate"], options);
 
@@ -850,6 +861,7 @@ program
   .requiredOption("-p, --period <period-id>", "Specify the period to be used")
   .requiredOption("-e, --export-file <export-file-id>", "Specify the export file template to be used")
   .action(async (options) => {
+    cliUtils.checkNumericIdFormat(options.firm, "firm id");
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
     const generator = new ExportFileInstanceGenerator(options.firm, options.company, options.period, options.exportFile);
     await generator.generateAndOpenFile();
@@ -863,6 +875,7 @@ program
   .requiredOption("-l, --source-ledger-ids <ledger-ids...>", "One or more period ids to copy, space-separated (the id in the source company URL between 'ledgers/' and '/workflows')")
   .requiredOption("-f, --firm <firm-id>", "Destination firm where the copied company will be created", firmIdDefault)
   .action(async (options) => {
+    cliUtils.checkNumericIdFormat(options.firm, "firm id");
     cliUtils.checkDefaultFirm(options.firm, firmIdDefault);
 
     const sourceCompanyId = Number(options.sourceCompanyId);

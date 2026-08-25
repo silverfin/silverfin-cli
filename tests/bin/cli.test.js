@@ -127,6 +127,49 @@ describe("bin/cli.js Commander wiring", () => {
     });
   });
 
+  // The commands below do not go through runCommandChecks, so the id check has to be wired into
+  // each action. Without it a bad firm id reaches the API: run-test exited 0 with "Config file
+  // not found", which scripts read as a pass
+  describe("firm and partner id validation on commands outside runCommandChecks", () => {
+    it.each([
+      ["run-test", "run-test -h some_handle"],
+      ["development-mode", "development-mode -h some_handle"],
+      ["create-all-templates", "create-all-templates --yes"],
+      ["update-all-templates", "update-all-templates --yes"],
+      ["generate-export-file", "generate-export-file -c 1 -p 1 -e 1"],
+      ["company-data-copier", "company-data-copier -c 1224550 -l 33417839"],
+    ])("%s exits 1 on a non-numeric firm id", (_name, args) => {
+      expect(runCliExitCode(`${args} -f abc`)).toBe(1);
+    });
+
+    it.each([
+      ["run-test", "run-test -h some_handle"],
+      ["development-mode", "development-mode -h some_handle"],
+      ["create-all-templates", "create-all-templates --yes"],
+      ["update-all-templates", "update-all-templates --yes"],
+      ["generate-export-file", "generate-export-file -c 1 -p 1 -e 1"],
+      ["company-data-copier", "company-data-copier -c 1224550 -l 33417839"],
+    ])("%s exits 1 on a zero-padded firm id", (_name, args) => {
+      expect(runCliExitCode(`${args} -f 007`)).toBe(1);
+    });
+
+    it("run-sampler exits 1 on a non-numeric partner id", () => {
+      expect(runCliExitCode("run-sampler -p abc -h some_handle")).toBe(1);
+    });
+
+    it("run-sampler exits 1 when any of the variadic firm ids is not a number", () => {
+      expect(runCliExitCode("run-sampler -p 500 -h some_handle --firm-ids 13827 abc")).toBe(1);
+    });
+
+    // Only the exit code is asserted here. runCli sets NODE_ENV=test, which puts consola at level
+    // 1 and drops everything below a warning, so the consola.log follow-up lines ("Did you mean
+    // 7?") never reach this harness even though a real user sees them. The message itself is
+    // covered in tests/lib/utils/errorUtils.test.js
+    it("reports the invalid id rather than failing later", () => {
+      expect(runCli("run-test -h some_handle -f 007")).toMatch(/Invalid firm id "007"/);
+    });
+  });
+
   describe("silverfin company-data-copier exit codes", () => {
     it("exits 1 on an invalid source company id", () => {
       expect(runCliExitCode("company-data-copier -c abc -l 33417839 -f 13692")).toBe(1);
