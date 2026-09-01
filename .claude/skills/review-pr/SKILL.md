@@ -11,11 +11,23 @@ Perform a layered PR review that builds on existing bot comments, then adds net-
 
 ## Conventions
 
+### Dry run by default
+
+**This skill is read-only unless the user says otherwise.** Steps 0–6 and 8 have no side effects and always run. The two steps that do — Step 7 (posting) and Step 9 (writing learnings) — are gated:
+
+- If the user invoked the skill with `--post` (or said in their message that findings should be posted), treat posting as pre-authorised and skip the Step 7 gate.
+- Otherwise, run in **dry run**: collect everything, print the Step 8 summary with the exact comment bodies you would post, then ask once for explicit confirmation before Step 7. Ask again before Step 9.
+- No confirmation, no answer, or an ambiguous answer means do not post and do not write. Report what would have been posted and stop.
+
+The `--post` opt-in covers replies and inline comments only. Step 9 always asks, because it writes a file into the repo.
+
 ### Severity rubric
-- **🔴 Critical** — data loss or crash in normal use
-- **🟠 Major** — crash or silent wrong behavior under a realistic edge case
-- **🟡 Minor** — silent wrong behavior that's unlikely but possible
+- **🔴 Critical** — data loss or crash in normal use; command injection; authentication or authorization bypass; a credential, token or secret written to logs, disk, or a remote service
+- **🟠 Major** — crash or silent wrong behavior under a realistic edge case; any other security-boundary violation (path traversal, `eval`/dynamic require on untrusted input, TLS or signature verification disabled); exposure of user or firm data to a party that should not see it
+- **🟡 Minor** — silent wrong behavior that's unlikely but possible; a security weakness that needs an unlikely precondition to exploit
 - **💡 Suggestion** — style, cleanup, or optional improvement
+
+Rate security and privacy findings by the harm they enable, not by whether they crash or produce a visibly wrong result. A leak or an injection that runs silently and returns the correct output is still Critical.
 
 ### When to post vs summarize
 | Situation | Action |
@@ -27,6 +39,8 @@ Perform a layered PR review that builds on existing bot comments, then adds net-
 | Valid bot finding still open, no new angle | Summary only — don't duplicate inline |
 | Same root cause AND same triggering condition as existing | Don't post |
 | Bug on unchanged line (can't post inline) | Post as general PR comment via /reviews |
+
+Every "Post" / "Reply" row above means *queue it for posting*. Nothing in this table reaches GitHub until the gate in **Dry run by default** has been cleared.
 
 ### Comment format
 - Net-new inline: severity emoji + label, one-sentence description, concrete fix snippet for Major/Critical
@@ -169,7 +183,10 @@ A human reply does not mean the issue is resolved. Only the code at HEAD determi
 
 If a comment is stale or a false positive AND also unclear, address both concerns in one reply.
 
+Do **not** send replies here. Queue each one as `{comment_id} → {reply body}` and carry the queue to Step 7, where it is posted together with the net-new findings after the single confirmation gate:
+
 ```bash
+# Step 7 only, after confirmation:
 gh api repos/{owner}/{repo}/pulls/{pr_number}/comments \
   -X POST \
   -f body="{reply}" \
@@ -272,9 +289,17 @@ Post only CONFIRMED findings inline. Include PLAUSIBLE in the summary. Discard R
 
 ---
 
-## Step 7 — Post findings
+## Step 7 — Post findings (gated)
 
-For findings on added/modified lines:
+**Confirmation gate — do this before the first `gh api ... -X POST`:**
+
+1. Print the Step 8 summary, plus the queued Step 4 replies and the verbatim body of every comment you intend to post, each with its file, line and side.
+2. State the totals: *N inline comments, M thread replies, K general PR comments.*
+3. Ask the user, in one message, whether to post them — and stop there.
+
+Post only after the user answers yes, and post only what you listed. If the user was already explicit (`--post`, or "post the findings" in their message), skip the gate. If they decline, say nothing was posted and go to Step 9. If they ask for a subset, post that subset only.
+
+Once confirmed, for findings on added/modified lines:
 ```bash
 gh api repos/{owner}/{repo}/pulls/{pr_number}/comments \
   -X POST \
@@ -321,7 +346,7 @@ gh api repos/{owner}/{repo}/pulls/{pr_number}/reviews \
 
 ## Step 8 — Required summary
 
-Print to terminal after all comments are posted:
+Print to terminal — as part of the Step 7 gate when posting is unconfirmed, or after posting when it was pre-authorised. In a dry run, sections 2 and 3 describe what *would* be posted; label them `(dry run — not posted)`.
 
 ```
 ## PR Review Summary — #{pr_number}
@@ -361,9 +386,13 @@ Print to terminal after all comments are posted:
 
 ---
 
-## Step 9 — Save learnings
+## Step 9 — Save learnings (gated)
 
-Write to the same learnings file read in Step 0. If creating the file for the first time, write this header first:
+**Confirmation gate — do this before writing or creating any file:**
+
+Show the exact entry you would append and the path you would write it to, then ask the user whether to save it. Write only after they say yes; a decline or no answer means leave the file untouched and note that in the summary. This gate always applies — `--post` does not cover it.
+
+Once confirmed, write to the same learnings file read in Step 0. If creating the file for the first time, write this header first:
 
 ```markdown
 # Review Learnings

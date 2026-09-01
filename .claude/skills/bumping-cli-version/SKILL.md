@@ -50,7 +50,7 @@ A change with more than one user-visible consequence adds bullets under the lead
 
 Do not reach for bullets to restate the lead line in more words. One consequence means one line, as above.
 
-`lib/cli/changelogReader.js` parses this file at runtime to show users what changed when they update. It splits on `## [` and keeps everything up to the next one, so **the heading is the only load-bearing part** — the body can be a line or a list. Keep `## [<version>] (DD/MM/YYYY)` exactly, do not introduce `### ` levels, and do not reformat or re-date existing entries.
+`lib/cli/changelogReader.js` parses this file at runtime to show users what changed when they update. It splits on `## [` and keeps everything up to the next one, so **the heading is the only load-bearing part** — the body can be a line or a list. Keep `## [<version>] (DD/MM/YYYY)` exactly, do not introduce `###` levels, and do not reformat or re-date existing entries.
 
 ## Which number
 
