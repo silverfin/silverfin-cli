@@ -371,6 +371,30 @@ describe("FirmCredentials", () => {
     });
   });
 
+  describe("storePartnerApiKey", () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it("returns false, without throwing, when saveCredentials() fails", () => {
+      let testFirmCredentials;
+      jest.isolateModules(() => {
+        fs.existsSync.mockReturnValue(true);
+        fs.readFileSync.mockReturnValueOnce(JSON.stringify({ defaultFirmIDs: {}, host: "https://initial.getsilverfin.com" }));
+
+        const module = require("../../../lib/api/firmCredentials");
+        testFirmCredentials = module.firmCredentials;
+      });
+
+      // A failed load blocks saveCredentials() from persisting - storePartnerApiKey() must
+      // surface that instead of reporting success.
+      fs.readFileSync.mockReturnValueOnce("not valid json{{{");
+      testFirmCredentials.loadCredentials();
+
+      expect(testFirmCredentials.storePartnerApiKey("1234", "an-api-key", "Partner name")).toBe(false);
+    });
+  });
+
   describe("setHost and getHost", () => {
     let mockConfig;
 
