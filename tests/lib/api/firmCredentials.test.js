@@ -163,6 +163,55 @@ describe("FirmCredentials", () => {
       expect(() => testFirmCredentials.listAuthorizedPartners()).not.toThrow();
       expect(testFirmCredentials.listAuthorizedPartners()).toEqual([]);
     });
+
+    it("drops a present but non-object entry inside partnerCredentials instead of crashing read paths on it", () => {
+      const mockCredentials = {
+        defaultFirmIDs: {},
+        host: "https://test.getsilverfin.com",
+        partnerCredentials: { 1: null, 2: { name: "Good Partner", token: "abc" } },
+      };
+
+      fs.existsSync = jest.fn().mockReturnValueOnce(true).mockReturnValueOnce(true);
+      fs.readFileSync = jest.fn().mockReturnValueOnce(JSON.stringify(mockCredentials));
+
+      let testFirmCredentials;
+      jest.isolateModules(() => {
+        const module = require("../../../lib/api/firmCredentials");
+        testFirmCredentials = module.firmCredentials;
+      });
+
+      expect(() => testFirmCredentials.listAuthorizedPartners()).not.toThrow();
+      expect(testFirmCredentials.listAuthorizedPartners()).toEqual([{ id: "2", name: "Good Partner" }]);
+
+      const exitSpy = jest.spyOn(process, "exit").mockImplementation((code) => {
+        throw new Error(`Process.exit called with code ${code}`);
+      });
+      // A dropped (malformed) entry must read as "not authorized", not silently succeed with no token.
+      expect(() => testFirmCredentials.getPartnerCredentials("1")).toThrow("Process.exit called with code 1");
+      exitSpy.mockRestore();
+    });
+
+    it("drops a present but non-object per-firm record instead of crashing config --list-all", () => {
+      const mockCredentials = {
+        defaultFirmIDs: {},
+        host: "https://test.getsilverfin.com",
+        12345: null,
+        67890: { accessToken: "a", refreshToken: "b", firmName: "Good Firm" },
+      };
+
+      fs.existsSync = jest.fn().mockReturnValueOnce(true).mockReturnValueOnce(true);
+      fs.readFileSync = jest.fn().mockReturnValueOnce(JSON.stringify(mockCredentials));
+
+      let testFirmCredentials;
+      jest.isolateModules(() => {
+        const module = require("../../../lib/api/firmCredentials");
+        testFirmCredentials = module.firmCredentials;
+      });
+
+      expect(() => testFirmCredentials.listAuthorizedFirms()).not.toThrow();
+      expect(testFirmCredentials.listAuthorizedFirms()).toEqual([["67890", "Good Firm"]]);
+      expect(testFirmCredentials.getTokenPair("12345")).toBeNull();
+    });
   });
 
   describe("loadCredentials", () => {
@@ -541,6 +590,31 @@ describe("FirmCredentials", () => {
     it("setHost returns false when saveCredentials() fails", () => {
       const testFirmCredentials = firmCredentialsAfterAFailedLoad();
       expect(testFirmCredentials.setHost("https://new.getsilverfin.com")).toBe(false);
+    });
+  });
+
+  describe("listAuthorizedFirms", () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it("does not list the host key as a firm (pre-existing gap, unrelated to malformed data)", () => {
+      const mockCredentials = {
+        defaultFirmIDs: {},
+        host: "https://test.getsilverfin.com",
+        12345: { accessToken: "a", refreshToken: "b", firmName: "Good Firm" },
+      };
+
+      fs.existsSync = jest.fn().mockReturnValueOnce(true).mockReturnValueOnce(true);
+      fs.readFileSync = jest.fn().mockReturnValueOnce(JSON.stringify(mockCredentials));
+
+      let testFirmCredentials;
+      jest.isolateModules(() => {
+        const module = require("../../../lib/api/firmCredentials");
+        testFirmCredentials = module.firmCredentials;
+      });
+
+      expect(testFirmCredentials.listAuthorizedFirms()).toEqual([["12345", "Good Firm"]]);
     });
   });
 
