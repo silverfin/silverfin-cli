@@ -1556,5 +1556,19 @@ describe("Toolkit", () => {
       expect(consola.warn).toHaveBeenCalledWith(`Firm 100 not found.`);
       expect(result).toBe(false);
     });
+
+    it("should return false, without logging success, when the firm name could not be saved", async () => {
+      const { firmCredentials } = require("../../lib/api/firmCredentials");
+      const storeFirmNameSpy = jest.spyOn(firmCredentials, "storeFirmName").mockReturnValue(false);
+
+      SF.getFirmDetails.mockResolvedValue({ name: "Test Firm" });
+
+      const result = await toolkit.updateFirmName(100);
+
+      expect(consola.info).not.toHaveBeenCalled();
+      expect(result).toBe(false);
+
+      storeFirmNameSpy.mockRestore();
+    });
   });
 });

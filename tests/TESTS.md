@@ -399,8 +399,10 @@ Source: `lib/api/firmCredentials.js`
 | `FirmCredentials` (initialization) | creates the credentials file if it does not exist | Verifies that `fs.writeFileSync` is called with the default credentials structure when the config file is absent. |
 | `FirmCredentials` (initialization) | loads existing credentials if the file exists | Verifies that existing credentials are read from disk and populated into `firmCredentials.data`. |
 | `FirmCredentials` (initialization) | adds default values if they are missing from existing credentials | Verifies that `defaultFirmIDs` and `host` defaults are merged in when loading a credentials file that lacks them. |
+| `FirmCredentials` (initialization) | replaces a present but non-object defaultFirmIDs instead of crashing later on it | Verifies that `defaultFirmIDs: null` (present but wrong-shaped, e.g. a hand-edited config) is replaced with `{}` rather than left in place, since `Object.hasOwn` alone can't catch it and `setDefaultFirmId` writes into it unconditionally. |
 | `loadCredentials` | loads credentials from file successfully | Verifies that calling `loadCredentials` replaces the in-memory data with freshly read credentials from disk. |
 | `loadCredentials` | logs an error and falls back to {} (without exiting) when the credentials file contains invalid JSON | Verifies that invalid JSON is reported via `errorUtils.credentialsFileNotLoaded` and replaced with safe empty defaults (`{ defaultFirmIDs: {}, host: ... }`) in memory, without exiting the process. |
+| `loadCredentials` | never puts a snippet of the corrupted file's content into the user-visible error message | Verifies that `JSON.parse`'s own error message - which embeds a snippet of the invalid input on this V8, and that input is the credentials file's raw content - is not repeated in the default-visible `consola.error`/`consola.log` output. |
 | `loadCredentials` | logs an error and falls back to {} (without exiting) when the credentials file can't be read | Verifies the same fallback for a read failure (e.g. permissions), not just a parse failure. |
 | `loadCredentials` | logs an error and falls back to {} when the credentials file parses to %s instead of an object (`null`, an array, a number) | Verifies that valid-but-wrong-shaped JSON is also treated as a load failure, closing the crash `#checkDefaultValues()` would otherwise hit via `Object.hasOwn(null, ...)`. |
 | `field preservation across a store -> save -> load cycle` | keeps a per-firm field it doesn't recognize through storeNewTokenPair, saveCredentials, and loadCredentials | Verifies a per-firm field the class doesn't know about (e.g. a future flag) survives a full store → save → load round trip. |
@@ -408,6 +410,7 @@ Source: `lib/api/firmCredentials.js`
 | `saveCredentials` | writes credentials to file successfully | Verifies that `saveCredentials` calls `fs.writeFileSync` with the current in-memory credentials serialised as JSON. |
 | `saveCredentials` | handles file system error when saving credentials | Verifies that a filesystem error during save is reported via `errorUtils.credentialsFileWriteFailed`, returns `false`, and does not throw. |
 | `storePartnerApiKey` | returns false, without throwing, when saveCredentials() fails | Verifies that a blocked save is surfaced to the caller instead of always reporting success. |
+| `storePartnerApiKey` | replaces a present but non-object partnerCredentials instead of crashing | Verifies that `partnerCredentials: null` (present but wrong-shaped) is replaced with `{}` instead of throwing when indexed into. |
 | `propagating a failed save` | storeNewTokenPair / storeFirmName / setDefaultFirmId / setHost return false when saveCredentials() fails | Verifies each of these four methods surfaces a blocked save instead of silently discarding it, the same contract `storePartnerApiKey` already had. |
 | `setHost` / `getHost` | should set and get the host correctly | Verifies that `setHost` persists the host to disk and `getHost` returns the updated value. |
 | `setHost` / `getHost` | should return environment variable host if set | Verifies that `getHost` returns the `SF_HOST` env var value instead of the stored host when the env var is set. |
@@ -1092,6 +1095,7 @@ Source: `index.js` (toolkit)
 | `getAllTemplatesId` | should call getTemplateId for each template of the type | Verifies that `getAllTemplatesOfAType` is iterated over and `findReconciliationTextByHandle` is called for each handle. |
 | `updateFirmName` | should store firm name and return true when firm found | Verifies that the firm name is fetched and an info message with the firm details is logged. |
 | `updateFirmName` | should warn and return false when firm not found | Verifies that a warning is logged and `false` is returned when the firm is not found. |
+| `updateFirmName` | should return false, without logging success, when the firm name could not be saved | Verifies that a blocked `firmCredentials.storeFirmName` save is surfaced instead of always reporting success. |
 
 ---
 

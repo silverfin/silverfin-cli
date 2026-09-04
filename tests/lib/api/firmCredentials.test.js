@@ -130,6 +130,22 @@ describe("FirmCredentials", () => {
       expect(testFirmCredentials.data).toHaveProperty("host", "https://live.getsilverfin.com");
       expect(testFirmCredentials.data.firm123).toEqual(mockCredentials.firm123);
     });
+
+    it("replaces a present but non-object defaultFirmIDs instead of crashing later on it", () => {
+      const mockCredentials = { defaultFirmIDs: null, host: "https://test.getsilverfin.com" };
+
+      fs.existsSync = jest.fn().mockReturnValueOnce(true).mockReturnValueOnce(true);
+      fs.readFileSync = jest.fn().mockReturnValueOnce(JSON.stringify(mockCredentials));
+
+      let testFirmCredentials;
+      jest.isolateModules(() => {
+        const module = require("../../../lib/api/firmCredentials");
+        testFirmCredentials = module.firmCredentials;
+      });
+
+      expect(testFirmCredentials.data).toHaveProperty("defaultFirmIDs", {});
+      expect(() => testFirmCredentials.setDefaultFirmId("firm123")).not.toThrow();
+    });
   });
 
   describe("loadCredentials", () => {
@@ -194,6 +210,35 @@ describe("FirmCredentials", () => {
       expect(testFirmCredentials.data).toEqual({ defaultFirmIDs: {}, host: "https://live.getsilverfin.com" });
 
       exitSpy.mockRestore();
+    });
+
+    it("never puts a snippet of the corrupted file's content into the user-visible error message", () => {
+      // On this Node's V8, JSON.parse's own error message embeds a snippet of the invalid input
+      // (e.g. `Unexpected token 'o', "not valid j"... is not valid JSON`) - and this file's
+      // content is the credentials themselves, so that snippet could be a fragment of a real
+      // access/refresh token. consola.debug(err) is fine (that's the existing -v convention);
+      // the default-visible consola.error/consola.log must not repeat it.
+      let testFirmCredentials;
+      jest.isolateModules(() => {
+        fs.existsSync.mockReturnValue(true);
+        fs.readFileSync.mockReturnValueOnce(JSON.stringify({ defaultFirmIDs: {}, host: "https://initial.getsilverfin.com" }));
+
+        const module = require("../../../lib/api/firmCredentials");
+        testFirmCredentials = module.firmCredentials;
+      });
+
+      // V8 only embeds a short prefix of the input in the error message, so the "secret" has to
+      // sit at the very start to actually exercise the leak (matching a real truncated write).
+      const secretLikeCorruption = 'secret-token-abc123{{{"';
+      fs.readFileSync.mockReturnValueOnce(secretLikeCorruption);
+      testFirmCredentials.loadCredentials();
+
+      for (const call of consola.error.mock.calls) {
+        expect(call.join(" ")).not.toContain("secret-tok");
+      }
+      for (const call of consola.log.mock.calls) {
+        expect(call.join(" ")).not.toContain("secret-tok");
+      }
     });
 
     it("logs an error and falls back to {} (without exiting) when the credentials file can't be read", () => {
@@ -392,6 +437,30 @@ describe("FirmCredentials", () => {
       testFirmCredentials.loadCredentials();
 
       expect(testFirmCredentials.storePartnerApiKey("1234", "an-api-key", "Partner name")).toBe(false);
+    });
+
+    it("replaces a present but non-object partnerCredentials instead of crashing", () => {
+      let testFirmCredentials;
+      jest.isolateModules(() => {
+        fs.existsSync.mockReturnValue(true);
+        fs.readFileSync.mockReturnValueOnce(
+          JSON.stringify({ defaultFirmIDs: {}, host: "https://initial.getsilverfin.com", partnerCredentials: null })
+        );
+
+        const module = require("../../../lib/api/firmCredentials");
+        testFirmCredentials = module.firmCredentials;
+      });
+
+      // Guard against the pre-fix behavior actually terminating the test worker.
+      const exitSpy = jest.spyOn(process, "exit").mockImplementation((code) => {
+        throw new Error(`Process.exit called with code ${code}`);
+      });
+
+      expect(() => testFirmCredentials.storePartnerApiKey("1234", "an-api-key", "Partner name")).not.toThrow();
+      expect(exitSpy).not.toHaveBeenCalled();
+      expect(testFirmCredentials.data.partnerCredentials).toEqual({ 1234: { name: "Partner name", token: "an-api-key" } });
+
+      exitSpy.mockRestore();
     });
   });
 

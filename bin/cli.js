@@ -618,6 +618,8 @@ program
 
     if (stored) {
       consola.success("Partner API key succesfully stored");
+    } else {
+      process.exit(1);
     }
   });
 
@@ -678,6 +680,8 @@ program
       if (saved) {
         const currentDirectory = path.basename(process.cwd());
         consola.success(`${currentDirectory}: firm id set to ${options.setFirm}`);
+      } else {
+        process.exit(1);
       }
     }
     if (options.getFirm) {
@@ -704,7 +708,10 @@ program
     }
     if (options.updateName) {
       cliUtils.checkDefaultFirm(options.updateName, firmIdDefault);
-      toolkit.updateFirmName(options.updateName);
+      const updated = await toolkit.updateFirmName(options.updateName);
+      if (!updated) {
+        process.exit(1);
+      }
     }
     if (options.refreshToken) {
       cliUtils.checkDefaultFirm(options.refreshToken, firmIdDefault);
@@ -725,6 +732,8 @@ program
       const saved = firmCredentials.setHost(options.setHost);
       if (saved) {
         consola.success(`Host set to: ${options.setHost}`);
+      } else {
+        process.exit(1);
       }
     }
     if (options.getHost) {

@@ -1338,7 +1338,9 @@ async function updateFirmName(firmId) {
       consola.warn(`Firm ${firmId} not found.`);
       return false;
     }
-    firmCredentials.storeFirmName(firmId, firmDetails.name);
+    if (!firmCredentials.storeFirmName(firmId, firmDetails.name)) {
+      return false;
+    }
     consola.info(`Firm ${firmId} name set to ${firmDetails.name}`);
     return true;
   } catch (error) {
