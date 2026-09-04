@@ -247,7 +247,7 @@ describe("FirmCredentials", () => {
       jest.clearAllMocks();
     });
 
-    it("refuses to write and exits if the last loadCredentials() call failed", () => {
+    it("refuses to write (and returns false), without exiting, if the last loadCredentials() call failed", () => {
       let testFirmCredentials;
       jest.isolateModules(() => {
         fs.existsSync.mockReturnValue(true);
@@ -260,14 +260,13 @@ describe("FirmCredentials", () => {
       fs.readFileSync.mockReturnValueOnce("not valid json{{{");
       testFirmCredentials.loadCredentials();
 
-      // Mocked as a no-op (not throwing) so this also proves saveCredentials() doesn't fall
-      // through into the write - it must not depend on process.exit() actually halting.
       const exitSpy = jest.spyOn(process, "exit").mockImplementation(() => {});
 
-      testFirmCredentials.saveCredentials();
+      expect(testFirmCredentials.saveCredentials()).toBe(false);
 
-      expect(exitSpy).toHaveBeenCalledWith(1);
+      expect(exitSpy).not.toHaveBeenCalled();
       expect(fs.writeFileSync).not.toHaveBeenCalled();
+      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("the last load failed"));
 
       exitSpy.mockRestore();
     });
@@ -365,13 +364,9 @@ describe("FirmCredentials", () => {
           throw new Error("Write file error");
         });
 
-        testFirmCredentials.saveCredentials();
+        expect(testFirmCredentials.saveCredentials()).toBe(false);
 
-        expect(consola.error).toHaveBeenCalledWith(
-          expect.objectContaining({
-            message: expect.stringContaining("Error while writing credentials file"),
-          })
-        );
+        expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("could not be written: Write file error"));
       });
     });
   });

@@ -78,4 +78,47 @@ describe("utils/errorUtils", () => {
       expect(consola.log).toHaveBeenCalledWith(expect.stringContaining(`./${WORKFLOWS_FOLDER}/workflow_a.json`));
     });
   });
+
+  // ─── Credentials file ──────────────────────────────────────────────────────
+
+  describe("credentialsFileNotLoaded", () => {
+    it("should name the path and the reason", () => {
+      errorUtils.credentialsFileNotLoaded("/home/.silverfin/config.json", "the file is not valid JSON (Unexpected token o)");
+      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("/home/.silverfin/config.json"));
+      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("the file is not valid JSON"));
+    });
+
+    it("should say saving is blocked until the file is fixed", () => {
+      errorUtils.credentialsFileNotLoaded("/home/.silverfin/config.json", "the file could not be read");
+      expect(consola.log).toHaveBeenCalledWith(expect.stringContaining("Fix or restore"));
+    });
+
+    it("should return false", () => {
+      expect(errorUtils.credentialsFileNotLoaded("/home/.silverfin/config.json", "the file could not be read")).toBe(false);
+    });
+  });
+
+  describe("credentialsFileNotSaved", () => {
+    it("should name the path and say the last load failed", () => {
+      errorUtils.credentialsFileNotSaved("/home/.silverfin/config.json");
+      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("/home/.silverfin/config.json"));
+      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("the last load failed"));
+    });
+
+    it("should return false", () => {
+      expect(errorUtils.credentialsFileNotSaved("/home/.silverfin/config.json")).toBe(false);
+    });
+  });
+
+  describe("credentialsFileWriteFailed", () => {
+    it("should name the path and the underlying error", () => {
+      errorUtils.credentialsFileWriteFailed("/home/.silverfin/config.json", new Error("EACCES: permission denied"));
+      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("/home/.silverfin/config.json"));
+      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("EACCES: permission denied"));
+    });
+
+    it("should return false", () => {
+      expect(errorUtils.credentialsFileWriteFailed("/home/.silverfin/config.json", new Error("EACCES"))).toBe(false);
+    });
+  });
 });

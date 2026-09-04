@@ -398,8 +398,13 @@ Source: `lib/api/firmCredentials.js`
 | `FirmCredentials` (initialization) | loads existing credentials if the file exists | Verifies that existing credentials are read from disk and populated into `firmCredentials.data`. |
 | `FirmCredentials` (initialization) | adds default values if they are missing from existing credentials | Verifies that `defaultFirmIDs` and `host` defaults are merged in when loading a credentials file that lacks them. |
 | `loadCredentials` | loads credentials from file successfully | Verifies that calling `loadCredentials` replaces the in-memory data with freshly read credentials from disk. |
+| `loadCredentials` | logs an error and falls back to {} (without exiting) when the credentials file contains invalid JSON | Verifies that invalid JSON is reported via `errorUtils.credentialsFileNotLoaded` and replaced with an empty object in memory, without exiting the process. |
+| `loadCredentials` | logs an error and falls back to {} (without exiting) when the credentials file can't be read | Verifies the same fallback for a read failure (e.g. permissions), not just a parse failure. |
+| `loadCredentials` | logs an error and falls back to {} when the credentials file parses to %s instead of an object (`null`, an array, a number) | Verifies that valid-but-wrong-shaped JSON is also treated as a load failure, closing the crash `#checkDefaultValues()` would otherwise hit via `Object.hasOwn(null, ...)`. |
+| `field preservation across a store -> save -> load cycle` | keeps a per-firm field it doesn't recognize through storeNewTokenPair, saveCredentials, and loadCredentials | Verifies a per-firm field the class doesn't know about (e.g. a future flag) survives a full store → save → load round trip. |
+| `saveCredentials refusing to persist a failed load` | refuses to write (and returns false), without exiting, if the last loadCredentials() call failed | Verifies that `saveCredentials` blocks the write and reports via `errorUtils.credentialsFileNotSaved` when the in-memory data came from a failed load, instead of persisting an incomplete state. |
 | `saveCredentials` | writes credentials to file successfully | Verifies that `saveCredentials` calls `fs.writeFileSync` with the current in-memory credentials serialised as JSON. |
-| `saveCredentials` | handles file system error when saving credentials | Verifies that a filesystem error during save is caught and logged without throwing. |
+| `saveCredentials` | handles file system error when saving credentials | Verifies that a filesystem error during save is reported via `errorUtils.credentialsFileWriteFailed`, returns `false`, and does not throw. |
 | `setHost` / `getHost` | should set and get the host correctly | Verifies that `setHost` persists the host to disk and `getHost` returns the updated value. |
 | `setHost` / `getHost` | should return environment variable host if set | Verifies that `getHost` returns the `SF_HOST` env var value instead of the stored host when the env var is set. |
 | `setHost` / `getHost` | should return default host if not set | Verifies that `getHost` returns the default live host when neither `SF_HOST` nor a stored value is present. |
@@ -727,6 +732,13 @@ Source: `lib/utils/errorUtils.js`
 | `invalidHandleFormat` | should return false | Verifies that the caller decides what happens next. |
 | `noWorkflowsStored` | should point at the workflows folder fsUtils reads from | Verifies that the folder named in the message comes from `lib/utils/constants.js`, so it cannot drift from the folder `fsUtils` reads. |
 | `unparsableWorkflow` | should point at the workflow file inside that folder | Verifies that the file path offered to the user is built from the same shared constant. |
+| `credentialsFileNotLoaded` | should name the path and the reason | Verifies that the message names the credentials file path and the caller-supplied reason the load failed. |
+| `credentialsFileNotLoaded` | should say saving is blocked until the file is fixed | Verifies that the user is told saving is blocked until the file is fixed or restored. |
+| `credentialsFileNotLoaded` | should return false | Verifies that the caller decides what happens next. |
+| `credentialsFileNotSaved` | should name the path and say the last load failed | Verifies that the message explains the write was refused because the last load failed. |
+| `credentialsFileNotSaved` | should return false | Verifies that the caller decides what happens next. |
+| `credentialsFileWriteFailed` | should name the path and the underlying error | Verifies that a genuine write failure (e.g. permissions) names the file and includes the underlying error message. |
+| `credentialsFileWriteFailed` | should return false | Verifies that the caller decides what happens next. |
 
 ---
 
