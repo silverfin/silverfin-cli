@@ -146,6 +146,23 @@ describe("FirmCredentials", () => {
       expect(testFirmCredentials.data).toHaveProperty("defaultFirmIDs", {});
       expect(() => testFirmCredentials.setDefaultFirmId("firm123")).not.toThrow();
     });
+
+    it("replaces a present but non-object partnerCredentials instead of crashing read paths on it", () => {
+      const mockCredentials = { defaultFirmIDs: {}, host: "https://test.getsilverfin.com", partnerCredentials: null };
+
+      fs.existsSync = jest.fn().mockReturnValueOnce(true).mockReturnValueOnce(true);
+      fs.readFileSync = jest.fn().mockReturnValueOnce(JSON.stringify(mockCredentials));
+
+      let testFirmCredentials;
+      jest.isolateModules(() => {
+        const module = require("../../../lib/api/firmCredentials");
+        testFirmCredentials = module.firmCredentials;
+      });
+
+      expect(testFirmCredentials.data).toHaveProperty("partnerCredentials", {});
+      expect(() => testFirmCredentials.listAuthorizedPartners()).not.toThrow();
+      expect(testFirmCredentials.listAuthorizedPartners()).toEqual([]);
+    });
   });
 
   describe("loadCredentials", () => {
@@ -182,6 +199,27 @@ describe("FirmCredentials", () => {
       testFirmCredentials.loadCredentials();
 
       expect(testFirmCredentials.data).toEqual(newCredentials);
+    });
+
+    it("repairs a malformed shape on a reload too, not only on the constructor's first load", () => {
+      let testFirmCredentials;
+      jest.isolateModules(() => {
+        fs.existsSync.mockReturnValue(true);
+        fs.readFileSync.mockReturnValueOnce(JSON.stringify({ defaultFirmIDs: {}, host: "https://initial.getsilverfin.com" }));
+
+        const module = require("../../../lib/api/firmCredentials");
+        testFirmCredentials = module.firmCredentials;
+      });
+
+      // A file hand-edited between two loadCredentials() calls - not just the constructor's own.
+      fs.readFileSync.mockReturnValueOnce(
+        JSON.stringify({ defaultFirmIDs: null, partnerCredentials: null, host: "https://reloaded.getsilverfin.com" })
+      );
+      testFirmCredentials.loadCredentials();
+
+      expect(testFirmCredentials.data.defaultFirmIDs).toEqual({});
+      expect(() => testFirmCredentials.setDefaultFirmId("firm123")).not.toThrow();
+      expect(() => testFirmCredentials.listAuthorizedPartners()).not.toThrow();
     });
 
     it("logs an error and falls back to {} (without exiting) when the credentials file contains invalid JSON", () => {
