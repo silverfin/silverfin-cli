@@ -28,6 +28,8 @@ describe("AxiosFactory", () => {
     process.env.SF_BASIC_AUTH = "test_basic_auth";
     process.env.SF_API_CLIENT_ID = "test_client_id";
     process.env.SF_API_SECRET = "test_client_secret";
+    firmCredentials.storeNewTokenPair.mockReturnValue(true);
+    firmCredentials.storePartnerApiKey.mockReturnValue(true);
     exitSpy = jest.spyOn(process, "exit").mockImplementation((code) => {
       throw new Error(`Process.exit called with code ${code}`);
     });
@@ -133,6 +135,28 @@ describe("AxiosFactory", () => {
 
       expect(firmCredentials.storeNewTokenPair).toHaveBeenCalledWith(String(firmId), newTokenPairResponse);
       expect(response.data).toBe("Success");
+    });
+
+    it("should terminate the process when the refreshed tokens could not be saved", async () => {
+      const newTokenPairResponse = {
+        access_token: "new-access",
+        refresh_token: "new-refresh",
+      };
+
+      firmCredentials.getHost.mockReturnValue(mockHost);
+      firmCredentials.getTokenPair.mockReturnValue(mockTokenPair);
+      firmCredentials.storeNewTokenPair.mockReturnValue(false);
+
+      const axiosInstance = AxiosFactory.createInstance("firm", firmId);
+
+      axiosMockAdapter.onGet("/test-endpoint").reply(401, "Unauthorized");
+      axiosMockAdapter.onPost(`${mockHost}/f/${firmId}/oauth/token`).reply(200, newTokenPairResponse);
+
+      await expect(axiosInstance.get("/test-endpoint")).rejects.toThrow("Process.exit called with code 1");
+
+      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("could not be saved"));
+      // Only one refresh attempt: the save failure is not retried as a fresh request.
+      expect(axiosMockAdapter.history.get.length).toBe(1);
     });
 
     it("should attempt to refresh tokens only once on 401 and terminate the process", async () => {
@@ -290,6 +314,23 @@ describe("AxiosFactory", () => {
 
       expect(firmCredentials.storePartnerApiKey).toHaveBeenCalledWith(partnerId, newApiKey);
       expect(response.data).toBe("Success");
+    });
+
+    it("should terminate the process when the refreshed API key could not be saved", async () => {
+      const newApiKey = "new-api-key";
+
+      firmCredentials.getHost.mockReturnValue(mockHost);
+      firmCredentials.getPartnerCredentials.mockReturnValue(mockPartnerTokens);
+      firmCredentials.storePartnerApiKey.mockReturnValue(false);
+
+      const axiosInstance = AxiosFactory.createInstance("partner", partnerId);
+
+      axiosMockAdapter.onGet("/test-endpoint").reply(401, "Unauthorized");
+      axiosMockAdapter.onPost(`${mockHost}/api/partner/v1/refresh_api_key?api_key=stored-api-key`).reply(200, { api_key: newApiKey });
+
+      await expect(axiosInstance.get("/test-endpoint")).rejects.toThrow("Process.exit called with code 1");
+
+      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("could not be saved"));
     });
 
     it("should attempt to refresh API key only once on 401 and terminate the process", async () => {

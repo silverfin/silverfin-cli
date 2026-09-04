@@ -674,9 +674,11 @@ program
   .action(async (options) => {
     cliUtils.checkUniqueOption(["setFirm", "getFirm", "listAll", "updateName", "refreshToken", "refreshPartnerToken", "setHost", "getHost", "setAutocompletion"], options);
     if (options.setFirm) {
-      firmCredentials.setDefaultFirmId(options.setFirm);
-      const currentDirectory = path.basename(process.cwd());
-      consola.success(`${currentDirectory}: firm id set to ${options.setFirm}`);
+      const saved = firmCredentials.setDefaultFirmId(options.setFirm);
+      if (saved) {
+        const currentDirectory = path.basename(process.cwd());
+        consola.success(`${currentDirectory}: firm id set to ${options.setFirm}`);
+      }
     }
     if (options.getFirm) {
       const storedFirmId = firmCredentials.getDefaultFirmId();
@@ -720,8 +722,10 @@ program
       }
     }
     if (options.setHost) {
-      firmCredentials.setHost(options.setHost);
-      consola.success(`Host set to: ${options.setHost}`);
+      const saved = firmCredentials.setHost(options.setHost);
+      if (saved) {
+        consola.success(`Host set to: ${options.setHost}`);
+      }
     }
     if (options.getHost) {
       const host = firmCredentials.getHost();

@@ -60,6 +60,8 @@ describe("SilverfinAuthorizer", () => {
     jest.clearAllMocks();
 
     firmCredentials.getHost.mockReturnValue("https://api.test.com");
+    firmCredentials.storeNewTokenPair.mockReturnValue(true);
+    firmCredentials.storePartnerApiKey.mockReturnValue(true);
     process.env.SF_API_CLIENT_ID = "test_client_id";
     process.env.SF_API_SECRET = "test_secret";
 
@@ -178,6 +180,16 @@ describe("SilverfinAuthorizer", () => {
 
       expect(firmCredentials.storeNewTokenPair).toHaveBeenCalledWith(mockFirmId, mockTokenResponse.data);
     });
+
+    it("should exit and not report success when the tokens could not be saved", async () => {
+      firmCredentials.storeNewTokenPair.mockReturnValue(false);
+
+      await expect(async () => {
+        await SilverfinAuthorizer.authorizeFirm(mockFirmId);
+      }).rejects.toThrow("Process.exit called with code 1");
+
+      expect(consola.success).not.toHaveBeenCalled();
+    });
   });
 
   describe("refreshFirm", () => {
@@ -248,6 +260,21 @@ describe("SilverfinAuthorizer", () => {
 
       expect(firmCredentials.storeNewTokenPair).not.toHaveBeenCalled();
     });
+
+    it("should exit when the refreshed tokens could not be saved", async () => {
+      const mockTokenPair = {
+        accessToken: "stored-access",
+        refreshToken: "stored-refresh",
+      };
+      firmCredentials.getTokenPair.mockReturnValue(mockTokenPair);
+      firmCredentials.storeNewTokenPair.mockReturnValue(false);
+
+      await expect(async () => {
+        await SilverfinAuthorizer.refreshFirm(mockFirmId);
+      }).rejects.toThrow("Process.exit called with code 1");
+
+      expect(consola.error).toHaveBeenCalledWith(`Refreshed tokens for firm ${mockFirmId} could not be saved`);
+    });
   });
 
   describe("refreshPartner", () => {
@@ -302,6 +329,19 @@ describe("SilverfinAuthorizer", () => {
       expect(consola.error).toHaveBeenCalledWith("Response Status: 401 (Unauthorized). An error occurred trying to refresh the partner API key");
 
       expect(firmCredentials.storePartnerApiKey).not.toHaveBeenCalled();
+    });
+
+    it("should exit when the refreshed API key could not be saved", async () => {
+      firmCredentials.getPartnerCredentials.mockReturnValue(mockPartnerStoredToken);
+      firmCredentials.storePartnerApiKey.mockReturnValue(false);
+      mockAxiosInstance.post.mockReset();
+      mockAxiosInstance.post.mockResolvedValueOnce({ data: { api_key: "new-api-key" } });
+
+      await expect(async () => {
+        await SilverfinAuthorizer.refreshPartner(mockPartnerId);
+      }).rejects.toThrow("Process.exit called with code 1");
+
+      expect(consola.error).toHaveBeenCalledWith(`Refreshed API key for partner ${mockPartnerId} could not be saved`);
     });
   });
 });

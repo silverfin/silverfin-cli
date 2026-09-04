@@ -191,7 +191,7 @@ describe("FirmCredentials", () => {
 
       expect(consola.error).toHaveBeenCalled();
       expect(exitSpy).not.toHaveBeenCalled();
-      expect(testFirmCredentials.data).toEqual({});
+      expect(testFirmCredentials.data).toEqual({ defaultFirmIDs: {}, host: "https://live.getsilverfin.com" });
 
       exitSpy.mockRestore();
     });
@@ -215,7 +215,7 @@ describe("FirmCredentials", () => {
 
       expect(consola.error).toHaveBeenCalled();
       expect(exitSpy).not.toHaveBeenCalled();
-      expect(testFirmCredentials.data).toEqual({});
+      expect(testFirmCredentials.data).toEqual({ defaultFirmIDs: {}, host: "https://live.getsilverfin.com" });
 
       exitSpy.mockRestore();
     });
@@ -237,7 +237,7 @@ describe("FirmCredentials", () => {
         expect(() => testFirmCredentials.loadCredentials()).not.toThrow();
 
         expect(consola.error).toHaveBeenCalled();
-        expect(testFirmCredentials.data).toEqual({});
+        expect(testFirmCredentials.data).toEqual({ defaultFirmIDs: {}, host: "https://live.getsilverfin.com" });
       }
     );
   });
@@ -392,6 +392,48 @@ describe("FirmCredentials", () => {
       testFirmCredentials.loadCredentials();
 
       expect(testFirmCredentials.storePartnerApiKey("1234", "an-api-key", "Partner name")).toBe(false);
+    });
+  });
+
+  describe("propagating a failed save", () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    function firmCredentialsAfterAFailedLoad() {
+      let testFirmCredentials;
+      jest.isolateModules(() => {
+        fs.existsSync.mockReturnValue(true);
+        fs.readFileSync.mockReturnValueOnce(JSON.stringify({ defaultFirmIDs: {}, host: "https://initial.getsilverfin.com" }));
+
+        const module = require("../../../lib/api/firmCredentials");
+        testFirmCredentials = module.firmCredentials;
+      });
+
+      fs.readFileSync.mockReturnValueOnce("not valid json{{{");
+      testFirmCredentials.loadCredentials();
+
+      return testFirmCredentials;
+    }
+
+    it("storeNewTokenPair returns false when saveCredentials() fails", () => {
+      const testFirmCredentials = firmCredentialsAfterAFailedLoad();
+      expect(testFirmCredentials.storeNewTokenPair("firm123", { access_token: "a", refresh_token: "b" })).toBe(false);
+    });
+
+    it("storeFirmName returns false when saveCredentials() fails", () => {
+      const testFirmCredentials = firmCredentialsAfterAFailedLoad();
+      expect(testFirmCredentials.storeFirmName("firm123", "Test firm")).toBe(false);
+    });
+
+    it("setDefaultFirmId returns false when saveCredentials() fails", () => {
+      const testFirmCredentials = firmCredentialsAfterAFailedLoad();
+      expect(testFirmCredentials.setDefaultFirmId("firm123")).toBe(false);
+    });
+
+    it("setHost returns false when saveCredentials() fails", () => {
+      const testFirmCredentials = firmCredentialsAfterAFailedLoad();
+      expect(testFirmCredentials.setHost("https://new.getsilverfin.com")).toBe(false);
     });
   });
 

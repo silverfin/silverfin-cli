@@ -365,6 +365,7 @@ Source: `lib/api/axiosFactory.js`
 | `AxiosFactory.createInstance` (firm) | should create a valid instance | Verifies that a firm instance has the correct `baseURL` and `Authorization` header set from stored tokens. |
 | `AxiosFactory.createInstance` (firm) | should throw an error for missing tokens and terminate process | Verifies that when no token pair is stored for the firm an error is logged and the process exits with code 1. |
 | `AxiosFactory.createInstance` (firm) | should refresh tokens on 401 Unauthorized error | Verifies that a 401 response triggers a token refresh POST, new tokens are stored, and the original request is retried successfully. |
+| `AxiosFactory.createInstance` (firm) | should terminate the process when the refreshed tokens could not be saved | Verifies that a successful refresh whose `storeNewTokenPair` call fails to save does not retry the original request and exits, instead of proceeding on tokens that were never persisted. |
 | `AxiosFactory.createInstance` (firm) | should attempt to refresh tokens only once on 401 and terminate the process | Verifies that when the token refresh itself returns 401 the process exits with code 1 after exactly one refresh attempt. |
 | `AxiosFactory.createInstance` (firm) | should throw any other response errors | Verifies that non-401 HTTP errors (e.g. 404) are rethrown without triggering a refresh or exiting the process. |
 | `AxiosFactory.createInstance` (firm) | should throw the error again if there is no response | Verifies that network-level errors (no HTTP response) are rethrown without triggering a refresh or process exit. |
@@ -372,6 +373,7 @@ Source: `lib/api/axiosFactory.js`
 | `AxiosFactory.createInstance` (partner) | should add partner_id and api_key to requests params | Verifies that every outgoing request automatically includes `api_key` and `partner_id` query parameters. |
 | `AxiosFactory.createInstance` (partner) | should throw an error for missing API key and terminate process | Verifies that when no partner credentials are stored an error is logged and the process exits. |
 | `AxiosFactory.createInstance` (partner) | should refresh API key on 401 Unauthorized error | Verifies that a 401 triggers an API key refresh, the new key is stored, and the original request is retried with the new key. |
+| `AxiosFactory.createInstance` (partner) | should terminate the process when the refreshed API key could not be saved | Verifies that a successful refresh whose `storePartnerApiKey` call fails to save exits instead of retrying with an unpersisted key. |
 | `AxiosFactory.createInstance` (partner) | should attempt to refresh API key only once on 401 and terminate the process | Verifies that when the API key refresh itself returns 401 the process exits after one refresh attempt. |
 | `AxiosFactory.createInstance` (partner) | should throw any other response error | Verifies that non-401 HTTP errors are rethrown without triggering a refresh or process exit. |
 | `AxiosFactory.createInstance` (partner) | should throw the error again if there is no response | Verifies that network-level errors are rethrown without triggering a refresh or process exit. |
@@ -398,13 +400,15 @@ Source: `lib/api/firmCredentials.js`
 | `FirmCredentials` (initialization) | loads existing credentials if the file exists | Verifies that existing credentials are read from disk and populated into `firmCredentials.data`. |
 | `FirmCredentials` (initialization) | adds default values if they are missing from existing credentials | Verifies that `defaultFirmIDs` and `host` defaults are merged in when loading a credentials file that lacks them. |
 | `loadCredentials` | loads credentials from file successfully | Verifies that calling `loadCredentials` replaces the in-memory data with freshly read credentials from disk. |
-| `loadCredentials` | logs an error and falls back to {} (without exiting) when the credentials file contains invalid JSON | Verifies that invalid JSON is reported via `errorUtils.credentialsFileNotLoaded` and replaced with an empty object in memory, without exiting the process. |
+| `loadCredentials` | logs an error and falls back to {} (without exiting) when the credentials file contains invalid JSON | Verifies that invalid JSON is reported via `errorUtils.credentialsFileNotLoaded` and replaced with safe empty defaults (`{ defaultFirmIDs: {}, host: ... }`) in memory, without exiting the process. |
 | `loadCredentials` | logs an error and falls back to {} (without exiting) when the credentials file can't be read | Verifies the same fallback for a read failure (e.g. permissions), not just a parse failure. |
 | `loadCredentials` | logs an error and falls back to {} when the credentials file parses to %s instead of an object (`null`, an array, a number) | Verifies that valid-but-wrong-shaped JSON is also treated as a load failure, closing the crash `#checkDefaultValues()` would otherwise hit via `Object.hasOwn(null, ...)`. |
 | `field preservation across a store -> save -> load cycle` | keeps a per-firm field it doesn't recognize through storeNewTokenPair, saveCredentials, and loadCredentials | Verifies a per-firm field the class doesn't know about (e.g. a future flag) survives a full store → save → load round trip. |
 | `saveCredentials refusing to persist a failed load` | refuses to write (and returns false), without exiting, if the last loadCredentials() call failed | Verifies that `saveCredentials` blocks the write and reports via `errorUtils.credentialsFileNotSaved` when the in-memory data came from a failed load, instead of persisting an incomplete state. |
 | `saveCredentials` | writes credentials to file successfully | Verifies that `saveCredentials` calls `fs.writeFileSync` with the current in-memory credentials serialised as JSON. |
 | `saveCredentials` | handles file system error when saving credentials | Verifies that a filesystem error during save is reported via `errorUtils.credentialsFileWriteFailed`, returns `false`, and does not throw. |
+| `storePartnerApiKey` | returns false, without throwing, when saveCredentials() fails | Verifies that a blocked save is surfaced to the caller instead of always reporting success. |
+| `propagating a failed save` | storeNewTokenPair / storeFirmName / setDefaultFirmId / setHost return false when saveCredentials() fails | Verifies each of these four methods surfaces a blocked save instead of silently discarding it, the same contract `storePartnerApiKey` already had. |
 | `setHost` / `getHost` | should set and get the host correctly | Verifies that `setHost` persists the host to disk and `getHost` returns the updated value. |
 | `setHost` / `getHost` | should return environment variable host if set | Verifies that `getHost` returns the `SF_HOST` env var value instead of the stored host when the env var is set. |
 | `setHost` / `getHost` | should return default host if not set | Verifies that `getHost` returns the default live host when neither `SF_HOST` nor a stored value is present. |
@@ -463,12 +467,15 @@ Source: `lib/api/silverfinAuthorizer.js`
 | `SilverfinAuthorizer.authorizeFirm` | should raise an error when firm id is missing | Verifies that when the user enters an empty firm ID an error is logged and the process exits without opening the browser. |
 | `SilverfinAuthorizer.authorizeFirm` | should handle response errors | Verifies that an HTTP error response during token exchange logs the status, error description, and exits the process without storing tokens. |
 | `SilverfinAuthorizer.authorizeFirm` | should not raise errors when getting the firm name fails | Verifies that a failure to fetch the firm name is silently ignored and the tokens are still stored. |
+| `SilverfinAuthorizer.authorizeFirm` | should exit and not report success when the tokens could not be saved | Verifies that a save refused by `storeNewTokenPair` (e.g. after a corrupted config) is not reported as "Authentication successful". |
 | `SilverfinAuthorizer.refreshFirm` | should store provided tokens | Verifies that when valid stored tokens exist a refresh request is made with the correct parameters and new tokens are stored. |
 | `SilverfinAuthorizer.refreshFirm` | should raise an error when there are no previous tokens | Verifies that when no existing tokens are stored an error is logged, no refresh request is made, and the process exits. |
 | `SilverfinAuthorizer.refreshFirm` | should handle response errors | Verifies that an HTTP error during token refresh logs the status and description and exits without storing tokens. |
+| `SilverfinAuthorizer.refreshFirm` | should exit when the refreshed tokens could not be saved | Verifies that a refresh whose `storeNewTokenPair` call fails to save is reported and exits, rather than returning `true` regardless. |
 | `SilverfinAuthorizer.refreshPartner` | should store the new API key | Verifies that when valid stored credentials exist the refresh endpoint is called and the new API key is persisted. |
 | `SilverfinAuthorizer.refreshPartner` | should raise an error when there are no previous tokens | Verifies that when no partner credentials are stored an error is logged, no refresh request is made, and the process exits. |
 | `SilverfinAuthorizer.refreshPartner` | should handle response errors | Verifies that an HTTP error during API key refresh logs the status and exits without storing the new key. |
+| `SilverfinAuthorizer.refreshPartner` | should exit when the refreshed API key could not be saved | Verifies that a refresh whose `storePartnerApiKey` call fails to save is reported and exits, rather than returning `true` regardless. |
 
 ---
 
