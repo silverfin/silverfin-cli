@@ -168,32 +168,106 @@ describe("FirmCredentials", () => {
       expect(testFirmCredentials.data).toEqual(newCredentials);
     });
 
-    it("fails loudly instead of resetting to {} when the credentials file contains invalid JSON", () => {
-      const initialCredentials = {
-        firm123: { accessToken: "initial-token", refreshToken: "initial-refresh" },
-        defaultFirmIDs: {},
-        host: "https://initial.getsilverfin.com",
-      };
-
+    it("logs an error and falls back to {} (without exiting) when the credentials file contains invalid JSON", () => {
       let testFirmCredentials;
       jest.isolateModules(() => {
         fs.existsSync.mockReturnValue(true);
-        fs.readFileSync.mockReturnValueOnce(JSON.stringify(initialCredentials));
+        fs.readFileSync.mockReturnValueOnce(
+          JSON.stringify({
+            firm123: { accessToken: "initial-token", refreshToken: "initial-refresh" },
+            defaultFirmIDs: {},
+            host: "https://initial.getsilverfin.com",
+          })
+        );
 
         const module = require("../../../lib/api/firmCredentials");
         testFirmCredentials = module.firmCredentials;
       });
 
-      const exitSpy = jest.spyOn(process, "exit").mockImplementation((code) => {
-        throw new Error(`Process.exit called with code ${code}`);
+      const exitSpy = jest.spyOn(process, "exit").mockImplementation(() => {});
+
+      fs.readFileSync.mockReturnValueOnce("not valid json{{{");
+      testFirmCredentials.loadCredentials();
+
+      expect(consola.error).toHaveBeenCalled();
+      expect(exitSpy).not.toHaveBeenCalled();
+      expect(testFirmCredentials.data).toEqual({});
+
+      exitSpy.mockRestore();
+    });
+
+    it("logs an error and falls back to {} (without exiting) when the credentials file can't be read", () => {
+      let testFirmCredentials;
+      jest.isolateModules(() => {
+        fs.existsSync.mockReturnValue(true);
+        fs.readFileSync.mockReturnValueOnce(JSON.stringify({ defaultFirmIDs: {}, host: "https://initial.getsilverfin.com" }));
+
+        const module = require("../../../lib/api/firmCredentials");
+        testFirmCredentials = module.firmCredentials;
+      });
+
+      const exitSpy = jest.spyOn(process, "exit").mockImplementation(() => {});
+
+      fs.readFileSync.mockImplementationOnce(() => {
+        throw new Error("EACCES: permission denied");
+      });
+      testFirmCredentials.loadCredentials();
+
+      expect(consola.error).toHaveBeenCalled();
+      expect(exitSpy).not.toHaveBeenCalled();
+      expect(testFirmCredentials.data).toEqual({});
+
+      exitSpy.mockRestore();
+    });
+
+    it.each([["null", "null"], ["an array", "[]"], ["a number", "5"]])(
+      "logs an error and falls back to {} when the credentials file parses to %s instead of an object",
+      (_label, jsonBody) => {
+        let testFirmCredentials;
+        jest.isolateModules(() => {
+          fs.existsSync.mockReturnValue(true);
+          fs.readFileSync.mockReturnValueOnce(JSON.stringify({ defaultFirmIDs: {}, host: "https://initial.getsilverfin.com" }));
+
+          const module = require("../../../lib/api/firmCredentials");
+          testFirmCredentials = module.firmCredentials;
+        });
+
+        fs.readFileSync.mockReturnValueOnce(jsonBody);
+
+        expect(() => testFirmCredentials.loadCredentials()).not.toThrow();
+
+        expect(consola.error).toHaveBeenCalled();
+        expect(testFirmCredentials.data).toEqual({});
+      }
+    );
+  });
+
+  describe("saveCredentials refusing to persist a failed load", () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it("refuses to write and exits if the last loadCredentials() call failed", () => {
+      let testFirmCredentials;
+      jest.isolateModules(() => {
+        fs.existsSync.mockReturnValue(true);
+        fs.readFileSync.mockReturnValueOnce(JSON.stringify({ defaultFirmIDs: {}, host: "https://initial.getsilverfin.com" }));
+
+        const module = require("../../../lib/api/firmCredentials");
+        testFirmCredentials = module.firmCredentials;
       });
 
       fs.readFileSync.mockReturnValueOnce("not valid json{{{");
+      testFirmCredentials.loadCredentials();
 
-      expect(() => testFirmCredentials.loadCredentials()).toThrow("Process.exit called with code 1");
+      // Mocked as a no-op (not throwing) so this also proves saveCredentials() doesn't fall
+      // through into the write - it must not depend on process.exit() actually halting.
+      const exitSpy = jest.spyOn(process, "exit").mockImplementation(() => {});
 
-      expect(consola.error).toHaveBeenCalled();
-      expect(testFirmCredentials.data).toEqual(initialCredentials);
+      testFirmCredentials.saveCredentials();
+
+      expect(exitSpy).toHaveBeenCalledWith(1);
+      expect(fs.writeFileSync).not.toHaveBeenCalled();
 
       exitSpy.mockRestore();
     });
