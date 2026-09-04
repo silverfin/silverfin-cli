@@ -8,6 +8,13 @@ jest.mock("os", () => ({
   homedir: jest.fn().mockReturnValue("/test/home"),
 }));
 
+// The module below instantiates a singleton at require-time (`new FirmCredentials()`), whose
+// constructor calls `loadCredentials()`. Give the automocked fs sane defaults first, or that call
+// hits `JSON.parse(undefined)` and now fails loudly via `process.exit` instead of the old silent
+// `{}` fallback.
+fs.existsSync.mockReturnValue(true);
+fs.readFileSync.mockReturnValue(JSON.stringify({ defaultFirmIDs: {}, host: "https://live.getsilverfin.com" }));
+
 const { firmCredentials } = require("../../../lib/api/firmCredentials");
 
 describe("FirmCredentials", () => {
@@ -159,6 +166,80 @@ describe("FirmCredentials", () => {
       testFirmCredentials.loadCredentials();
 
       expect(testFirmCredentials.data).toEqual(newCredentials);
+    });
+
+    it("fails loudly instead of resetting to {} when the credentials file contains invalid JSON", () => {
+      const initialCredentials = {
+        firm123: { accessToken: "initial-token", refreshToken: "initial-refresh" },
+        defaultFirmIDs: {},
+        host: "https://initial.getsilverfin.com",
+      };
+
+      let testFirmCredentials;
+      jest.isolateModules(() => {
+        fs.existsSync.mockReturnValue(true);
+        fs.readFileSync.mockReturnValueOnce(JSON.stringify(initialCredentials));
+
+        const module = require("../../../lib/api/firmCredentials");
+        testFirmCredentials = module.firmCredentials;
+      });
+
+      const exitSpy = jest.spyOn(process, "exit").mockImplementation((code) => {
+        throw new Error(`Process.exit called with code ${code}`);
+      });
+
+      fs.readFileSync.mockReturnValueOnce("not valid json{{{");
+
+      expect(() => testFirmCredentials.loadCredentials()).toThrow("Process.exit called with code 1");
+
+      expect(consola.error).toHaveBeenCalled();
+      expect(testFirmCredentials.data).toEqual(initialCredentials);
+
+      exitSpy.mockRestore();
+    });
+  });
+
+  describe("field preservation across a store -> save -> load cycle", () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it("keeps a per-firm field it doesn't recognize through storeNewTokenPair, saveCredentials, and loadCredentials", () => {
+      const initialCredentials = {
+        firm123: { accessToken: "old-token", refreshToken: "old-refresh", futureFlag: true },
+        defaultFirmIDs: {},
+        host: "https://test.getsilverfin.com",
+      };
+
+      let testFirmCredentials;
+      let writtenData;
+
+      jest.isolateModules(() => {
+        fs.existsSync.mockReturnValue(true);
+        fs.readFileSync.mockReturnValueOnce(JSON.stringify(initialCredentials));
+
+        const module = require("../../../lib/api/firmCredentials");
+        testFirmCredentials = module.firmCredentials;
+
+        fs.writeFileSync.mockImplementation((_, data) => {
+          writtenData = data;
+        });
+
+        testFirmCredentials.storeNewTokenPair("firm123", {
+          access_token: "new-token",
+          refresh_token: "new-refresh",
+        });
+
+        // Complete the cycle: load back exactly what was just written.
+        fs.readFileSync.mockReturnValueOnce(writtenData);
+        testFirmCredentials.loadCredentials();
+
+        expect(testFirmCredentials.data.firm123).toEqual({
+          accessToken: "new-token",
+          refreshToken: "new-refresh",
+          futureFlag: true,
+        });
+      });
     });
   });
 
