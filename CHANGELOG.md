@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.59.1] (05/09/2026)
+`config --list-all` no longer lists the configured host as if it were an authorized firm.
+
 ## [1.59.0] (19/08/2026)
 Add a workflow filter to the stats command: use `--workflow <handle>` for one workflow or `--workflow` on its own to report on every workflow in the workflows folder.
 - Workflow statistics cover the templates the workflow file lists which are stored in this repository, excluding shared parts. A listed template you have not imported is left out of the totals and named in a warning, instead of being counted and having a template folder created for it.
