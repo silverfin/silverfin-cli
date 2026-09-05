@@ -92,21 +92,11 @@ describe("SilverfinAuthorizer", () => {
     exitSpy.mockRestore();
   });
 
+  // "No host configured" is guarded inside firmCredentials.getHost() itself (which exits
+  // directly), not here - see firmCredentials.test.js "should exit loudly when no host is
+  // available at all". firmCredentials is fully mocked in this file, so that real behavior
+  // can't be exercised from here; this file only needs to trust getHost()'s contract.
   describe("authorizeFirm", () => {
-    it("should exit before opening the browser when no host is configured", async () => {
-      // getHost() can return undefined (e.g. after a corrupted config left it unset) - opening
-      // the browser anyway builds "undefined/f/<id>/oauth/authorize", which open()'s wait:false
-      // default swallows any failure from, leaving the user stuck at an auth-code prompt with no
-      // indication anything is wrong.
-      firmCredentials.getHost.mockReturnValue(undefined);
-
-      await expect(async () => {
-        await SilverfinAuthorizer.authorizeFirm(mockFirmId);
-      }).rejects.toThrow("Process.exit called with code 1");
-
-      expect(open).not.toHaveBeenCalled();
-    });
-
     it("should successfully store new tokens when they dont exist", async () => {
       await SilverfinAuthorizer.authorizeFirm(mockStoredFirmId);
 

@@ -84,6 +84,25 @@ describe("FirmCredentials", () => {
       );
     });
 
+    it("debug-logs (without crashing) when the initial credentials file can't be created", () => {
+      // The failure still surfaces to the user - the immediate loadCredentials() call right
+      // after this fails too (the file still doesn't exist) and reports it clearly via
+      // errorUtils - but silently swallowing the write error here with no trace at all,
+      // even at -v, is worth a debug log while we're already touching this method.
+      fs.existsSync = jest.fn().mockReturnValueOnce(true).mockReturnValueOnce(false).mockReturnValueOnce(false);
+      fs.writeFileSync = jest.fn().mockImplementationOnce(() => {
+        throw new Error("EACCES: permission denied");
+      });
+
+      expect(() => {
+        jest.isolateModules(() => {
+          require("../../../lib/api/firmCredentials");
+        });
+      }).not.toThrow();
+
+      expect(consola.debug).toHaveBeenCalledWith(expect.stringContaining("/test/home/.silverfin/config.json"));
+    });
+
     it("loads existing credentials if the file exists", () => {
       const mockCredentials = {
         firm123: { accessToken: "test-token", refreshToken: "test-refresh" },
@@ -223,6 +242,34 @@ describe("FirmCredentials", () => {
       exitSpy.mockRestore();
     });
 
+    it("treats a non-null but non-object partner entry as not authorized too, not a spread with no token", () => {
+      // A leftover truthy scalar isn't null, so #dropNullEntries leaves it - but
+      // {id, ...this.data.partnerCredentials[id]} spreads a string by character index
+      // ({...  "ab"} -> {0:'a', 1:'b'}), silently returning something with no `token` at all.
+      const mockCredentials = {
+        defaultFirmIDs: {},
+        host: "https://test.getsilverfin.com",
+        partnerCredentials: { 1: "ab", 2: { name: "Good Partner", token: "abc" } },
+      };
+
+      fs.existsSync = jest.fn().mockReturnValueOnce(true).mockReturnValueOnce(true);
+      fs.readFileSync = jest.fn().mockReturnValueOnce(JSON.stringify(mockCredentials));
+
+      let testFirmCredentials;
+      jest.isolateModules(() => {
+        const module = require("../../../lib/api/firmCredentials");
+        testFirmCredentials = module.firmCredentials;
+      });
+
+      expect(testFirmCredentials.listAuthorizedPartners()).toEqual([{ id: "2", name: "Good Partner" }]);
+
+      const exitSpy = jest.spyOn(process, "exit").mockImplementation((code) => {
+        throw new Error(`Process.exit called with code ${code}`);
+      });
+      expect(() => testFirmCredentials.getPartnerCredentials("1")).toThrow("Process.exit called with code 1");
+      exitSpy.mockRestore();
+    });
+
     it("drops a present but non-object per-firm record instead of crashing config --list-all", () => {
       const mockCredentials = {
         defaultFirmIDs: {},
@@ -242,6 +289,24 @@ describe("FirmCredentials", () => {
 
       expect(() => testFirmCredentials.listAuthorizedFirms()).not.toThrow();
       expect(testFirmCredentials.listAuthorizedFirms()).toEqual([["67890", "Good Firm"]]);
+      expect(testFirmCredentials.getTokenPair("12345")).toBeNull();
+    });
+
+    it("getTokenPair treats a non-null but non-object per-firm entry as not authorized too", () => {
+      // #dropNullEntries only drops null - a leftover truthy scalar (e.g. a hand-edited
+      // "12345": "oops" nobody has written new tokens over yet) must not pass the auth gate:
+      // returning it as-is would let a caller send `Authorization: Bearer undefined`.
+      const mockCredentials = { defaultFirmIDs: {}, host: "https://test.getsilverfin.com", 12345: "oops" };
+
+      fs.existsSync = jest.fn().mockReturnValueOnce(true).mockReturnValueOnce(true);
+      fs.readFileSync = jest.fn().mockReturnValueOnce(JSON.stringify(mockCredentials));
+
+      let testFirmCredentials;
+      jest.isolateModules(() => {
+        const module = require("../../../lib/api/firmCredentials");
+        testFirmCredentials = module.firmCredentials;
+      });
+
       expect(testFirmCredentials.getTokenPair("12345")).toBeNull();
     });
   });
@@ -304,6 +369,12 @@ describe("FirmCredentials", () => {
     });
 
     it("does not silently switch a staging user to production when a later load fails", () => {
+      // Explicitly controlled, not just "happens to be unset in this shell": SF_HOST always wins
+      // in getHost(), so leaving this to chance would let the test pass even if #failLoad
+      // regressed back to defaulting host to production - it just wouldn't be testing that path.
+      const originalSfHost = process.env.SF_HOST;
+      delete process.env.SF_HOST;
+
       let testFirmCredentials;
       jest.isolateModules(() => {
         fs.existsSync.mockReturnValue(true);
@@ -317,8 +388,18 @@ describe("FirmCredentials", () => {
       testFirmCredentials.loadCredentials();
 
       // The old staging host is gone either way (the whole in-memory state resets on a failed
-      // load) - what must never happen is silently asserting the live production host instead.
-      expect(testFirmCredentials.getHost()).not.toBe(testFirmCredentials.SF_DEFAULT_HOST);
+      // load) - what must never happen is silently proceeding on the live production host instead.
+      const exitSpy = jest.spyOn(process, "exit").mockImplementation((code) => {
+        throw new Error(`Process.exit called with code ${code}`);
+      });
+      expect(() => testFirmCredentials.getHost()).toThrow("Process.exit called with code 1");
+      exitSpy.mockRestore();
+
+      if (originalSfHost === undefined) {
+        delete process.env.SF_HOST;
+      } else {
+        process.env.SF_HOST = originalSfHost;
+      }
     });
 
     it("logs an error and falls back to {} (without exiting) when the credentials file contains invalid JSON", () => {
@@ -678,6 +759,26 @@ describe("FirmCredentials", () => {
         expect(testFirmCredentials.data["12345"]).toEqual({ firmName: "Test Firm" });
       });
     });
+
+    it("storeFirmName does not silently drop the write when the firm's existing entry is an array", () => {
+      let testFirmCredentials;
+      let writtenData;
+      jest.isolateModules(() => {
+        fs.existsSync.mockReturnValue(true);
+        fs.readFileSync.mockReturnValueOnce(JSON.stringify({ defaultFirmIDs: {}, host: "https://test.getsilverfin.com", 12345: [] }));
+
+        const module = require("../../../lib/api/firmCredentials");
+        testFirmCredentials = module.firmCredentials;
+
+        fs.writeFileSync.mockImplementation((_, data) => {
+          writtenData = data;
+        });
+
+        testFirmCredentials.storeFirmName("12345", "Test Firm");
+
+        expect(JSON.parse(writtenData)["12345"]).toEqual({ firmName: "Test Firm" });
+      });
+    });
   });
 
   describe("propagating a failed save", () => {
@@ -824,6 +925,24 @@ describe("FirmCredentials", () => {
       jest.resetModules();
 
       expect(firmCredentials.getHost()).toBe("https://live.getsilverfin.com");
+    });
+
+    it("should exit loudly when no host is available at all, instead of returning undefined to every caller", () => {
+      // #failLoad() deliberately leaves host unset (see the loadCredentials describe block) -
+      // every one of getHost()'s ~8 callers across 3 files would otherwise silently build a
+      // request/URL/log line from "undefined". Guarding it here, once, makes all of them correct
+      // by construction instead of needing the same check repeated at each call site.
+      delete process.env.SF_HOST;
+      fs.readFileSync.mockReturnValueOnce("not valid json{{{");
+      firmCredentials.loadCredentials();
+
+      const exitSpy = jest.spyOn(process, "exit").mockImplementation((code) => {
+        throw new Error(`Process.exit called with code ${code}`);
+      });
+
+      expect(() => firmCredentials.getHost()).toThrow("Process.exit called with code 1");
+
+      exitSpy.mockRestore();
     });
   });
 });

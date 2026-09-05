@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ## [1.59.1] (04/09/2026)
 Stop `~/.silverfin/config.json` corruption from silently discarding every firm's stored tokens. Previously, a read/parse failure replaced the in-memory credentials with an empty object, and the next write (e.g. a token refresh) would overwrite the file with that empty object. The CLI now logs the underlying error and refuses to write the credentials file until it's fixed or restored, while unrelated commands keep working.
-- `config --set-firm`, `config --set-host`, `config --update-name`, and `authorize-partner` now exit with status 1 instead of 0 when the write is blocked for this reason - scripts and CI steps checking the exit code will now see the failure they were previously missing.
+- `config --set-firm`, `config --set-host`, `config --update-name`, `authorize-partner`, `authorize-firm`, `config --refresh-token`, `config --refresh-partner-token`, and any automatic token refresh triggered by a 401 response now exit with status 1 instead of 0 when the write is blocked for this reason - scripts and CI steps checking the exit code will now see the failure they were previously missing.
 - `config --list-all` no longer lists the configured host as if it were an authorized firm.
 
 ## [1.59.0] (19/08/2026)

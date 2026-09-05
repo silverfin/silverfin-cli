@@ -138,4 +138,30 @@ describe("utils/errorUtils", () => {
       expect(errorUtils.credentialsFileWriteFailed("/home/.silverfin/config.json", new Error("EACCES"))).toBe(false);
     });
   });
+
+  describe("noHostConfigured", () => {
+    it("should mention SF_HOST and the credentials file as ways to fix it", () => {
+      errorUtils.noHostConfigured("/home/.silverfin/config.json");
+      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("host"));
+      expect(consola.log).toHaveBeenCalledWith(expect.stringContaining("SF_HOST"));
+      expect(consola.log).toHaveBeenCalledWith(expect.stringContaining("/home/.silverfin/config.json"));
+    });
+  });
+
+  describe("invalidHostReplaced", () => {
+    it("should name the path, the invalid value, and the default it was replaced with", () => {
+      errorUtils.invalidHostReplaced("/home/.silverfin/config.json", null, "https://live.getsilverfin.com");
+      expect(consola.warn).toHaveBeenCalledWith(expect.stringContaining("/home/.silverfin/config.json"));
+      expect(consola.warn).toHaveBeenCalledWith(expect.stringContaining("null"));
+      expect(consola.warn).toHaveBeenCalledWith(expect.stringContaining("https://live.getsilverfin.com"));
+    });
+
+    it("should truncate an unreasonably long invalid value instead of logging it in full", () => {
+      const hugeValue = "x".repeat(10000);
+      errorUtils.invalidHostReplaced("/home/.silverfin/config.json", hugeValue, "https://live.getsilverfin.com");
+      const loggedCall = consola.warn.mock.calls[0][0];
+      expect(loggedCall.length).toBeLessThan(300);
+      expect(loggedCall).not.toContain(hugeValue);
+    });
+  });
 });

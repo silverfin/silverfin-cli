@@ -405,12 +405,16 @@ Source: `lib/api/firmCredentials.js`
 | `storeNewTokenPair and storeFirmName replacing a malformed existing entry` | storeNewTokenPair does not crash when the firm's existing entry is a truthy scalar | Verifies that `this.data[firmId] || {}`'s falsy-only fallback is replaced with a proper shape check - a truthy scalar (e.g. a hand-edited `"12345": "oops"`) previously threw "Cannot create property on string" under strict mode. |
 | `storeNewTokenPair and storeFirmName replacing a malformed existing entry` | storeNewTokenPair does not silently drop the write when the firm's existing entry is an array | Verifies that an array entry - which doesn't crash the assignment but loses non-index properties on `JSON.stringify` - is replaced too, instead of silently discarding the tokens being written. |
 | `storeNewTokenPair and storeFirmName replacing a malformed existing entry` | storeFirmName does not crash when the firm's existing entry is a truthy scalar | Same fix as `storeNewTokenPair`, for `storeFirmName`. |
+| `storeNewTokenPair and storeFirmName replacing a malformed existing entry` | storeFirmName does not silently drop the write when the firm's existing entry is an array | Same fix as `storeNewTokenPair`'s array case, for `storeFirmName`. |
 | `FirmCredentials` (initialization) | replaces a present but non-object partnerCredentials instead of crashing read paths on it | Verifies that `partnerCredentials: null` is replaced with `{}` on load, so `listAuthorizedPartners`/`getPartnerCredentials` don't crash indexing into it (e.g. via `config --list-all`) even without ever calling a write method first. |
 | `FirmCredentials` (initialization) | drops a present but non-object entry inside partnerCredentials instead of crashing read paths on it | Verifies that a malformed individual partner record (e.g. `"1": null`) is dropped on load so `listAuthorizedPartners` skips it and `getPartnerCredentials` correctly reports it as not authorized, instead of crashing or silently returning a record with no token. |
 | `FirmCredentials` (initialization) | drops a present but non-object per-firm record instead of crashing config --list-all | Verifies that a malformed per-firm entry (e.g. `"12345": null`) is dropped on load so `listAuthorizedFirms` skips it and `getTokenPair` reports it as not authorized, instead of crashing on `.firmName`. |
+| `FirmCredentials` (initialization) | getTokenPair treats a non-null but non-object per-firm entry as not authorized too | Verifies that a leftover truthy scalar (e.g. `"12345": "oops"`, never `null` so `#dropNullEntries` leaves it) doesn't pass the auth gate - returning it as-is would let a caller send `Authorization: Bearer undefined`. |
+| `FirmCredentials` (initialization) | treats a non-null but non-object partner entry as not authorized too, not a spread with no token | Verifies that `{id, ...this.data.partnerCredentials[id]}`'s spread of a leftover truthy scalar (which spreads by character index instead of throwing) is treated as not-authorized via the same shared record accessor used everywhere else, instead of silently returning an object with no `token`. |
+| `FirmCredentials` (initialization) | debug-logs (without crashing) when the initial credentials file can't be created | Verifies that a write failure in `#createCredentialsFile()` is debug-logged with the file path, rather than silently swallowed with no trace at all. |
 | `loadCredentials` | loads credentials from file successfully | Verifies that calling `loadCredentials` replaces the in-memory data with freshly read credentials from disk. |
 | `loadCredentials` | repairs a malformed shape on a reload too, not only on the constructor's first load | Verifies that `#checkDefaultValues()` now runs after every successful `loadCredentials()` call, not only the constructor's, so a file hand-edited between two loads still gets its shape repaired. |
-| `loadCredentials` | does not silently switch a staging user to production when a later load fails | Verifies that `#failLoad()` leaves `host` unset rather than defaulting to `SF_DEFAULT_HOST`, so a corrupted config can't silently redirect a staging user's session to production. |
+| `loadCredentials` | does not silently switch a staging user to production when a later load fails | Verifies that `#failLoad()` leaves `host` unset rather than defaulting to `SF_DEFAULT_HOST` (so `getHost()` exits loudly instead), and that `SF_HOST` is explicitly cleared first so the test can't pass vacuously depending on the runner's own shell environment. |
 | `loadCredentials` | logs an error and falls back to {} (without exiting) when the credentials file contains invalid JSON | Verifies that invalid JSON is reported via `errorUtils.credentialsFileNotLoaded` and replaced with safe empty defaults (`{ defaultFirmIDs: {}, host: ... }`) in memory, without exiting the process. |
 | `loadCredentials` | never puts a snippet of the corrupted file's content into the user-visible error message | Verifies that `JSON.parse`'s own error message - which embeds a snippet of the invalid input on this V8, and that input is the credentials file's raw content - is not repeated in the default-visible `consola.error`/`consola.log` output. |
 | `loadCredentials` | logs an error and falls back to {} (without exiting) when the credentials file can't be read | Verifies the same fallback for a read failure (e.g. permissions), not just a parse failure. |
@@ -424,12 +428,16 @@ Source: `lib/api/firmCredentials.js`
 | `saveCredentials` | handles file system error when saving credentials | Verifies that a filesystem error during save is reported via `errorUtils.credentialsFileWriteFailed`, returns `false`, and does not throw. |
 | `storePartnerApiKey` | returns false, without throwing, when saveCredentials() fails | Verifies that a blocked save is surfaced to the caller instead of always reporting success. |
 | `storePartnerApiKey` | replaces a present but non-object partnerCredentials instead of crashing | Verifies that `partnerCredentials: null` (present but wrong-shaped) is replaced with `{}` instead of throwing when indexed into. |
-| `propagating a failed save` | storeNewTokenPair / storeFirmName / setDefaultFirmId / setHost return false when saveCredentials() fails | Verifies each of these four methods surfaces a blocked save instead of silently discarding it, the same contract `storePartnerApiKey` already had. |
+| `propagating a failed save` | storeNewTokenPair returns false when saveCredentials() fails | Verifies the blocked save is surfaced instead of silently discarded, the same contract `storePartnerApiKey` already had. |
+| `propagating a failed save` | storeFirmName returns false when saveCredentials() fails | Same as above, for `storeFirmName`. |
+| `propagating a failed save` | setDefaultFirmId returns false when saveCredentials() fails | Same as above, for `setDefaultFirmId`. |
+| `propagating a failed save` | setHost returns false when saveCredentials() fails | Same as above, for `setHost`. |
 | `listAuthorizedFirms` | does not list the host key as a firm (pre-existing gap, unrelated to malformed data) | Verifies that `host` is excluded from the firm list, fixing a pre-existing bug (predates this PR) where a valid config always leaked `["host", undefined]` into `config --list-all`'s output. |
 | `listAuthorizedFirms` | does not list a preserved top-level scalar field as a firm | Verifies that a filter on key name alone isn't enough: an unrecognized top-level field this PR deliberately preserves (not `null`) must also be excluded by shape, or it displays as a nameless firm. |
 | `setHost` / `getHost` | should set and get the host correctly | Verifies that `setHost` persists the host to disk and `getHost` returns the updated value. |
 | `setHost` / `getHost` | should return environment variable host if set | Verifies that `getHost` returns the `SF_HOST` env var value instead of the stored host when the env var is set. |
 | `setHost` / `getHost` | should return default host if not set | Verifies that `getHost` returns the default live host when neither `SF_HOST` nor a stored value is present. |
+| `setHost` / `getHost` | should exit loudly when no host is available at all, instead of returning undefined to every caller | Verifies that `getHost()` itself exits (via `errorUtils.noHostConfigured`) when there's no `SF_HOST` and no stored host - the single guard point that makes all ~8 call sites across 3 files correct by construction, instead of needing the same check repeated at each one. |
 
 ---
 
@@ -480,7 +488,6 @@ Source: `lib/api/silverfinAuthorizer.js`
 
 | Function | Test | Description |
 |---|---|---|
-| `SilverfinAuthorizer.authorizeFirm` | should exit before opening the browser when no host is configured | Verifies that a missing host (e.g. after a corrupted config left it unset) exits before `open()` is called, instead of silently opening a broken `"undefined/f/<id>/oauth/authorize"` URL. |
 | `SilverfinAuthorizer.authorizeFirm` | should successfully store new tokens when they dont exist | Verifies the full OAuth flow: the browser is opened, the authorization code is exchanged for tokens, firm details are fetched, and tokens are stored. |
 | `SilverfinAuthorizer.authorizeFirm` | should succesfully store new tokens when they exist | Verifies that re-authorizing an already-authorized firm also completes the OAuth flow and stores the new tokens. |
 | `SilverfinAuthorizer.authorizeFirm` | should raise an error when firm id is missing | Verifies that when the user enters an empty firm ID an error is logged and the process exits without opening the browser. |
@@ -769,6 +776,9 @@ Source: `lib/utils/errorUtils.js`
 | `credentialsFileNotSaved` | should return false | Verifies that the caller decides what happens next. |
 | `credentialsFileWriteFailed` | should name the path and the underlying error | Verifies that a genuine write failure (e.g. permissions) names the file and includes the underlying error message. |
 | `credentialsFileWriteFailed` | should return false | Verifies that the caller decides what happens next. |
+| `noHostConfigured` | should mention SF_HOST and the credentials file as ways to fix it | Verifies the message names both recovery paths for `getHost()`'s own "no host available" exit. |
+| `invalidHostReplaced` | should name the path, the invalid value, and the default it was replaced with | Verifies the warning names all three, so a present-but-invalid host being reset isn't silent. |
+| `invalidHostReplaced` | should truncate an unreasonably long invalid value instead of logging it in full | Verifies the invalid value (which comes directly from the credentials file's own content) is bounded, not embedded in full in the logged message. |
 
 ---
 
