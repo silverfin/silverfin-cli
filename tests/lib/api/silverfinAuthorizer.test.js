@@ -15,6 +15,7 @@ jest.mock("../../../lib/api/firmCredentials", () => ({
     getHost: jest.fn(),
     getTokenPair: jest.fn(),
     storeNewTokenPair: jest.fn(),
+    storeFirmName: jest.fn(),
     getPartnerCredentials: jest.fn(),
     storePartnerApiKey: jest.fn(),
   },
@@ -61,6 +62,7 @@ describe("SilverfinAuthorizer", () => {
 
     firmCredentials.getHost.mockReturnValue("https://api.test.com");
     firmCredentials.storeNewTokenPair.mockReturnValue(true);
+    firmCredentials.storeFirmName.mockReturnValue(true);
     firmCredentials.storePartnerApiKey.mockReturnValue(true);
     process.env.SF_API_CLIENT_ID = "test_client_id";
     process.env.SF_API_SECRET = "test_secret";
@@ -179,6 +181,15 @@ describe("SilverfinAuthorizer", () => {
       expect(consola.error).not.toHaveBeenCalled();
 
       expect(firmCredentials.storeNewTokenPair).toHaveBeenCalledWith(mockFirmId, mockTokenResponse.data);
+    });
+
+    it("should not raise errors, only debug-log, when the fetched firm name could not be saved", async () => {
+      firmCredentials.storeFirmName.mockReturnValue(false);
+
+      await SilverfinAuthorizer.authorizeFirm(mockFirmId);
+
+      expect(consola.error).not.toHaveBeenCalled();
+      expect(consola.debug).toHaveBeenCalledWith(expect.stringContaining(String(mockFirmId)));
     });
 
     it("should exit and not report success when the tokens could not be saved", async () => {

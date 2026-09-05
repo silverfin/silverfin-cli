@@ -90,7 +90,14 @@ describe("utils/errorUtils", () => {
 
     it("should say saving is blocked until the file is fixed", () => {
       errorUtils.credentialsFileNotLoaded("/home/.silverfin/config.json", "the file could not be read");
-      expect(consola.log).toHaveBeenCalledWith(expect.stringContaining("Fix or restore"));
+      expect(consola.log).toHaveBeenCalledWith(expect.stringContaining("Fix"));
+    });
+
+    it("should warn that a restored backup's tokens may already be dead, not just say to restore one", () => {
+      // Silverfin rotates a refresh token the moment the new one is used - a restored backup can
+      // hold a pair the server already invalidated, so "restore" alone is misleading advice here.
+      errorUtils.credentialsFileNotLoaded("/home/.silverfin/config.json", "the file could not be read");
+      expect(consola.log).toHaveBeenCalledWith(expect.stringContaining("re-authoriz"));
     });
 
     it("should return false", () => {
@@ -107,6 +114,11 @@ describe("utils/errorUtils", () => {
 
     it("should return false", () => {
       expect(errorUtils.credentialsFileNotSaved("/home/.silverfin/config.json")).toBe(false);
+    });
+
+    it("should warn that a restored backup's tokens may already be dead", () => {
+      errorUtils.credentialsFileNotSaved("/home/.silverfin/config.json");
+      expect(consola.log).toHaveBeenCalledWith(expect.stringContaining("re-authoriz"));
     });
   });
 

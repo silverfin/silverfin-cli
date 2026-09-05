@@ -10,8 +10,8 @@ jest.mock("os", () => ({
 
 // The module below instantiates a singleton at require-time (`new FirmCredentials()`), whose
 // constructor calls `loadCredentials()`. Give the automocked fs sane defaults first, or that call
-// hits `JSON.parse(undefined)` and now fails loudly via `process.exit` instead of the old silent
-// `{}` fallback.
+// hits `JSON.parse(undefined)`, logging a load-failure error on every test in this file for no
+// reason relevant to what each test actually checks.
 fs.existsSync.mockReturnValue(true);
 fs.readFileSync.mockReturnValue(JSON.stringify({ defaultFirmIDs: {}, host: "https://live.getsilverfin.com" }));
 
@@ -147,6 +147,21 @@ describe("FirmCredentials", () => {
       expect(() => testFirmCredentials.setDefaultFirmId("firm123")).not.toThrow();
     });
 
+    it("replaces a present but non-string host instead of letting it reach getHost()", () => {
+      const mockCredentials = { defaultFirmIDs: {}, host: null };
+
+      fs.existsSync = jest.fn().mockReturnValueOnce(true).mockReturnValueOnce(true);
+      fs.readFileSync = jest.fn().mockReturnValueOnce(JSON.stringify(mockCredentials));
+
+      let testFirmCredentials;
+      jest.isolateModules(() => {
+        const module = require("../../../lib/api/firmCredentials");
+        testFirmCredentials = module.firmCredentials;
+      });
+
+      expect(testFirmCredentials.getHost()).toBe(testFirmCredentials.SF_DEFAULT_HOST);
+    });
+
     it("replaces a present but non-object partnerCredentials instead of crashing read paths on it", () => {
       const mockCredentials = { defaultFirmIDs: {}, host: "https://test.getsilverfin.com", partnerCredentials: null };
 
@@ -271,6 +286,24 @@ describe("FirmCredentials", () => {
       expect(() => testFirmCredentials.listAuthorizedPartners()).not.toThrow();
     });
 
+    it("does not silently switch a staging user to production when a later load fails", () => {
+      let testFirmCredentials;
+      jest.isolateModules(() => {
+        fs.existsSync.mockReturnValue(true);
+        fs.readFileSync.mockReturnValueOnce(JSON.stringify({ defaultFirmIDs: {}, host: "https://my-staging.getsilverfin.com" }));
+
+        const module = require("../../../lib/api/firmCredentials");
+        testFirmCredentials = module.firmCredentials;
+      });
+
+      fs.readFileSync.mockReturnValueOnce("not valid json{{{");
+      testFirmCredentials.loadCredentials();
+
+      // The old staging host is gone either way (the whole in-memory state resets on a failed
+      // load) - what must never happen is silently asserting the live production host instead.
+      expect(testFirmCredentials.getHost()).not.toBe(testFirmCredentials.SF_DEFAULT_HOST);
+    });
+
     it("logs an error and falls back to {} (without exiting) when the credentials file contains invalid JSON", () => {
       let testFirmCredentials;
       jest.isolateModules(() => {
@@ -294,7 +327,7 @@ describe("FirmCredentials", () => {
 
       expect(consola.error).toHaveBeenCalled();
       expect(exitSpy).not.toHaveBeenCalled();
-      expect(testFirmCredentials.data).toEqual({ defaultFirmIDs: {}, host: "https://live.getsilverfin.com" });
+      expect(testFirmCredentials.data).toEqual({ defaultFirmIDs: {} });
 
       exitSpy.mockRestore();
     });
@@ -347,7 +380,7 @@ describe("FirmCredentials", () => {
 
       expect(consola.error).toHaveBeenCalled();
       expect(exitSpy).not.toHaveBeenCalled();
-      expect(testFirmCredentials.data).toEqual({ defaultFirmIDs: {}, host: "https://live.getsilverfin.com" });
+      expect(testFirmCredentials.data).toEqual({ defaultFirmIDs: {} });
 
       exitSpy.mockRestore();
     });
@@ -369,7 +402,7 @@ describe("FirmCredentials", () => {
         expect(() => testFirmCredentials.loadCredentials()).not.toThrow();
 
         expect(consola.error).toHaveBeenCalled();
-        expect(testFirmCredentials.data).toEqual({ defaultFirmIDs: {}, host: "https://live.getsilverfin.com" });
+        expect(testFirmCredentials.data).toEqual({ defaultFirmIDs: {} });
       }
     );
   });
@@ -444,6 +477,27 @@ describe("FirmCredentials", () => {
           refreshToken: "new-refresh",
           futureFlag: true,
         });
+      });
+    });
+
+    it("keeps an unrecognized top-level scalar field through a load, not just per-firm fields", () => {
+      // #checkDefaultValues() must not treat "unknown, not an object" the same as "malformed" -
+      // a future top-level flag (e.g. a schema version) is neither a firm record nor corrupt.
+      const initialCredentials = {
+        someTopLevelFlag: true,
+        defaultFirmIDs: {},
+        host: "https://test.getsilverfin.com",
+      };
+
+      let testFirmCredentials;
+      jest.isolateModules(() => {
+        fs.existsSync.mockReturnValue(true);
+        fs.readFileSync.mockReturnValueOnce(JSON.stringify(initialCredentials));
+
+        const module = require("../../../lib/api/firmCredentials");
+        testFirmCredentials = module.firmCredentials;
+
+        expect(testFirmCredentials.data.someTopLevelFlag).toBe(true);
       });
     });
   });
