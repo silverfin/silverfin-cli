@@ -160,6 +160,23 @@ describe("FirmCredentials", () => {
       });
 
       expect(testFirmCredentials.getHost()).toBe(testFirmCredentials.SF_DEFAULT_HOST);
+      // Unlike a missing host (legacy compatibility, silent), a *present* invalid value being
+      // replaced - and then persisted on the next save - must not happen without a word: it
+      // discards whatever staging/custom host was actually configured.
+      expect(consola.warn).toHaveBeenCalledWith(expect.stringContaining("host"));
+    });
+
+    it("stays silent when host is simply missing (legacy compatibility, not a corruption)", () => {
+      const mockCredentials = { defaultFirmIDs: {} };
+
+      fs.existsSync = jest.fn().mockReturnValueOnce(true).mockReturnValueOnce(true);
+      fs.readFileSync = jest.fn().mockReturnValueOnce(JSON.stringify(mockCredentials));
+
+      jest.isolateModules(() => {
+        require("../../../lib/api/firmCredentials");
+      });
+
+      expect(consola.warn).not.toHaveBeenCalled();
     });
 
     it("replaces a present but non-object partnerCredentials instead of crashing read paths on it", () => {
@@ -605,6 +622,64 @@ describe("FirmCredentials", () => {
     });
   });
 
+  describe("storeNewTokenPair and storeFirmName replacing a malformed existing entry", () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it("storeNewTokenPair does not crash when the firm's existing entry is a truthy scalar", () => {
+      // `this.data[firmId] || {}` only replaces a falsy entry - "x" is truthy, so under strict
+      // mode `this.data[firmId].accessToken = ...` throws "Cannot create property on string".
+      let testFirmCredentials;
+      jest.isolateModules(() => {
+        fs.existsSync.mockReturnValue(true);
+        fs.readFileSync.mockReturnValueOnce(JSON.stringify({ defaultFirmIDs: {}, host: "https://test.getsilverfin.com", 12345: "x" }));
+
+        const module = require("../../../lib/api/firmCredentials");
+        testFirmCredentials = module.firmCredentials;
+
+        expect(() => testFirmCredentials.storeNewTokenPair("12345", { access_token: "a", refresh_token: "b" })).not.toThrow();
+        expect(testFirmCredentials.data["12345"]).toEqual({ accessToken: "a", refreshToken: "b" });
+      });
+    });
+
+    it("storeNewTokenPair does not silently drop the write when the firm's existing entry is an array", () => {
+      // An array entry doesn't crash the assignment (arrays are objects), but JSON.stringify
+      // drops non-index properties on arrays - the write would "succeed" while losing the tokens.
+      let testFirmCredentials;
+      let writtenData;
+      jest.isolateModules(() => {
+        fs.existsSync.mockReturnValue(true);
+        fs.readFileSync.mockReturnValueOnce(JSON.stringify({ defaultFirmIDs: {}, host: "https://test.getsilverfin.com", 12345: [] }));
+
+        const module = require("../../../lib/api/firmCredentials");
+        testFirmCredentials = module.firmCredentials;
+
+        fs.writeFileSync.mockImplementation((_, data) => {
+          writtenData = data;
+        });
+
+        testFirmCredentials.storeNewTokenPair("12345", { access_token: "a", refresh_token: "b" });
+
+        expect(JSON.parse(writtenData)["12345"]).toEqual({ accessToken: "a", refreshToken: "b" });
+      });
+    });
+
+    it("storeFirmName does not crash when the firm's existing entry is a truthy scalar", () => {
+      let testFirmCredentials;
+      jest.isolateModules(() => {
+        fs.existsSync.mockReturnValue(true);
+        fs.readFileSync.mockReturnValueOnce(JSON.stringify({ defaultFirmIDs: {}, host: "https://test.getsilverfin.com", 12345: "x" }));
+
+        const module = require("../../../lib/api/firmCredentials");
+        testFirmCredentials = module.firmCredentials;
+
+        expect(() => testFirmCredentials.storeFirmName("12345", "Test Firm")).not.toThrow();
+        expect(testFirmCredentials.data["12345"]).toEqual({ firmName: "Test Firm" });
+      });
+    });
+  });
+
   describe("propagating a failed save", () => {
     beforeEach(() => {
       jest.clearAllMocks();
@@ -656,6 +731,28 @@ describe("FirmCredentials", () => {
       const mockCredentials = {
         defaultFirmIDs: {},
         host: "https://test.getsilverfin.com",
+        12345: { accessToken: "a", refreshToken: "b", firmName: "Good Firm" },
+      };
+
+      fs.existsSync = jest.fn().mockReturnValueOnce(true).mockReturnValueOnce(true);
+      fs.readFileSync = jest.fn().mockReturnValueOnce(JSON.stringify(mockCredentials));
+
+      let testFirmCredentials;
+      jest.isolateModules(() => {
+        const module = require("../../../lib/api/firmCredentials");
+        testFirmCredentials = module.firmCredentials;
+      });
+
+      expect(testFirmCredentials.listAuthorizedFirms()).toEqual([["12345", "Good Firm"]]);
+    });
+
+    it("does not list a preserved top-level scalar field as a firm", () => {
+      // #dropNullEntries deliberately keeps an unrecognized top-level field that isn't null (a
+      // future flag, say) - listAuthorizedFirms() must not then display it as a nameless firm.
+      const mockCredentials = {
+        defaultFirmIDs: {},
+        host: "https://test.getsilverfin.com",
+        someTopLevelFlag: true,
         12345: { accessToken: "a", refreshToken: "b", firmName: "Good Firm" },
       };
 

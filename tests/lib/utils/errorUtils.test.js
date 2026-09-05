@@ -120,6 +120,11 @@ describe("utils/errorUtils", () => {
       errorUtils.credentialsFileNotSaved("/home/.silverfin/config.json");
       expect(consola.log).toHaveBeenCalledWith(expect.stringContaining("re-authoriz"));
     });
+
+    it("should not claim a refresh just happened - this message also fires for --set-firm/--set-host/authorize-partner, none of which refresh anything", () => {
+      errorUtils.credentialsFileNotSaved("/home/.silverfin/config.json");
+      expect(consola.log).toHaveBeenCalledWith(expect.not.stringContaining("the refresh this run just performed"));
+    });
   });
 
   describe("credentialsFileWriteFailed", () => {

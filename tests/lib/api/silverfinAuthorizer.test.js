@@ -93,6 +93,20 @@ describe("SilverfinAuthorizer", () => {
   });
 
   describe("authorizeFirm", () => {
+    it("should exit before opening the browser when no host is configured", async () => {
+      // getHost() can return undefined (e.g. after a corrupted config left it unset) - opening
+      // the browser anyway builds "undefined/f/<id>/oauth/authorize", which open()'s wait:false
+      // default swallows any failure from, leaving the user stuck at an auth-code prompt with no
+      // indication anything is wrong.
+      firmCredentials.getHost.mockReturnValue(undefined);
+
+      await expect(async () => {
+        await SilverfinAuthorizer.authorizeFirm(mockFirmId);
+      }).rejects.toThrow("Process.exit called with code 1");
+
+      expect(open).not.toHaveBeenCalled();
+    });
+
     it("should successfully store new tokens when they dont exist", async () => {
       await SilverfinAuthorizer.authorizeFirm(mockStoredFirmId);
 
