@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.60.0] (07/09/2026)
+Honour a per-firm `autoRenew` flag in the stored credentials, so a firm can be opted out of automatic token renewal, and report an authentication failure as a known error with its own exit code instead of a crash.
+- When a firm's credential record carries `autoRenew: false`, a `401` from the platform no longer triggers a token refresh for that firm. Only the boolean `false` opts a firm out: a firm with no flag, a `null`, or a string keeps renewing exactly as before, so an existing credentials file is unaffected. The flag applies to the *automatic* renewal the CLI performs mid-request; `config --refresh-token` still renews on request, since that is the command a refresher runs deliberately.
+- An authentication failure now ends the command with a message naming the firm and pointing at `silverfin authorize`, instead of a stack trace and a request to open an issue. An expired credential is a routine operational state, not a defect.
+- **Exit code change:** authentication failures now exit with code `2` rather than `1`. This covers a renewal skipped by the flag, a refresh that fails, and a firm or partner with no stored credential at all — including `config --refresh-token` and the partner API key path. A caller can therefore treat `2` as "this credential cannot be used and retrying will not help" and distinguish it from any other failure without parsing the log. Scripts testing for a specific exit code of `1` need updating; scripts testing for a non-zero exit are unaffected.
+
 ## [1.59.0] (19/08/2026)
 Add a workflow filter to the stats command: use `--workflow <handle>` for one workflow or `--workflow` on its own to report on every workflow in the workflows folder.
 - Workflow statistics cover the templates the workflow file lists which are stored in this repository, excluding shared parts. A listed template you have not imported is left out of the totals and named in a warning, instead of being counted and having a template folder created for it.

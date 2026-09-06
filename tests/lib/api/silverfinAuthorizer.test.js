@@ -209,7 +209,7 @@ describe("SilverfinAuthorizer", () => {
 
       await expect(async () => {
         await SilverfinAuthorizer.refreshFirm(mockFirmId);
-      }).rejects.toThrow("Process.exit called with code 1");
+      }).rejects.toThrow("Process.exit called with code 2");
 
       expect(mockAxiosInstance.post).not.toHaveBeenCalled();
       expect(mockAxiosInstance.get).not.toHaveBeenCalled();
@@ -238,7 +238,7 @@ describe("SilverfinAuthorizer", () => {
 
       await expect(async () => {
         await SilverfinAuthorizer.refreshFirm(mockFirmId);
-      }).rejects.toThrow("Process.exit called with code 1");
+      }).rejects.toThrow("Process.exit called with code 2");
 
       expect(consola.error).toHaveBeenCalledWith(
         "Response Status: 401 (Unauthorized)",
@@ -275,7 +275,7 @@ describe("SilverfinAuthorizer", () => {
 
       await expect(async () => {
         await SilverfinAuthorizer.refreshPartner("partner_123");
-      }).rejects.toThrow("Process.exit called with code 1");
+      }).rejects.toThrow("Process.exit called with code 2");
 
       expect(mockAxiosInstance.post).not.toHaveBeenCalled();
       expect(mockAxiosInstance.get).not.toHaveBeenCalled();
@@ -297,7 +297,7 @@ describe("SilverfinAuthorizer", () => {
 
       await expect(async () => {
         await SilverfinAuthorizer.refreshPartner(mockPartnerId);
-      }).rejects.toThrow("Process.exit called with code 1");
+      }).rejects.toThrow("Process.exit called with code 2");
 
       expect(consola.error).toHaveBeenCalledWith("Response Status: 401 (Unauthorized). An error occurred trying to refresh the partner API key");
 
