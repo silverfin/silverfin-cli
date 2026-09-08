@@ -63,6 +63,87 @@ describe("utils/errorUtils", () => {
     });
   });
 
+  // ─── invalidNumericId ──────────────────────────────────────────────────────
+
+  describe("invalidNumericId", () => {
+    it("should name the value and the label", () => {
+      errorUtils.invalidNumericId("my-firm", "firm id");
+      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining('Invalid firm id "my-firm"'));
+    });
+
+    it("should say what an id looks like", () => {
+      errorUtils.invalidNumericId("my-firm", "firm id");
+      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("is a number"));
+    });
+
+    it("should mention an unset variable, which is the other way a bad id arrives", () => {
+      errorUtils.invalidNumericId("", "firm id");
+      expect(consola.log).toHaveBeenCalledWith(expect.stringContaining("variable you passed is set"));
+    });
+
+    it("should use the label it is given rather than assuming a firm", () => {
+      errorUtils.invalidNumericId("abc", "partner id");
+      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining('Invalid partner id "abc"'));
+    });
+
+    // A zero-padded id is the one invalid value which is not a typo but a working id written
+    // oddly, and the CLI keys stored tokens by the exact string, so the user is told the
+    // unpadded id rather than being left to guess why a firm they are authorized for is refused
+    it("should suggest the unpadded id when the value only has leading zeros", () => {
+      errorUtils.invalidNumericId("007", "firm id");
+      expect(consola.log).toHaveBeenCalledWith(expect.stringContaining("Did you mean 7?"));
+    });
+
+    it("should suggest the unpadded id for a longer padded value", () => {
+      errorUtils.invalidNumericId("000013827", "firm id");
+      expect(consola.log).toHaveBeenCalledWith(expect.stringContaining("Did you mean 13827?"));
+    });
+
+    it("should not suggest an unpadded id when the value is not a padded number", () => {
+      errorUtils.invalidNumericId("my-firm", "firm id");
+      expect(consola.log).not.toHaveBeenCalledWith(expect.stringContaining("Did you mean"));
+      expect(consola.log).toHaveBeenCalledWith(expect.stringContaining("variable you passed is set"));
+    });
+
+    // "0" and "000" have no positive id hiding inside them, so there is nothing to suggest
+    it.each(["0", "000"])("should not suggest an unpadded id for %p", (zeroId) => {
+      errorUtils.invalidNumericId(zeroId, "firm id");
+      expect(consola.log).not.toHaveBeenCalledWith(expect.stringContaining("Did you mean"));
+    });
+
+    it("should return false", () => {
+      expect(errorUtils.invalidNumericId("my-firm", "firm id")).toBe(false);
+    });
+  });
+
+  // ─── invalidDateFormat ─────────────────────────────────────────────────────
+
+  describe("invalidDateFormat", () => {
+    it("should name the date and the format expected", () => {
+      errorUtils.invalidDateFormat("31-01-2024");
+      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining('Invalid date "31-01-2024"'));
+      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("YYYY-MM-DD"));
+    });
+
+    it("should return false", () => {
+      expect(errorUtils.invalidDateFormat("31-01-2024")).toBe(false);
+    });
+  });
+
+  // ─── impossibleDate ────────────────────────────────────────────────────────
+
+  describe("impossibleDate", () => {
+    it("should name the date and say it is not a real one", () => {
+      errorUtils.impossibleDate("2024-02-31");
+      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining('Invalid date "2024-02-31"'));
+      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("not an existing calendar date"));
+    });
+
+    it("should return false", () => {
+      expect(errorUtils.impossibleDate("2024-02-31")).toBe(false);
+    });
+  });
+
   // ─── Workflow folder naming ────────────────────────────────────────────────
 
   // The folder the messages point the user at must stay the folder fsUtils reads from,

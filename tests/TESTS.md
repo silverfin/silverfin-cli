@@ -155,6 +155,16 @@ Source: `bin/cli.js` (Commander program)
 | silverfin company-data-copier --help output contains --firm option | Verifies `--firm` is declared for the company-data-copier command. |
 | silverfin company-data-copier --help output contains --source-company-id option | Verifies `--source-company-id` is declared. |
 | silverfin company-data-copier --help output contains --source-ledger-ids option | Verifies `--source-ledger-ids` is declared. |
+| firm and partner id validation %s exits 1 on a non-numeric firm id | Verifies that `run-test`, `development-mode`, `create-all-templates`, `update-all-templates`, `generate-export-file` and `company-data-copier` reject a malformed firm id, since none of them go through `runCommandChecks`. |
+| firm and partner id validation %s exits 1 on a zero-padded firm id | Verifies the same six commands reject `007`, which previously reached the API as an unauthorized firm. |
+| firm and partner id validation run-sampler exits 1 on a non-numeric partner id | Verifies the sampler's partner id is checked on the same path. |
+| firm and partner id validation run-sampler exits 1 when any of the variadic firm ids is not a number | Verifies each `--firm-ids` value is checked in turn, not just the first. |
+| firm and partner id validation reports the invalid id rather than failing later | Verifies the id is named in the output. Only the `consola.error` line is assertable here: `NODE_ENV=test` puts consola at level 1, so the `consola.log` follow-up is dropped in this harness. |
+| the other ids accepted on the command line reports an invalid %s | Verifies that the company, period, export file and sampler ids are checked too. The message is asserted, not just the exit code, since these commands also exit 1 on a network failure. |
+| the other ids accepted on the command line reports a zero-padded %s | Verifies that `007` is rejected where the checks this replaced used `Number()`, which accepted it and then passed the raw string on. |
+| the other ids accepted on the command line reports an empty sampler id rather than asking for a template | Verifies that `--id ''` is reported as an invalid id: being falsy, it used to skip the check inside the `if (options.id)` branch and fall through to the "specify at least one template" message. |
+| ids on the commands which store credentials %s reports an id which is not a number | Verifies that `config --set-firm`, `--update-name`, `--refresh-token`, `--refresh-partner-token` and `authorize-partner` reject a bad id. Runs against a throwaway `HOME` so nothing reaches the developer's own credentials file. |
+| ids on the commands which store credentials does not store a firm id which was rejected | Verifies that `config --set-firm` checks before writing, so a bad id cannot be persisted and then be rejected by every command which reads it back. |
 | silverfin company-data-copier exit codes exits 1 on an invalid source company id | Verifies a non-integer `--source-company-id` terminates the process with exit code 1. |
 | silverfin company-data-copier exit codes exits 1 on an invalid source ledger id | Verifies a non-integer `--source-ledger-ids` value terminates the process with exit code 1. |
 | silverfin company-data-copier exit codes exits 1 when a required option is missing | Verifies Commander's required-option check terminates the process with exit code 1. |
@@ -578,6 +588,15 @@ Source: `lib/cli/utils.js`
 | `checkHandleFormat` | should report a missing handle as missing | Verifies that `undefined` goes to `errorUtils.missingHandle`. |
 | `checkHandleFormat` | should pass the suggested command on to the error message | Verifies that the command the caller offers reaches `errorUtils.invalidHandleFormat`. |
 | `checkHandleFormat` | should pass the suggested command on when the handle is missing | Verifies that the command the caller offers reaches `errorUtils.missingHandle`. |
+| `checkNumericIdFormat` | should return true for an id given as a string | Verifies that an ordinary id is accepted without exiting. |
+| `checkNumericIdFormat` | should return true for an id given as a number | Verifies that a value which Commander has already converted is accepted. |
+| `checkNumericIdFormat` | should return true without exiting when the id is %p | Verifies that `undefined` and `null` pass through, since whether an id is required is `checkRequiredFirmOrPartner`'s decision. |
+| `checkNumericIdFormat` | should call process.exit(1) for the id %p | Verifies that text, decimals, exponents, signs, zero, leading zeros, padding and an unexpanded shell variable are reported through `errorUtils.invalidNumericId` and stop the command. |
+| `checkNumericIdFormat` | should pass the label on to the error message | Verifies that the caller's label reaches `errorUtils.invalidNumericId`, so one message serves firm, partner, company, period and sampler ids. |
+| `runCommandChecks` | should stop the command when the firm id is not a number | Verifies that the id check is wired into the function ~20 commands funnel through. |
+| `runCommandChecks` | should stop the command when the partner id is not a number | Verifies that a partner id is checked on the same path as a firm id. |
+| `runCommandChecks` | should let a numeric firm id through and return the command settings | Verifies that a valid firm id is unaffected by the new check. |
+| `runCommandChecks` | should let a numeric partner id through and return the command settings | Verifies that a valid partner id is unaffected by the new check. |
 | `checkUniqueOption` | should return true when exactly one unique option is used | Verifies that `true` is returned and no error is logged when exactly one of the mutually exclusive options is set. |
 | `checkUniqueOption` | should call process.exit(1) when none of the unique options are used | Verifies that an error is logged and `process.exit(1)` is called when none of the required options are present. |
 | `checkUniqueOption` | should call process.exit(1) when more than one unique option is used | Verifies that an error about incompatible options is logged and `process.exit(1)` is called when multiple exclusive options are set. |
@@ -725,6 +744,19 @@ Source: `lib/utils/errorUtils.js`
 | `invalidHandleFormat` | should suggest the command which lists the handles available | Verifies that the caller's command is printed as the next step. |
 | `invalidHandleFormat` | should ask for a valid handle when no command is suggested | Verifies that the user is still told what to do when the caller offers no command. |
 | `invalidHandleFormat` | should return false | Verifies that the caller decides what happens next. |
+| `invalidNumericId` | should name the value and the label | Verifies that the rejected id appears in the message. |
+| `invalidNumericId` | should say what an id looks like | Verifies that the message states the rule rather than only that the value is wrong. |
+| `invalidNumericId` | should mention an unset variable, which is the other way a bad id arrives | Verifies that an empty id points at an unset shell variable as the likely cause. |
+| `invalidNumericId` | should use the label it is given rather than assuming a firm | Verifies that the same message serves partner, company, period and sampler ids. |
+| `invalidNumericId` | should suggest the unpadded id when the value only has leading zeros | Verifies that `007` is answered with the id it names, since tokens are keyed by the exact string and a padded id would otherwise be refused with no way forward. |
+| `invalidNumericId` | should suggest the unpadded id for a longer padded value | Verifies that the suggestion is derived from the value rather than assuming a single zero. |
+| `invalidNumericId` | should not suggest an unpadded id when the value is not a padded number | Verifies that ordinary typos still get the unset-variable hint instead of a meaningless suggestion. |
+| `invalidNumericId` | should not suggest an unpadded id for %p | Verifies that `0` and `000` produce no suggestion, since no positive id is hiding in them. |
+| `invalidNumericId` | should return false | Verifies that the caller decides what happens next. |
+| `invalidDateFormat` | should name the date and the format expected | Verifies that the rejected date and `YYYY-MM-DD` both appear in the message. |
+| `invalidDateFormat` | should return false | Verifies that the caller decides what happens next. |
+| `impossibleDate` | should name the date and say it is not a real one | Verifies that a well-formed but non-existent date is distinguished from a malformed one. |
+| `impossibleDate` | should return false | Verifies that the caller decides what happens next. |
 | `noWorkflowsStored` | should point at the workflows folder fsUtils reads from | Verifies that the folder named in the message comes from `lib/utils/constants.js`, so it cannot drift from the folder `fsUtils` reads. |
 | `unparsableWorkflow` | should point at the workflow file inside that folder | Verifies that the file path offered to the user is built from the same shared constant. |
 

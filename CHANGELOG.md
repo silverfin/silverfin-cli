@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.60.0] (25/08/2026)
+Check every id given on the command line before the command runs, so a typo or an unset variable is named and stopped instead of reaching the platform and coming back as a confusing authorization or not-found error.
+- The firm, partner, company, period, export file and sampler ids are all covered. An id has to be a positive whole number, so a zero-padded id such as `007` is rejected and answered with the id it names: the CLI stores credentials under the exact id it is given, so a firm authorized as `7` was never reachable as `007`.
+- `silverfin config --set-firm` checks the id before storing it, rather than saving a bad one for every later command in that directory to trip over.
+- `silverfin company-data-copier` no longer accepts a zero-padded company or period id, which it previously converted for you.
+
 ## [1.59.0] (19/08/2026)
 Add a workflow filter to the stats command: use `--workflow <handle>` for one workflow or `--workflow` on its own to report on every workflow in the workflows folder.
 - Workflow statistics cover the templates the workflow file lists which are stored in this repository, excluding shared parts. A listed template you have not imported is left out of the totals and named in a warning, instead of being counted and having a template folder created for it.

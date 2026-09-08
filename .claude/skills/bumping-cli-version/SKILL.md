@@ -37,7 +37,7 @@ git fetch origin main && git show origin/main:package.json | jq -r .version   # 
 
 ## Changelog entry format
 
-Match the existing entries — heading, then one line of plain description, no bullet:
+Match the existing entries — heading, then a lead line saying what changed, starting with a verb:
 
 ```markdown
 ## [1.56.2] (11/08/2026)
@@ -46,7 +46,11 @@ Add workflow statistics to the stats command.
 
 Date is `DD/MM/YYYY`. Write what changed for the user, not what changed in the code.
 
-`lib/cli/changelogReader.js` parses this file at runtime to show users what changed when they update, so the heading format is load-bearing. Do not reformat old entries, add sub-bullets under a version, or introduce `### ` levels.
+A change with more than one user-visible consequence adds bullets under the lead line, one per consequence — see `1.59.0` and `1.60.0`. Anything a user could be caught out by on upgrade goes in a bullet: behaviour that used to be accepted and now is not, a column whose meaning changed, a default that moved. The lead line still has to make sense alone, because it is often all a user reads.
+
+Do not reach for bullets to restate the lead line in more words. One consequence means one line, as above.
+
+`lib/cli/changelogReader.js` parses this file at runtime to show users what changed when they update. It splits on `## [` and keeps everything up to the next one, so **the heading is the only load-bearing part** — the body can be a line or a list. Keep `## [<version>] (DD/MM/YYYY)` exactly, do not introduce `###` levels, and do not reformat or re-date existing entries.
 
 ## Which number
 

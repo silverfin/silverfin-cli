@@ -10,6 +10,9 @@ jest.mock("../../../lib/utils/errorUtils", () => ({
   uncaughtErrors: jest.fn(),
   missingHandle: jest.fn(),
   invalidHandleFormat: jest.fn(),
+  invalidNumericId: jest.fn(),
+  invalidDateFormat: jest.fn(),
+  impossibleDate: jest.fn(),
 }));
 // Mock prompt-sync so no interactive prompts run in tests
 jest.mock("prompt-sync", () => () => jest.fn());
@@ -113,13 +116,13 @@ describe("cli/utils", () => {
 
     it("should call process.exit(1) for a date in the wrong format", () => {
       cliUtils.checkDateFormat("31-01-2024");
-      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("YYYY-MM-DD"));
+      expect(errorUtils.invalidDateFormat).toHaveBeenCalledWith("31-01-2024");
       expect(mockExit).toHaveBeenCalledWith(1);
     });
 
     it("should call process.exit(1) for a non-date string", () => {
       cliUtils.checkDateFormat("not-a-date");
-      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("YYYY-MM-DD"));
+      expect(errorUtils.invalidDateFormat).toHaveBeenCalledWith("not-a-date");
       expect(mockExit).toHaveBeenCalledWith(1);
     });
 
@@ -135,13 +138,13 @@ describe("cli/utils", () => {
 
     it("should reject a correctly formatted but impossible calendar date", () => {
       cliUtils.checkDateFormat("2024-02-31");
-      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("not an existing calendar date"));
+      expect(errorUtils.impossibleDate).toHaveBeenCalledWith("2024-02-31");
       expect(mockExit).toHaveBeenCalledWith(1);
     });
 
     it("should reject a leap day outside a leap year", () => {
       cliUtils.checkDateFormat("2023-02-29");
-      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("not an existing calendar date"));
+      expect(errorUtils.impossibleDate).toHaveBeenCalledWith("2023-02-29");
       expect(mockExit).toHaveBeenCalledWith(1);
     });
 
@@ -152,8 +155,80 @@ describe("cli/utils", () => {
 
     it("should reject input containing shell metacharacters", () => {
       cliUtils.checkDateFormat('2024-01-01"; rm -rf /; echo "');
-      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("YYYY-MM-DD"));
+      expect(errorUtils.invalidDateFormat).toHaveBeenCalledWith('2024-01-01"; rm -rf /; echo "');
       expect(mockExit).toHaveBeenCalledWith(1);
+    });
+  });
+
+  // ─── checkNumericIdFormat ──────────────────────────────────────────────────
+
+  describe("checkNumericIdFormat", () => {
+    it("should return true for an id given as a string", () => {
+      const result = cliUtils.checkNumericIdFormat("13827", "firm id");
+      expect(result).toBe(true);
+      expect(mockExit).not.toHaveBeenCalled();
+      expect(errorUtils.invalidNumericId).not.toHaveBeenCalled();
+    });
+
+    it("should return true for an id given as a number", () => {
+      const result = cliUtils.checkNumericIdFormat(13827, "firm id");
+      expect(result).toBe(true);
+      expect(mockExit).not.toHaveBeenCalled();
+    });
+
+    // Whether an id is required is decided by checkRequiredFirmOrPartner, so a value which was
+    // never given must pass through here rather than being reported as badly formatted
+    it.each([undefined, null])("should return true without exiting when the id is %p", (absentId) => {
+      const result = cliUtils.checkNumericIdFormat(absentId, "firm id");
+      expect(result).toBe(true);
+      expect(mockExit).not.toHaveBeenCalled();
+      expect(errorUtils.invalidNumericId).not.toHaveBeenCalled();
+    });
+
+    it.each(["abc", "", "   ", "12a", "12.0", "1e3", "-1", "+1", "0", "007", " 12 ", "1,2", "$FIRM"])(
+      "should call process.exit(1) for the id %p",
+      (invalidId) => {
+        cliUtils.checkNumericIdFormat(invalidId, "firm id");
+        expect(errorUtils.invalidNumericId).toHaveBeenCalledWith(invalidId, "firm id");
+        expect(mockExit).toHaveBeenCalledWith(1);
+      }
+    );
+
+    it("should pass the label on to the error message", () => {
+      cliUtils.checkNumericIdFormat("abc", "partner id");
+      expect(errorUtils.invalidNumericId).toHaveBeenCalledWith("abc", "partner id");
+    });
+  });
+
+  // ─── runCommandChecks ──────────────────────────────────────────────────────
+
+  // The single place ~20 commands funnel through, so the id checks being wired in here is
+  // what stops a typo reaching the API for all of them at once
+  describe("runCommandChecks", () => {
+    it("should stop the command when the firm id is not a number", () => {
+      cliUtils.runCommandChecks(["handle"], { firm: "my-firm", handle: "template_1", yes: true }, "13827");
+      expect(errorUtils.invalidNumericId).toHaveBeenCalledWith("my-firm", "firm id");
+      expect(mockExit).toHaveBeenCalledWith(1);
+    });
+
+    it("should stop the command when the partner id is not a number", () => {
+      cliUtils.runCommandChecks(["handle"], { partner: "my-partner", handle: "template_1", yes: true }, undefined);
+      expect(errorUtils.invalidNumericId).toHaveBeenCalledWith("my-partner", "partner id");
+      expect(mockExit).toHaveBeenCalledWith(1);
+    });
+
+    it("should let a numeric firm id through and return the command settings", () => {
+      const settings = cliUtils.runCommandChecks(["handle"], { firm: "13827", handle: "template_1", yes: true }, "13827");
+      expect(errorUtils.invalidNumericId).not.toHaveBeenCalled();
+      expect(mockExit).not.toHaveBeenCalled();
+      expect(settings).toEqual({ type: "firm", envId: "13827" });
+    });
+
+    it("should let a numeric partner id through and return the command settings", () => {
+      const settings = cliUtils.runCommandChecks(["handle"], { partner: "500", handle: "template_1", yes: true }, undefined);
+      expect(errorUtils.invalidNumericId).not.toHaveBeenCalled();
+      expect(mockExit).not.toHaveBeenCalled();
+      expect(settings).toEqual({ type: "partner", envId: "500" });
     });
   });
 
