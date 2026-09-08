@@ -201,6 +201,14 @@ describe("bin/cli.js Commander wiring", () => {
       expect(runCli(args)).toMatch(new RegExp(`Invalid ${label} "${value}"`));
       expect(runCliExitCode(args)).toBe(1);
     });
+
+    // An empty --id is falsy, so a check placed inside the "if an id was given" branch never sees
+    // it: the command used to fall through and complain that no template was specified instead
+    it("reports an empty sampler id rather than asking for a template", () => {
+      const args = `run-sampler -p 500 --id ''`;
+      expect(runCli(args)).toMatch(/Invalid sampler id ""/);
+      expect(runCliExitCode(args)).toBe(1);
+    });
   });
 
   // These commands write to the credentials file, so they run against a throwaway HOME. Without

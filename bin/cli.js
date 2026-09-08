@@ -549,9 +549,12 @@ program
     // In CI, never open regardless of the flag.
     const runnerOptions = { openReport: options.open && !process.env.CI, compact: options.compact || false };
 
+    // Checked before the branch below, so that an empty --id is reported as the invalid id it is
+    // rather than falling through to the "specify at least one template" message
+    cliUtils.checkNumericIdFormat(options.id, "sampler id");
+
     // If an existing sampler ID is provided, fetch and display results
     if (options.id) {
-      cliUtils.checkNumericIdFormat(options.id, "sampler id");
       await new LiquidSamplerRunner(options.partner, runnerOptions).checkStatus(options.id);
       return;
     }
