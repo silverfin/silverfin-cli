@@ -400,6 +400,7 @@ Source: `lib/api/firmCredentials.js`
 | `loadCredentials` | loads credentials from file successfully | Verifies that calling `loadCredentials` replaces the in-memory data with freshly read credentials from disk. |
 | `saveCredentials` | writes credentials to file successfully | Verifies that `saveCredentials` calls `fs.writeFileSync` with the current in-memory credentials serialised as JSON. |
 | `saveCredentials` | handles file system error when saving credentials | Verifies that a filesystem error during save is caught and logged without throwing. |
+| `listAuthorizedFirms` | does not list the host key as a firm | Verifies that the configured `host` key is not returned as if it were an authorized firm. |
 | `setHost` / `getHost` | should set and get the host correctly | Verifies that `setHost` persists the host to disk and `getHost` returns the updated value. |
 | `setHost` / `getHost` | should return environment variable host if set | Verifies that `getHost` returns the `SF_HOST` env var value instead of the stored host when the env var is set. |
 | `setHost` / `getHost` | should return default host if not set | Verifies that `getHost` returns the default live host when neither `SF_HOST` nor a stored value is present. |

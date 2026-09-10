@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.60.1] (10/09/2026)
+`config --list-all` no longer lists the configured host as if it were an authorized firm.
+
 ## [1.60.0] (10/09/2026)
 Added `update-text-properties` command. It uploads custom text properties from a Liquid Test YAML file to a company file at company, period, reconciliation and account levels for the entries referenced in the test scenario. Usage: `silverfin update-text-properties -u <url> -t <test-name>`. The YAML file read is the one referenced by the template's `config.json` `test` key (same as `run-test`); pass `--file <exact-file-name>` to read another file, e.g. a year variant like `*_TY25_liquid_test.yml`. When the test name exists in several templates the command lists them and asks for `--handle` instead of guessing. Also supports `--dry-run` to preview the payload and `--yes` to skip the confirmation prompt.
 

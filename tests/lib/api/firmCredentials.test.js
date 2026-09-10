@@ -221,6 +221,31 @@ describe("FirmCredentials", () => {
     });
   });
 
+  describe("listAuthorizedFirms", () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it("does not list the host key as a firm", () => {
+      const mockCredentials = {
+        defaultFirmIDs: {},
+        host: "https://test.getsilverfin.com",
+        12345: { accessToken: "a", refreshToken: "b", firmName: "Good Firm" },
+      };
+
+      fs.existsSync = jest.fn().mockReturnValueOnce(true).mockReturnValueOnce(true);
+      fs.readFileSync = jest.fn().mockReturnValueOnce(JSON.stringify(mockCredentials));
+
+      let testFirmCredentials;
+      jest.isolateModules(() => {
+        const module = require("../../../lib/api/firmCredentials");
+        testFirmCredentials = module.firmCredentials;
+      });
+
+      expect(testFirmCredentials.listAuthorizedFirms()).toEqual([["12345", "Good Firm"]]);
+    });
+  });
+
   describe("setHost and getHost", () => {
     let mockConfig;
 
