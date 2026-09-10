@@ -626,7 +626,13 @@ program
     for (const [periodKey, periodEntry] of Object.entries(testData.periods)) {
       // Resolve period date to period ID
       if (!periodsArray) {
-        periodsArray = await SF.getAllPeriods(firmId, companyId);
+        try {
+          periodsArray = await SF.getAllPeriods(firmId, companyId);
+        } catch (error) {
+          consola.error(`Could not fetch periods: ${error.message}`);
+          process.exitCode = 1;
+          break;
+        }
       }
       const { period, error: periodError } = textPropertyUtils.findPeriodByKey(periodsArray, periodKey);
       if (!period) {
