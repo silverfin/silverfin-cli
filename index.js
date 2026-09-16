@@ -756,17 +756,20 @@ async function newAccountTemplate(type, envId, name) {
     template.version_comment = "Created through the Silverfin CLI";
 
     // Only keep the mapping_list_ranges that belong to this firm or partner for the request
-    template.mapping_list_ranges = template.mapping_list_ranges.filter((range) => {
-      return range.type === "firm" && range.env_id === envId;
-    });
+    template.mapping_list_ranges =
+      template.mapping_list_ranges?.filter((range) => {
+        return range.type === type && range.env_id === envId;
+      }) || [];
 
     const response = await SF.createAccountTemplate(type, envId, template);
-    const handle = response.data.name_nl;
 
     // Store new id
-    if (response && response.status == 201) {
+    if (response && response.status == 201 && response.data) {
+      const handle = response.data.name_nl;
       AccountTemplate.updateTemplateId(type, envId, handle, response.data.id);
       consola.success(`Account template "${handle}" created on on ${type} ${envId}.`);
+    } else {
+      consola.error(`Account template creation failed: ${name}`);
     }
   } catch (error) {
     errorUtils.errorHandler(error);

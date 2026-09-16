@@ -922,6 +922,80 @@ describe("Toolkit", () => {
       expect(consola.warn).toHaveBeenCalled();
       expect(SF.createAccountTemplate).not.toHaveBeenCalled();
     });
+
+    it("should keep this partner's mapping list ranges when creating on a partner", async () => {
+      const partnerEnvId = "2";
+      const partnerRange = {
+        partner_account_mapping_list_id: 2,
+        account_range: "6.01080",
+        type: "partner",
+        env_id: partnerEnvId,
+      };
+      SF.findAccountTemplateByName.mockResolvedValue(null);
+      AccountTemplate.read.mockResolvedValue({
+        ...mockTemplate,
+        mapping_list_ranges: [
+          partnerRange,
+          { partner_account_mapping_list_id: 5, account_range: "7", type: "partner", env_id: "99" },
+          { account_mapping_list_id: 8293, account_range: "280", type: "firm", env_id: "100" },
+        ],
+      });
+      SF.createAccountTemplate.mockResolvedValue({ status: 201, data: { id: 999, name_nl: mockName } });
+
+      await toolkit.newAccountTemplate("partner", partnerEnvId, mockName);
+
+      expect(SF.createAccountTemplate).toHaveBeenCalledWith(
+        "partner",
+        partnerEnvId,
+        expect.objectContaining({ mapping_list_ranges: [partnerRange] })
+      );
+    });
+
+    it("should keep only this firm's mapping list ranges when creating on a firm", async () => {
+      const firmRange = { account_mapping_list_id: 8293, account_range: "280", type: "firm", env_id: mockEnvId };
+      SF.findAccountTemplateByName.mockResolvedValue(null);
+      AccountTemplate.read.mockResolvedValue({
+        ...mockTemplate,
+        mapping_list_ranges: [
+          firmRange,
+          { account_mapping_list_id: 9999, account_range: "300", type: "firm", env_id: "999" },
+          { partner_account_mapping_list_id: 2, account_range: "6.01080", type: "partner", env_id: "2" },
+        ],
+      });
+      SF.createAccountTemplate.mockResolvedValue({ status: 201, data: { id: 999, name_nl: mockName } });
+
+      await toolkit.newAccountTemplate(mockType, mockEnvId, mockName);
+
+      expect(SF.createAccountTemplate).toHaveBeenCalledWith(
+        mockType,
+        mockEnvId,
+        expect.objectContaining({ mapping_list_ranges: [firmRange] })
+      );
+    });
+
+    it("should send empty mapping list ranges when the config has no mapping_list_ranges key", async () => {
+      SF.findAccountTemplateByName.mockResolvedValue(null);
+      AccountTemplate.read.mockResolvedValue({ name_nl: mockName, text: "liquid" });
+      SF.createAccountTemplate.mockResolvedValue({ status: 201, data: { id: 999, name_nl: mockName } });
+
+      await toolkit.newAccountTemplate("partner", "2", mockName);
+
+      expect(errorUtils.errorHandler).not.toHaveBeenCalled();
+      expect(SF.createAccountTemplate).toHaveBeenCalledWith("partner", "2", expect.objectContaining({ mapping_list_ranges: [] }));
+    });
+
+    it("should report a failure instead of crashing when the API call returns no response", async () => {
+      SF.findAccountTemplateByName.mockResolvedValue(null);
+      AccountTemplate.read.mockResolvedValue(mockTemplate);
+      // sfApi returns undefined when apiUtils.responseErrorHandler swallows a 400/404
+      SF.createAccountTemplate.mockResolvedValue(undefined);
+
+      await toolkit.newAccountTemplate(mockType, mockEnvId, mockName);
+
+      expect(errorUtils.errorHandler).not.toHaveBeenCalled();
+      expect(AccountTemplate.updateTemplateId).not.toHaveBeenCalled();
+      expect(consola.error).toHaveBeenCalled();
+    });
   });
 
   // ─── fetchSharedPartById ──────────────────────────────────────────────────
