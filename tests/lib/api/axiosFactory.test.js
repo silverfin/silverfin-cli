@@ -3,12 +3,16 @@ const axios = require("axios");
 const { firmCredentials } = require("../../../lib/api/firmCredentials");
 const { AxiosFactory } = require("../../../lib/api/axiosFactory");
 const AxiosMockAdapter = require("axios-mock-adapter");
+const { AuthFailureError } = require("../../../lib/utils/authError");
+const errorUtils = require("../../../lib/utils/errorUtils");
+const util = require("util");
 
 jest.mock("consola");
 jest.mock("../../../lib/api/firmCredentials", () => ({
   firmCredentials: {
     getHost: jest.fn(),
     getTokenPair: jest.fn(),
+    isAutoRenewEnabled: jest.fn(),
     storeNewTokenPair: jest.fn(),
     getPartnerCredentials: jest.fn(),
     storePartnerApiKey: jest.fn(),
@@ -31,6 +35,8 @@ describe("AxiosFactory", () => {
     exitSpy = jest.spyOn(process, "exit").mockImplementation((code) => {
       throw new Error(`Process.exit called with code ${code}`);
     });
+
+    firmCredentials.isAutoRenewEnabled.mockReturnValue(true);
 
     axiosMockAdapter = new AxiosMockAdapter(axios);
   });
@@ -147,14 +153,72 @@ describe("AxiosFactory", () => {
       axiosMockAdapter.onGet("/test-endpoint").reply(401, "Unauthorized");
       axiosMockAdapter.onPost(`${mockHost}/f/${firmId}/oauth/token`).reply(401, "Unauthorized");
 
-      await expect(axiosInstance.get("/test-endpoint")).rejects.toThrow("Process.exit called with code 1");
+      await expect(axiosInstance.get("/test-endpoint")).rejects.toThrow("Process.exit called with code 2");
 
       expect(axiosMockAdapter.history.get.length).toBe(1);
       expect(axiosMockAdapter.history.post.length).toBe(1);
 
       expect(firmCredentials.storeNewTokenPair).toHaveBeenCalledTimes(0);
-      expect(exitSpy).toHaveBeenCalledWith(1);
+      expect(exitSpy).toHaveBeenCalledWith(2);
       expect(consola.error).toHaveBeenCalledWith("Error refreshing credentials. Try running the authentication process again");
+    });
+
+    describe("when autoRenew is disabled for the firm", () => {
+      beforeEach(() => {
+        firmCredentials.getHost.mockReturnValue(mockHost);
+        firmCredentials.getTokenPair.mockReturnValue(mockTokenPair);
+        firmCredentials.isAutoRenewEnabled.mockReturnValue(false);
+      });
+
+      it("does not attempt a refresh on 401", async () => {
+        const axiosInstance = AxiosFactory.createInstance("firm", firmId);
+        axiosMockAdapter.onGet("/test-endpoint").reply(401, "Unauthorized");
+
+        await expect(axiosInstance.get("/test-endpoint")).rejects.toThrow("Process.exit called with code 2");
+
+        expect(axiosMockAdapter.history.post.length).toBe(0);
+        expect(firmCredentials.storeNewTokenPair).toHaveBeenCalledTimes(0);
+      });
+
+      it("ends the process with the auth-failure code rather than letting a caller swallow it", async () => {
+        const axiosInstance = AxiosFactory.createInstance("firm", firmId);
+        axiosMockAdapter.onGet("/test-endpoint").reply(401, "Unauthorized");
+
+        await expect(axiosInstance.get("/test-endpoint")).rejects.toThrow();
+
+        expect(exitSpy).toHaveBeenCalledWith(2);
+      });
+
+      it("names the firm and points at re-authorising", async () => {
+        const axiosInstance = AxiosFactory.createInstance("firm", firmId);
+        axiosMockAdapter.onGet("/test-endpoint").reply(401, "Unauthorized");
+
+        await expect(axiosInstance.get("/test-endpoint")).rejects.toThrow();
+
+        expect(consola.error).toHaveBeenCalledWith(expect.stringContaining(String(firmId)));
+        expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("silverfin authorize"));
+      });
+
+      it("never puts the access token anywhere an inspector could print it", async () => {
+        const axiosInstance = AxiosFactory.createInstance("firm", firmId);
+        axiosMockAdapter.onGet("/test-endpoint").reply(401, "Unauthorized");
+        let captured;
+        errorUtils.errorHandler = jest.fn((error) => {
+          captured = error;
+        });
+
+        await axiosInstance.get("/test-endpoint").catch(() => {});
+
+        expect(captured).toBeInstanceOf(AuthFailureError);
+        expect(util.inspect(captured, { depth: 10 })).not.toContain(mockTokenPair.accessToken);
+      });
+
+      it("leaves a non-401 error alone", async () => {
+        const axiosInstance = AxiosFactory.createInstance("firm", firmId);
+        axiosMockAdapter.onGet("/test-endpoint").reply(404, "Not found");
+
+        await expect(axiosInstance.get("/test-endpoint")).rejects.not.toBeInstanceOf(AuthFailureError);
+      });
     });
 
     it("should throw any other response errors", async () => {
@@ -305,13 +369,15 @@ describe("AxiosFactory", () => {
       axiosMockAdapter.onPost(`${mockHost}/api/partner/v1/refresh_api_key?api_key=stored-api-key`).reply(401, "Unauthorized");
       jest.spyOn(axiosInstance, "post");
 
-      await expect(axiosInstance.get("/test-endpoint")).rejects.toThrow("Process.exit called with code 1");
+      // A partner API key refresh shares #handleFailedRefresh with the firm paths, so it
+      // reports the same "authentication failed" code. Same class of fault, same signal.
+      await expect(axiosInstance.get("/test-endpoint")).rejects.toThrow("Process.exit called with code 2");
 
       expect(axiosMockAdapter.history.get.length).toBe(1);
       expect(axiosMockAdapter.history.post.length).toBe(1);
 
       expect(firmCredentials.storeNewTokenPair).toHaveBeenCalledTimes(0);
-      expect(exitSpy).toHaveBeenCalledWith(1);
+      expect(exitSpy).toHaveBeenCalledWith(2);
       expect(consola.error).toHaveBeenCalledWith("Error refreshing credentials. Try running the authentication process again");
     });
 

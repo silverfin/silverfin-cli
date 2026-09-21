@@ -1,5 +1,6 @@
 const { firmCredentials } = require("../../../lib/api/firmCredentials");
 const { AxiosFactory } = require("../../../lib/api/axiosFactory");
+const { EXIT_AUTH_FAILURE } = require("../../../lib/utils/authError");
 const open = require("open");
 const { consola } = require("consola");
 
@@ -209,7 +210,13 @@ describe("SilverfinAuthorizer", () => {
 
       await expect(async () => {
         await SilverfinAuthorizer.refreshFirm(mockFirmId);
-      }).rejects.toThrow("Process.exit called with code 1");
+      }).rejects.toThrow("Process.exit called with code 2");
+
+      // The mocked process.exit throws, so this catch's own process.exit(EXIT_AUTH_FAILURE)
+      // fires a second time and is what the rejection above actually observes - asserting only
+      // that message would still pass if the exit above used the wrong code. Check the first
+      // call directly.
+      expect(exitSpy.mock.calls[0][0]).toBe(EXIT_AUTH_FAILURE);
 
       expect(mockAxiosInstance.post).not.toHaveBeenCalled();
       expect(mockAxiosInstance.get).not.toHaveBeenCalled();
@@ -238,7 +245,7 @@ describe("SilverfinAuthorizer", () => {
 
       await expect(async () => {
         await SilverfinAuthorizer.refreshFirm(mockFirmId);
-      }).rejects.toThrow("Process.exit called with code 1");
+      }).rejects.toThrow("Process.exit called with code 2");
 
       expect(consola.error).toHaveBeenCalledWith(
         "Response Status: 401 (Unauthorized)",
@@ -275,7 +282,11 @@ describe("SilverfinAuthorizer", () => {
 
       await expect(async () => {
         await SilverfinAuthorizer.refreshPartner("partner_123");
-      }).rejects.toThrow("Process.exit called with code 1");
+      }).rejects.toThrow("Process.exit called with code 2");
+
+      // Same reasoning as refreshFirm's equivalent test above: the mocked exit throws, gets
+      // caught, and re-exits a second time with the same code - assert the first call directly.
+      expect(exitSpy.mock.calls[0][0]).toBe(EXIT_AUTH_FAILURE);
 
       expect(mockAxiosInstance.post).not.toHaveBeenCalled();
       expect(mockAxiosInstance.get).not.toHaveBeenCalled();
@@ -297,7 +308,7 @@ describe("SilverfinAuthorizer", () => {
 
       await expect(async () => {
         await SilverfinAuthorizer.refreshPartner(mockPartnerId);
-      }).rejects.toThrow("Process.exit called with code 1");
+      }).rejects.toThrow("Process.exit called with code 2");
 
       expect(consola.error).toHaveBeenCalledWith("Response Status: 401 (Unauthorized). An error occurred trying to refresh the partner API key");
 
