@@ -8,7 +8,7 @@ Honour a per-firm `autoRenew` flag in the stored credentials, so a firm can be o
 - An authentication failure now ends the command with a message naming the firm and pointing at `silverfin authorize`, instead of a stack trace and a request to open an issue. An expired credential is a routine operational state, not a defect.
 - **Exit code change:** authentication failures now exit with code `2` rather than `1`. This covers a renewal skipped by the flag, a refresh that fails, and a firm or partner with no stored credential at all — including `config --refresh-token` and the partner API key path. A caller can therefore treat `2` as "this credential cannot be used and retrying will not help" and distinguish it from any other failure without parsing the log. Scripts testing for a specific exit code of `1` need updating; scripts testing for a non-zero exit are unaffected.
 
-## [1.60.0] (10/09/2026)
+## [1.60.0] (07/09/2026)
 Added `update-text-properties` command. It uploads custom text properties from a Liquid Test YAML file to a company file at company, period, reconciliation and account levels for the entries referenced in the test scenario. Usage: `silverfin update-text-properties -u <url> -t <test-name>`. The YAML file read is the one referenced by the template's `config.json` `test` key (same as `run-test`); pass `--file <exact-file-name>` to read another file, e.g. a year variant like `*_TY25_liquid_test.yml`. When the test name exists in several templates the command lists them and asks for `--handle` instead of guessing. Also supports `--dry-run` to preview the payload and `--yes` to skip the confirmation prompt.
 
 ## [1.59.0] (19/08/2026)
