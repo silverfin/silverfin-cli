@@ -407,7 +407,7 @@ describe("liquidSamplerCompact - describeVisualChange, structural parsing", () =
     const before = "<table><tr><td>a</td><td>b</td></tr></table><table><tr><td>c</td></tr></table>";
     const after = "<table><tr><td>c</td></tr></table>";
     const notes = describeVisualChange(before, after).join(" ");
-    expect(notes).toContain("tables: 2 → 1");
+    expect(notes).toContain("`<table>` 2 → 1");
     // The surviving table is unchanged - pairing it with the dropped one by
     // position would invent a row/colspan delta that isn't there.
     expect(notes).not.toContain("column span");
