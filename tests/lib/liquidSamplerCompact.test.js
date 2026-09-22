@@ -1050,7 +1050,7 @@ describe("liquidSamplerCompact - formatCompact", () => {
     try {
       const md = formatCompact(extractCompact(dir));
       expect(md).toContain("12 entries, 1 shared change");
-      expect(md).toContain("entries: 7000, 7001, 7002");
+      expect(md).toContain("entries: `7000`, `7001`, `7002`");
       // One findings block, not one per entry.
       expect(md.split("**wagenpark**")).toHaveLength(2);
     } finally {
@@ -1078,6 +1078,30 @@ describe("liquidSamplerCompact - formatCompact", () => {
     }
   });
 
+  it("doesn't let an entry id from an arbitrary zip break out of the entry list's Markdown", () => {
+    // With `--from-zip` an entry id is a directory name from whatever zip the
+    // caller points at, and this diff is posted verbatim as a PR comment.
+    // No slash - that would just create nested directories, not test anything.
+    const hostileId = "1](x)`y";
+    const dir = buildResultsDir({
+      reconciliation_entries: [hostileId, "2"].map((id) => ({
+        id,
+        label: "hostile_tpl",
+        before: { a: "1" },
+        after: { a: "1" },
+        viewHtml: { before: "<td>old</td>", after: "<td>new</td>" },
+      })),
+    });
+    try {
+      const md = formatCompact(extractCompact(dir));
+      // The id still appears, but only ever inside a code span it can't close.
+      expect(md).toContain("1](x)y");
+      expect(md).not.toContain("1](x)`y");
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("caps the per-finding entry list and discloses the remainder", () => {
     const dir = buildResultsDir({
       reconciliation_entries: Array.from({ length: 9 }, (_, i) => ({
@@ -1091,7 +1115,7 @@ describe("liquidSamplerCompact - formatCompact", () => {
     try {
       const md = formatCompact(extractCompact(dir));
       expect(md).toContain("9 entries, 1 shared change");
-      expect(md).toContain("entries: 9000, 9001, 9002, 9003, 9004 +4 more");
+      expect(md).toContain("entries: `9000`, `9001`, `9002`, `9003`, `9004` +4 more");
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }
