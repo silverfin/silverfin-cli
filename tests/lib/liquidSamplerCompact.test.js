@@ -269,7 +269,7 @@ describe("liquidSamplerCompact - describeVisualChange", () => {
 
   it("names the changed words when no anchored field explains the diff", () => {
     const notes = describeVisualChange("<div>old layout</div>", "<div class=\"new\">new layout</div>");
-    expect(notes).toEqual(["static text: −1 word (old), +1 word (new)"]);
+    expect(notes).toEqual(["static text: −1 word (`old`), +1 word (`new`)"]);
   });
 
   it("says nothing about fields that are identical in both", () => {
@@ -318,7 +318,7 @@ describe("liquidSamplerCompact - describeVisualChange, option sets", () => {
     const notes = describeVisualChange(select(ALL_FUELS), select(["petrol"]));
     expect(notes).toHaveLength(1);
     expect(notes[0]).toContain("field `fuel_type` options: 8 → 1");
-    expect(notes[0]).toContain("lost: cng");
+    expect(notes[0]).toContain("lost: `cng`");
   });
 
   it("reports a <select> that lost every option", () => {
@@ -328,7 +328,7 @@ describe("liquidSamplerCompact - describeVisualChange, option sets", () => {
 
   it("reports added options too, not just lost ones", () => {
     const notes = describeVisualChange(select(["petrol"]), select(["petrol", "diesel"]));
-    expect(notes).toEqual(["field `fuel_type` options: 1 → 2 (added: diesel)"]);
+    expect(notes).toEqual(["field `fuel_type` options: 1 → 2 (added: `diesel`)"]);
   });
 
   it("says nothing about an unchanged option list", () => {
@@ -341,7 +341,7 @@ describe("liquidSamplerCompact - describeVisualChange, option sets", () => {
     const withSelected = (opts, chosen) =>
       `<select data-name="fuel_type">${opts.map((o) => `<option value="${o}"${o === chosen ? " selected" : ""}>${o}</option>`).join("")}</select>`;
     const notes = describeVisualChange(withSelected(["petrol", "diesel"], "diesel"), withSelected(["petrol"], "petrol"));
-    expect(notes).toEqual(['field `fuel_type` value: "diesel" → "petrol"', "field `fuel_type` options: 2 → 1 (lost: diesel)"]);
+    expect(notes).toEqual(['field `fuel_type` value: "diesel" → "petrol"', "field `fuel_type` options: 2 → 1 (lost: `diesel`)"]);
   });
 
   it("reports a radio group that lost options even though the checked value is unchanged", () => {
@@ -350,7 +350,7 @@ describe("liquidSamplerCompact - describeVisualChange, option sets", () => {
     const radios = (values, checked) =>
       values.map((v) => `<input type="radio" data-name="size" value="${v}" ${v === checked ? "checked" : ""} />`).join("");
     const notes = describeVisualChange(radios(["micro", "small", "large"], "small"), radios(["small"], "small"));
-    expect(notes).toEqual(["field `size` options: 3 → 1 (lost: large, micro)"]);
+    expect(notes).toEqual(["field `size` options: 3 → 1 (lost: `large`, `micro`)"]);
   });
 });
 
@@ -394,6 +394,86 @@ describe("liquidSamplerCompact - describeVisualChange, structural parsing", () =
     const before = "<div><b><i>x</i></b></div>";
     const after = "<div><i><b>x</b></i></div>";
     expect(describeVisualChange(before, after)).toEqual(["element order/nesting changed (tag counts unchanged)"]);
+  });
+
+  it("doesn't throw when a radio input shares its data-name with another field type", () => {
+    // One thrown error here aborts the compact diff for every sampled entry
+    // in the run, not just this one.
+    const html = (value) => `<textarea data-name="x">${value}</textarea><input type="radio" data-name="x" value="1" checked />`;
+    expect(() => describeVisualChange(html("a"), html("b"))).not.toThrow();
+  });
+
+  it("doesn't compare two unrelated tables when a table was added or removed", () => {
+    const before = "<table><tr><td>a</td><td>b</td></tr></table><table><tr><td>c</td></tr></table>";
+    const after = "<table><tr><td>c</td></tr></table>";
+    const notes = describeVisualChange(before, after).join(" ");
+    expect(notes).toContain("tables: 2 → 1");
+    // The surviving table is unchanged - pairing it with the dropped one by
+    // position would invent a row/colspan delta that isn't there.
+    expect(notes).not.toContain("column span");
+    expect(notes).not.toContain("rows");
+  });
+
+  it("reports an added or removed table even on the field-note path", () => {
+    // elementNotes is skipped once a field explains the diff, so tableNotes is
+    // the only thing that can still say a whole table appeared.
+    const before = '<textarea data-name="n">a</textarea>';
+    const after = '<textarea data-name="n">b</textarea><table><tr><td>x</td></tr></table>';
+    expect(describeVisualChange(before, after)).toEqual(['field `n` value: "a" → "b"', "tables: 0 → 1"]);
+  });
+
+  it("treats a checkbox group like a radio group, not as last-input-wins", () => {
+    const boxes = (values) => values.map((v) => `<input type="checkbox" data-name="opts" value="${v}" />`).join("");
+    expect(describeVisualChange(boxes(["a", "b", "c"]), boxes(["a"]))).toEqual(["field `opts` options: 3 → 1 (lost: `b`, `c`)"]);
+  });
+
+  it("doesn't let a hidden companion input discard the radio group's option list", () => {
+    const group = (values) =>
+      values.map((v) => `<input type="radio" data-name="size" value="${v}" />`).join("") + '<input type="hidden" data-name="size" value="x" />';
+    expect(describeVisualChange(group(["s", "m", "l"]), group(["s"]))).toEqual(["field `size` options: 3 → 1 (lost: `l`, `m`)"]);
+  });
+
+  it("reports a field that changed element type", () => {
+    const before = '<select data-name="x"><option selected>a</option></select>';
+    const after = '<input data-name="x" value="a" />';
+    expect(describeVisualChange(before, after).join(" ")).toContain("field `x` element: `<select>` → `<input>`");
+  });
+
+  it("normalizes a non-breaking space in a field value, as the regex path did", () => {
+    // Otherwise swapping `&nbsp;` for a literal space renders as
+    // `value: "a b" → "a b"` - two strings a reader can't tell apart.
+    const notes = describeVisualChange('<textarea data-name="x">a&nbsp;b</textarea>', '<textarea data-name="x">a b</textarea>');
+    expect(notes).toEqual(["attribute/styling-only change - element structure and visible text are identical"]);
+  });
+
+  it("ignores <style>/<script> contents when diffing static text", () => {
+    const before = "<div><style>.a{color:red}</style><span>Total</span></div>";
+    const after = "<div><style>.a{color:blue}</style><span>Total</span></div>";
+    expect(describeVisualChange(before, after)).toEqual([
+      "attribute/styling-only change - element structure and visible text are identical",
+    ]);
+  });
+
+  it("doesn't run adjacent inline elements together into one word", () => {
+    const before = "<div><span>Total</span><span>Amount</span></div>";
+    const after = "<div><span>Totaal</span><span>Amount</span></div>";
+    expect(describeVisualChange(before, after)).toEqual(["static text: −1 word (`Total`), +1 word (`Totaal`)"]);
+  });
+
+  it("keeps option labels and static-text words inside a code span they can't close", () => {
+    const select = (label) => `<select data-name="x"><option>keep</option><option>${label}</option></select>`;
+    const notes = describeVisualChange(select("a"), select("[l](http://evil)`b"));
+    // The label survives, minus the backtick that would have closed the span
+    // and let `[l](...)` render as a live link in the posted comment.
+    expect(notes.join(" ")).toContain("`[l](http://evil)b`");
+    expect(notes.join(" ")).not.toContain("evil)`b");
+  });
+
+  it("distinguishes reordered text from text whose words changed in number", () => {
+    expect(describeVisualChange("<td>a b</td>", "<td>b a</td>")).toEqual(["static text reordered (same words)"]);
+    expect(describeVisualChange("<td>a a b</td>", "<td>a b b</td>")).toEqual([
+      "static text: same words, different repeats (3 → 3 words)",
+    ]);
   });
 
   it("still reports a table shape change when an anchored field also changed", () => {
@@ -797,6 +877,60 @@ describe("liquidSamplerCompact - extractCompact", () => {
     }
   });
 
+  it("degrades to a note instead of aborting when a view.html can't be read", () => {
+    // A crafted --from-zip archive can put a directory where a file belongs;
+    // one throw here would lose every other tier's findings for the whole run.
+    const dir = buildResultsDir({
+      reconciliation_entries: [{ id: "10004", label: "unreadable_tpl", before: { a: "1" }, after: { a: "1" } }],
+    });
+    for (const phase of ["before", "after"]) {
+      fs.mkdirSync(path.join(dir, "output", "reconciliation_entries", "10004", phase, "view.html"));
+    }
+    try {
+      expect(() => extractCompact(dir)).not.toThrow();
+      expect(extractCompact(dir).visualOnlyEntries).toEqual([]);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("degrades to a note instead of parsing a view.html too large to be worth it", () => {
+    const huge = `<div>${"x".repeat(3 * 1024 * 1024)}</div>`;
+    const dir = buildResultsDir({
+      reconciliation_entries: [
+        { id: "10005", label: "huge_tpl", before: { a: "1" }, after: { a: "1" }, viewHtml: { before: huge, after: `${huge}<p>y</p>` } },
+      ],
+    });
+    try {
+      const data = extractCompact(dir);
+      expect(data.visualOnlyEntries).toHaveLength(1);
+      expect(data.visualOnlyEntries[0].changes.join(" ")).toContain("larger than 2 MB");
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("exposes the grouped visual-only findings, like every other tier does", () => {
+    const dir = buildResultsDir({
+      reconciliation_entries: ["11000", "11001"].map((id) => ({
+        id,
+        label: "grouped_tpl",
+        before: { a: "1" },
+        after: { a: "1" },
+        viewHtml: { before: "<td>old</td>", after: "<td>new</td>" },
+      })),
+    });
+    try {
+      const data = extractCompact(dir);
+      expect(data.visualOnlyGroups).toHaveLength(1);
+      expect(data.visualOnlyGroups[0].entries).toHaveLength(2);
+      expect(data.summary.visualOnlyCount).toBe(2);
+      expect(data.summary.visualOnlyFindings).toBe(1);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("does not flag an entry whose view.html differs only in per-entry object ids", () => {
     const dir = buildResultsDir({
       reconciliation_entries: [
@@ -810,12 +944,46 @@ describe("liquidSamplerCompact - extractCompact", () => {
             after: '<td data-object-id="9002" data-object-ledger-id="70">x</td>',
           },
         },
+        // Same, but single-quoted and unquoted - a renderer isn't obliged to
+        // use double quotes, and an unstripped id makes every entry its own
+        // "finding", which is exactly the noise this normalization removes.
+        {
+          id: "10006",
+          label: "wagenpark",
+          before: { a: "1" },
+          after: { a: "1" },
+          viewHtml: {
+            before: "<td data-object-id='9001' data-object-ledger-id=70>x</td>",
+            after: "<td data-object-id='9002' data-object-ledger-id=71>x</td>",
+          },
+        },
       ],
     });
     try {
       const data = extractCompact(dir);
       expect(data.visualOnlyEntries).toEqual([]);
       expect(data.diffEntryKeys).toEqual([]);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("still flags an entry that stopped emitting an object id altogether", () => {
+    // The values are blanked, not the attributes deleted - losing the binding
+    // is a real regression that deletion would hide as "no change".
+    const dir = buildResultsDir({
+      reconciliation_entries: [
+        {
+          id: "10007",
+          label: "wagenpark",
+          before: { a: "1" },
+          after: { a: "1" },
+          viewHtml: { before: '<td data-object-id="9001">x</td>', after: "<td>x</td>" },
+        },
+      ],
+    });
+    try {
+      expect(extractCompact(dir).visualOnlyEntries).toHaveLength(1);
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }
