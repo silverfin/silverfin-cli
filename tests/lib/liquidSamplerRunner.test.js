@@ -10,6 +10,16 @@ const mockOpenFile = jest.fn();
 jest.mock("../../lib/utils/urlHandler", () => ({
   UrlHandler: jest.fn().mockImplementation(() => ({ openFile: mockOpenFile })),
 }));
+// Only the two lookups #resolveTemplateId makes are stubbed; the rest stays
+// real because the template classes read fsUtils.FOLDERS at class-init time.
+jest.mock("../../lib/utils/fsUtils", () => ({
+  ...jest.requireActual("../../lib/utils/fsUtils"),
+  configExists: jest.fn(() => true),
+  readConfig: jest.fn(() => ({ partner_id: { 1: 4242 } })),
+}));
+jest.mock("../../lib/templates/reconciliationText", () => ({
+  ReconciliationText: { read: jest.fn() },
+}));
 
 const os = require("os");
 const fs = require("fs");
@@ -20,6 +30,7 @@ const SF = require("../../lib/api/sfApi");
 const { consola } = require("consola");
 const { spinner } = require("../../lib/cli/spinner");
 const { UrlHandler } = require("../../lib/utils/urlHandler");
+const { ReconciliationText } = require("../../lib/templates/reconciliationText");
 const { LiquidSamplerRunner } = require("../../lib/liquidSamplerRunner");
 
 const REPORT_URL = "https://reports.example.com/sampler/abc123.html";
@@ -521,5 +532,75 @@ describe("LiquidSamplerRunner - polling status output", () => {
 
     const heartbeats = consola.info.mock.calls.filter(([msg]) => msg.includes("elapsed"));
     expect(heartbeats.length).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe("LiquidSamplerRunner - payload attributes", () => {
+  const originalIsTTY = process.stdout.isTTY;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    process.stdout.isTTY = false;
+    SF.createSamplerRun.mockResolvedValue({ data: { id: "run-1" } });
+    SF.readSamplerRun.mockResolvedValue({ data: { status: "completed", result_url: REPORT_URL } });
+  });
+
+  afterEach(() => {
+    process.stdout.isTTY = originalIsTTY;
+    jest.useRealTimers();
+  });
+
+  async function runWithConfig(config) {
+    ReconciliationText.read.mockResolvedValue(config);
+    jest.useFakeTimers();
+    const runPromise = new LiquidSamplerRunner("1").run({ reconciliationTexts: ["my_handle"] }, [7]);
+    await jest.advanceTimersByTimeAsync(15000);
+    await runPromise;
+    jest.useRealTimers();
+    return SF.createSamplerRun.mock.calls[0][1].templates[0];
+  }
+
+  it("sends auto_hide_formula and reconciliation_type when present in the local config", async () => {
+    const template = await runWithConfig({
+      text: "{% comment %}main{% endcomment %}",
+      text_parts: { part_1: "part liquid" },
+      auto_hide_formula: "{% if period.reconciliations.my_handle.results.total == 0 %}t{% endif %}",
+      reconciliation_type: "only_reconciled_with_data",
+    });
+
+    expect(template).toEqual({
+      type: "reconciliation_text",
+      id: "4242",
+      text: "{% comment %}main{% endcomment %}",
+      text_parts: { part_1: "part liquid" },
+      auto_hide_formula: "{% if period.reconciliations.my_handle.results.total == 0 %}t{% endif %}",
+      reconciliation_type: "only_reconciled_with_data",
+    });
+  });
+
+  it("omits attributes that are absent from the local config", async () => {
+    const template = await runWithConfig({ text: "liquid", text_parts: {} });
+
+    expect(Object.keys(template).sort()).toEqual(["id", "text", "text_parts", "type"]);
+  });
+
+  it("keeps an empty-string auto_hide_formula (clearing the formula is a real change)", async () => {
+    const template = await runWithConfig({ text: "liquid", text_parts: {}, auto_hide_formula: "" });
+
+    expect(template.auto_hide_formula).toBe("");
+  });
+
+  it("never sends an attribute the API does not declare", async () => {
+    const template = await runWithConfig({
+      text: "liquid",
+      text_parts: {},
+      description_en: "should not be sent",
+      published: true,
+      hide_code: false,
+    });
+
+    expect(template).not.toHaveProperty("description_en");
+    expect(template).not.toHaveProperty("published");
+    expect(template).not.toHaveProperty("hide_code");
   });
 });
