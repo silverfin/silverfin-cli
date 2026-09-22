@@ -250,21 +250,21 @@ describe("liquidSamplerCompact - describeVisualChange", () => {
     const before = field("salutation.header", 'placeholder=""', "Geacht bestuur,");
     const after = field("salutation.header", 'placeholder="Geacht bestuur,"', "Geacht bestuur,");
     const notes = describeVisualChange(before, after);
-    expect(notes).toEqual(['field `salutation.header` placeholder: "" → "Geacht bestuur,"']);
+    expect(notes).toEqual(['field `salutation.header` placeholder: `""` → `"Geacht bestuur,"`']);
   });
 
   it("reports a value change on a field whose placeholder didn't change", () => {
     const before = field("company_city", 'placeholder=""', "Amsterdam");
     const after = field("company_city", 'placeholder=""', "Rotterdam");
     const notes = describeVisualChange(before, after);
-    expect(notes).toEqual(['field `company_city` value: "Amsterdam" → "Rotterdam"']);
+    expect(notes).toEqual(['field `company_city` value: `"Amsterdam"` → `"Rotterdam"`']);
   });
 
   it("reports both a value and a placeholder change as two separate notes", () => {
     const before = field("x", 'placeholder="old hint"', "old value");
     const after = field("x", 'placeholder="new hint"', "new value");
     const notes = describeVisualChange(before, after);
-    expect(notes).toEqual(['field `x` value: "old value" → "new value"', 'field `x` placeholder: "old hint" → "new hint"']);
+    expect(notes).toEqual(['field `x` value: `"old value"` → `"new value"`', 'field `x` placeholder: `"old hint"` → `"new hint"`']);
   });
 
   it("names the changed words when no anchored field explains the diff", () => {
@@ -276,14 +276,14 @@ describe("liquidSamplerCompact - describeVisualChange", () => {
     const before = field("unchanged", 'placeholder="p"', "v") + field("changed", "", "old");
     const after = field("unchanged", 'placeholder="p"', "v") + field("changed", "", "new");
     const notes = describeVisualChange(before, after);
-    expect(notes).toEqual(['field `changed` value: "old" → "new"']);
+    expect(notes).toEqual(['field `changed` value: `"old"` → `"new"`']);
   });
 
   it("decodes HTML entities in an <input> value, consistently with the <textarea>/<select> branches", () => {
     const before = `<input data-name="company_name" value="Foo &amp; Bar" />`;
     const after = `<input data-name="company_name" value="Foo &amp; Baz" />`;
     const notes = describeVisualChange(before, after);
-    expect(notes).toEqual(['field `company_name` value: "Foo & Bar" → "Foo & Baz"']);
+    expect(notes).toEqual(['field `company_name` value: `"Foo & Bar"` → `"Foo & Baz"`']);
   });
 
   it("reports a changed radio-group selection by which option is checked, not the last input in the group", () => {
@@ -291,7 +291,7 @@ describe("liquidSamplerCompact - describeVisualChange", () => {
       `<input type="radio" data-name="filing_type" value="vol" ${checkedValue === "vol" ? "checked" : ""} />` +
       `<input type="radio" data-name="filing_type" value="vkt" ${checkedValue === "vkt" ? "checked" : ""} />`;
     const notes = describeVisualChange(radioGroup("vol"), radioGroup("vkt"));
-    expect(notes).toEqual(['field `filing_type` value: "vol" → "vkt"']);
+    expect(notes).toEqual(['field `filing_type` value: `"vol"` → `"vkt"`']);
   });
 
   it("does not mistake aria-checked for checked (which would make every radio look selected)", () => {
@@ -303,7 +303,7 @@ describe("liquidSamplerCompact - describeVisualChange", () => {
         selectedValue === "vkt" ? "checked" : ""
       } />`;
     const notes = describeVisualChange(radioGroup("vol"), radioGroup("vkt"));
-    expect(notes).toEqual(['field `filing_type` value: "vol" → "vkt"']);
+    expect(notes).toEqual(['field `filing_type` value: `"vol"` → `"vkt"`']);
   });
 });
 
@@ -341,7 +341,7 @@ describe("liquidSamplerCompact - describeVisualChange, option sets", () => {
     const withSelected = (opts, chosen) =>
       `<select data-name="fuel_type">${opts.map((o) => `<option value="${o}"${o === chosen ? " selected" : ""}>${o}</option>`).join("")}</select>`;
     const notes = describeVisualChange(withSelected(["petrol", "diesel"], "diesel"), withSelected(["petrol"], "petrol"));
-    expect(notes).toEqual(['field `fuel_type` value: "diesel" → "petrol"', "field `fuel_type` options: 2 → 1 (lost: `diesel`)"]);
+    expect(notes).toEqual(['field `fuel_type` value: `"diesel"` → `"petrol"`', "field `fuel_type` options: 2 → 1 (lost: `diesel`)"]);
   });
 
   it("reports a radio group that lost options even though the checked value is unchanged", () => {
@@ -419,7 +419,7 @@ describe("liquidSamplerCompact - describeVisualChange, structural parsing", () =
     // the only thing that can still say a whole table appeared.
     const before = '<textarea data-name="n">a</textarea>';
     const after = '<textarea data-name="n">b</textarea><table><tr><td>x</td></tr></table>';
-    expect(describeVisualChange(before, after)).toEqual(['field `n` value: "a" → "b"', "tables: 0 → 1"]);
+    expect(describeVisualChange(before, after)).toEqual(['field `n` value: `"a"` → `"b"`', "tables: 0 → 1"]);
   });
 
   it("treats a checkbox group like a radio group, not as last-input-wins", () => {
@@ -460,6 +460,27 @@ describe("liquidSamplerCompact - describeVisualChange, structural parsing", () =
     expect(describeVisualChange(before, after)).toEqual(["static text: −1 word (`Total`), +1 word (`Totaal`)"]);
   });
 
+  it("keeps a crafted data-name inside the code span it's printed in", () => {
+    // The parser entity-decodes attribute values, so `&#96;` arrives as a
+    // real backtick and would close the span the field name is printed in.
+    const html = (value) => `<textarea data-name="x&#96; [click](http://evil) &#96;">${value}</textarea>`;
+    const notes = describeVisualChange(html("a"), html("b")).join(" ");
+    expect(notes).not.toContain("x` [click](http://evil) `");
+  });
+
+  it("keeps a crafted tag name inside the code span it's printed in", () => {
+    const notes = describeVisualChange("<div>x</div>", "<div><a`b>x</a`b></div>").join(" ");
+    expect(notes).not.toContain("`<a`b>`");
+  });
+
+  it("keeps a field value's own backticks from escaping the note", () => {
+    // Values are only JSON-quoted by renderValue, which escapes neither
+    // backticks nor Markdown.
+    const html = (value) => `<textarea data-name="note">${value}</textarea>`;
+    const notes = describeVisualChange(html("plain"), html("`x` [click](http://evil)")).join(" ");
+    expect(notes).not.toContain("`x`");
+  });
+
   it("keeps option labels and static-text words inside a code span they can't close", () => {
     const select = (label) => `<select data-name="x"><option>keep</option><option>${label}</option></select>`;
     const notes = describeVisualChange(select("a"), select("[l](http://evil)`b"));
@@ -482,7 +503,7 @@ describe("liquidSamplerCompact - describeVisualChange, structural parsing", () =
     const before = '<table><tr><td><textarea data-name="note">old</textarea></td><td>x</td></tr></table>';
     const after = '<table><tr><td><textarea data-name="note">new</textarea></td></tr></table>';
     expect(describeVisualChange(before, after)).toEqual([
-      'field `note` value: "old" → "new"',
+      'field `note` value: `"old"` → `"new"`',
       "table 1 column span: row 1 (2 → 1)",
     ]);
   });
@@ -836,7 +857,7 @@ describe("liquidSamplerCompact - extractCompact", () => {
       expect(data.templates).toEqual([]);
       expect(data.visualOnlyEntries).toHaveLength(1);
       expect(data.visualOnlyEntries[0]).toMatchObject({ label: "general_settings", entryId: "10000" });
-      expect(data.visualOnlyEntries[0].changes).toEqual(['field `salutation.header` placeholder: "" → "Geacht bestuur,"']);
+      expect(data.visualOnlyEntries[0].changes).toEqual(['field `salutation.header` placeholder: `""` → `"Geacht bestuur,"`']);
       expect(data.summary.visualOnlyCount).toBe(1);
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
@@ -905,6 +926,25 @@ describe("liquidSamplerCompact - extractCompact", () => {
       const data = extractCompact(dir);
       expect(data.visualOnlyEntries).toHaveLength(1);
       expect(data.visualOnlyEntries[0].changes.join(" ")).toContain("larger than 2 MB");
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("doesn't flag two byte-identical oversized renders as a change", () => {
+    // The size guard must not short-circuit ahead of the equality check -
+    // that turns every large-but-unchanged entry into a finding, and into a
+    // diffEntryKey that --add-diffs-folder copies as an empty pair.
+    const huge = `<div>${"x".repeat(3 * 1024 * 1024)}</div>`;
+    const dir = buildResultsDir({
+      reconciliation_entries: [
+        { id: "10008", label: "huge_same", before: { a: "1" }, after: { a: "1" }, viewHtml: { before: huge, after: huge } },
+      ],
+    });
+    try {
+      const data = extractCompact(dir);
+      expect(data.visualOnlyEntries).toEqual([]);
+      expect(data.diffEntryKeys).toEqual([]);
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }
@@ -1171,7 +1211,7 @@ describe("liquidSamplerCompact - formatCompact", () => {
       expect(md).toContain("visual_tpl");
       expect(md).toContain("[open in app](https://app.example.com/entry/1)");
       expect(md).toContain("output/reconciliation_entries/1/{before,after}/view.html");
-      expect(md).toContain('- field `salutation.header` placeholder: "" → "Geacht bestuur,"');
+      expect(md).toContain('- field `salutation.header` placeholder: `""` → `"Geacht bestuur,"`');
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }
@@ -1220,7 +1260,7 @@ describe("liquidSamplerCompact - formatCompact", () => {
       expect(md).toContain("12 entries, 1 shared change");
       expect(md).toContain("entries: `7000`, `7001`, `7002`");
       // One findings block, not one per entry.
-      expect(md.split("**wagenpark**")).toHaveLength(2);
+      expect(md.split("**`wagenpark`**")).toHaveLength(2);
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }
@@ -1238,7 +1278,7 @@ describe("liquidSamplerCompact - formatCompact", () => {
     });
     try {
       const md = formatCompact(extractCompact(dir));
-      const headings = md.split("\n").filter((l) => l.startsWith("**tpl_"));
+      const headings = md.split("\n").filter((l) => l.startsWith("**`tpl_"));
       expect(headings).toHaveLength(10);
       expect(md).toContain("+4 more visual-only findings");
     } finally {
@@ -1265,6 +1305,29 @@ describe("liquidSamplerCompact - formatCompact", () => {
       // The id still appears, but only ever inside a code span it can't close.
       expect(md).toContain("1](x)y");
       expect(md).not.toContain("1](x)`y");
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("doesn't let a template label from the zip's yml inject Markdown", () => {
+    const dir = buildResultsDir({
+      reconciliation_entries: [
+        {
+          id: "1",
+          // A backtick would close the span; a newline would escape the line
+          // it's printed on entirely.
+          label: "tpl` [click](http://evil)\n- [x](http://evil) `",
+          before: { a: "1" },
+          after: { a: "1" },
+          viewHtml: { before: "<td>old</td>", after: "<td>new</td>" },
+        },
+      ],
+    });
+    try {
+      const md = formatCompact(extractCompact(dir));
+      expect(md).not.toContain("tpl` [click](http://evil)");
+      expect(md).not.toContain("\n- [x](http://evil)");
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }
