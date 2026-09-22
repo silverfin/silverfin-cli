@@ -590,6 +590,21 @@ describe("LiquidSamplerRunner - payload attributes", () => {
     expect(template.auto_hide_formula).toBe("");
   });
 
+  it("sends handle and the localized names present in the config", async () => {
+    const template = await runWithConfig({
+      text: "liquid",
+      text_parts: {},
+      handle: "renamed_handle",
+      name_en: "Renamed",
+      name_nl: "Hernoemd",
+    });
+
+    expect(template.handle).toBe("renamed_handle");
+    expect(template.name_en).toBe("Renamed");
+    expect(template.name_nl).toBe("Hernoemd");
+    expect(template).not.toHaveProperty("name_fr");
+  });
+
   it("never sends an attribute the API does not declare", async () => {
     const template = await runWithConfig({
       text: "liquid",
