@@ -8,6 +8,7 @@ const {
   diffResultsRegister,
   diffScope,
   describeVisualChange,
+  groupVisualOnlyEntries,
   readEntryLabels,
 } = require("../../lib/liquidSamplerCompact");
 
@@ -266,9 +267,9 @@ describe("liquidSamplerCompact - describeVisualChange", () => {
     expect(notes).toEqual(['field `x` value: "old value" → "new value"', 'field `x` placeholder: "old hint" → "new hint"']);
   });
 
-  it("falls back to a generic note when no anchored field explains the diff", () => {
+  it("names the changed words when no anchored field explains the diff", () => {
     const notes = describeVisualChange("<div>old layout</div>", "<div class=\"new\">new layout</div>");
-    expect(notes).toEqual(["layout/markup changed with no anchored field explaining it - compare the two view.html files directly"]);
+    expect(notes).toEqual(["static text: −1 word (old), +1 word (new)"]);
   });
 
   it("says nothing about fields that are identical in both", () => {
@@ -303,6 +304,142 @@ describe("liquidSamplerCompact - describeVisualChange", () => {
       } />`;
     const notes = describeVisualChange(radioGroup("vol"), radioGroup("vkt"));
     expect(notes).toEqual(['field `filing_type` value: "vol" → "vkt"']);
+  });
+});
+
+describe("liquidSamplerCompact - describeVisualChange, option sets", () => {
+  const select = (opts) => `<select data-name="fuel_type">${opts.map((o) => `<option value="${o}">${o}</option>`).join("")}</select>`;
+  const ALL_FUELS = ["petrol", "diesel", "electric", "hybrid", "lpg", "cng", "hydrogen", "other"];
+
+  it("reports a <select> that lost its option list even though nothing is selected either side", () => {
+    // The confirmed real-world miss: a renamed variable emptied a fleet
+    // template's fuel-type dropdown. `selected` was null -> null, so the
+    // selected-value projection alone showed nothing at all.
+    const notes = describeVisualChange(select(ALL_FUELS), select(["petrol"]));
+    expect(notes).toHaveLength(1);
+    expect(notes[0]).toContain("field `fuel_type` options: 8 → 1");
+    expect(notes[0]).toContain("lost: cng");
+  });
+
+  it("reports a <select> that lost every option", () => {
+    const notes = describeVisualChange(select(ALL_FUELS), '<select data-name="fuel_type"></select>');
+    expect(notes[0]).toContain("field `fuel_type` options: 8 → 0");
+  });
+
+  it("reports added options too, not just lost ones", () => {
+    const notes = describeVisualChange(select(["petrol"]), select(["petrol", "diesel"]));
+    expect(notes).toEqual(["field `fuel_type` options: 1 → 2 (added: diesel)"]);
+  });
+
+  it("says nothing about an unchanged option list", () => {
+    expect(describeVisualChange(select(ALL_FUELS), select(ALL_FUELS))).toEqual([
+      "attribute/styling-only change - element structure and visible text are identical",
+    ]);
+  });
+
+  it("reports both the selected value and the option set when both changed", () => {
+    const withSelected = (opts, chosen) =>
+      `<select data-name="fuel_type">${opts.map((o) => `<option value="${o}"${o === chosen ? " selected" : ""}>${o}</option>`).join("")}</select>`;
+    const notes = describeVisualChange(withSelected(["petrol", "diesel"], "diesel"), withSelected(["petrol"], "petrol"));
+    expect(notes).toEqual(['field `fuel_type` value: "diesel" → "petrol"', "field `fuel_type` options: 2 → 1 (lost: diesel)"]);
+  });
+
+  it("reports a radio group that lost options even though the checked value is unchanged", () => {
+    // Same scalar-projection bug as <select>: `checked` is one option out of
+    // a group, so shrinking the group is invisible if the checked one survives.
+    const radios = (values, checked) =>
+      values.map((v) => `<input type="radio" data-name="size" value="${v}" ${v === checked ? "checked" : ""} />`).join("");
+    const notes = describeVisualChange(radios(["micro", "small", "large"], "small"), radios(["small"], "small"));
+    expect(notes).toEqual(["field `size` options: 3 → 1 (lost: large, micro)"]);
+  });
+});
+
+describe("liquidSamplerCompact - describeVisualChange, structural parsing", () => {
+  it("describes a dropped table cell instead of waving at the two view.html files", () => {
+    const before = "<table><tr><td>a</td><td>b</td></tr><tr><td>c</td><td>d</td></tr></table>";
+    const after = "<table><tr><td>a</td><td>b</td></tr><tr><td>c</td></tr></table>";
+    const notes = describeVisualChange(before, after);
+    expect(notes.join(" ")).toContain("`<td>` 4 → 3");
+    expect(notes.join(" ")).toContain("table 1 column span: row 2 (2 → 1)");
+    expect(notes.join(" ")).not.toContain("compare the two view.html files");
+  });
+
+  it("describes a colspan change that silently widens a row", () => {
+    const before = '<table><tr><td colspan="2">a</td><td>b</td></tr></table>';
+    const after = '<table><tr><td colspan="4">a</td><td>b</td></tr></table>';
+    expect(describeVisualChange(before, after)).toEqual(["table 1 column span: row 1 (3 → 5)"]);
+  });
+
+  it("describes an added table row", () => {
+    const before = "<table><tr><td>a</td></tr></table>";
+    const after = "<table><tr><td>a</td></tr><tr><td>b</td></tr></table>";
+    expect(describeVisualChange(before, after).join(" ")).toContain("table 1: 1 row → 2 rows");
+  });
+
+  it("describes a dropped closing tag (the table no longer parses as a table)", () => {
+    const before = "<div><table><tr><td>a</td></tr></table><p>after</p></div>";
+    const after = "<div><table><tr><td>a</td></tr><p>after</p></div>";
+    expect(describeVisualChange(before, after).join(" ")).toContain("`<table>` 1 → 0");
+  });
+
+  it("calls a class-only change styling, rather than an unexplained layout change", () => {
+    const before = '<div class="usr-width-50"><span>Total</span></div>';
+    const after = '<div class="usr-width-76"><span>Total</span></div>';
+    expect(describeVisualChange(before, after)).toEqual([
+      "attribute/styling-only change - element structure and visible text are identical",
+    ]);
+  });
+
+  it("flags a re-nesting that keeps every tag count identical", () => {
+    const before = "<div><b><i>x</i></b></div>";
+    const after = "<div><i><b>x</b></i></div>";
+    expect(describeVisualChange(before, after)).toEqual(["element order/nesting changed (tag counts unchanged)"]);
+  });
+
+  it("still reports a table shape change when an anchored field also changed", () => {
+    // Table shape is a separate axis - a field-level note can never account
+    // for a lost column, so the two must not be mutually exclusive.
+    const before = '<table><tr><td><textarea data-name="note">old</textarea></td><td>x</td></tr></table>';
+    const after = '<table><tr><td><textarea data-name="note">new</textarea></td></tr></table>';
+    expect(describeVisualChange(before, after)).toEqual([
+      'field `note` value: "old" → "new"',
+      "table 1 column span: row 1 (2 → 1)",
+    ]);
+  });
+
+  it("ignores per-entry object ids, which differ between renders without being a visual change", () => {
+    const before = '<td data-object-id="9001" data-object-ledger-id="70"><span>x</span></td>';
+    const after = '<td data-object-id="9002" data-object-ledger-id="71"><span>x</span></td>';
+    expect(describeVisualChange(before, after)).toEqual([
+      "attribute/styling-only change - element structure and visible text are identical",
+    ]);
+  });
+});
+
+describe("liquidSamplerCompact - groupVisualOnlyEntries", () => {
+  const entry = (entryId, changes, label = "wagenpark") => ({ kind: "reconciliation_entries", entryId, label, url: null, changes });
+
+  it("collapses entries of the same template reporting the identical finding", () => {
+    const changes = ["`<td>` 4 → 3"];
+    const groups = groupVisualOnlyEntries([entry("1", changes), entry("2", changes), entry("3", changes)]);
+    expect(groups).toHaveLength(1);
+    expect(groups[0]).toMatchObject({ label: "wagenpark", changes });
+    expect(groups[0].entries.map((e) => e.entryId)).toEqual(["1", "2", "3"]);
+  });
+
+  it("keeps genuinely different findings apart, and different templates apart", () => {
+    const groups = groupVisualOnlyEntries([
+      entry("1", ["a"]),
+      entry("2", ["b"]),
+      entry("3", ["a"], "other_tpl"),
+    ]);
+    expect(groups).toHaveLength(3);
+  });
+
+  it("orders groups by how many entries share the finding", () => {
+    const groups = groupVisualOnlyEntries([entry("1", ["rare"]), entry("2", ["common"]), entry("3", ["common"])]);
+    expect(groups[0].changes).toEqual(["common"]);
+    expect(groups[0].entries).toHaveLength(2);
   });
 });
 
@@ -659,6 +796,30 @@ describe("liquidSamplerCompact - extractCompact", () => {
       fs.rmSync(dir, { recursive: true, force: true });
     }
   });
+
+  it("does not flag an entry whose view.html differs only in per-entry object ids", () => {
+    const dir = buildResultsDir({
+      reconciliation_entries: [
+        {
+          id: "10003",
+          label: "wagenpark",
+          before: { a: "1" },
+          after: { a: "1" },
+          viewHtml: {
+            before: '<td data-object-id="9001" data-object-ledger-id="70">x</td>',
+            after: '<td data-object-id="9002" data-object-ledger-id="70">x</td>',
+          },
+        },
+      ],
+    });
+    try {
+      const data = extractCompact(dir);
+      expect(data.visualOnlyEntries).toEqual([]);
+      expect(data.diffEntryKeys).toEqual([]);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });
 
 describe("liquidSamplerCompact - formatCompact", () => {
@@ -867,6 +1028,70 @@ describe("liquidSamplerCompact - formatCompact", () => {
       const noteLines = md.split("\n").filter((l) => l.startsWith("- field `f"));
       expect(noteLines).toHaveLength(6);
       expect(md).toContain("+2 more change");
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("collapses repeated identical visual-only findings into one shared finding plus the entry list", () => {
+    // 12 entries of one template, each differing only in its per-entry object
+    // ids: one finding, not 12 near-identical boilerplate blocks.
+    const view = (objectId, heading) =>
+      `<table><tr><td data-object-id="${objectId}" data-object-ledger-id="70"><span>${heading}</span></td></tr></table>`;
+    const dir = buildResultsDir({
+      reconciliation_entries: Array.from({ length: 12 }, (_, i) => ({
+        id: `${7000 + i}`,
+        label: "wagenpark",
+        before: { a: "1" },
+        after: { a: "1" },
+        viewHtml: { before: view(1000 + i, "Total"), after: view(1000 + i, "Totaal") },
+      })),
+    });
+    try {
+      const md = formatCompact(extractCompact(dir));
+      expect(md).toContain("12 entries, 1 shared change");
+      expect(md).toContain("entries: 7000, 7001, 7002");
+      // One findings block, not one per entry.
+      expect(md.split("**wagenpark**")).toHaveLength(2);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("caps the number of visual-only findings shown and discloses the remainder", () => {
+    const dir = buildResultsDir({
+      reconciliation_entries: Array.from({ length: 14 }, (_, i) => ({
+        id: `${8000 + i}`,
+        label: `tpl_${i}`,
+        before: { a: "1" },
+        after: { a: "1" },
+        viewHtml: { before: `<td>word_${i}</td>`, after: `<td>changed_${i}</td>` },
+      })),
+    });
+    try {
+      const md = formatCompact(extractCompact(dir));
+      const headings = md.split("\n").filter((l) => l.startsWith("**tpl_"));
+      expect(headings).toHaveLength(10);
+      expect(md).toContain("+4 more visual-only findings");
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("caps the per-finding entry list and discloses the remainder", () => {
+    const dir = buildResultsDir({
+      reconciliation_entries: Array.from({ length: 9 }, (_, i) => ({
+        id: `${9000 + i}`,
+        label: "shared_tpl",
+        before: { a: "1" },
+        after: { a: "1" },
+        viewHtml: { before: "<td>old</td>", after: "<td>new</td>" },
+      })),
+    });
+    try {
+      const md = formatCompact(extractCompact(dir));
+      expect(md).toContain("9 entries, 1 shared change");
+      expect(md).toContain("entries: 9000, 9001, 9002, 9003, 9004 +4 more");
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }

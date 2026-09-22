@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.59.1] (22/09/2026)
+Sharpen `silverfin run-sampler --compact`'s visual-only tier. It now diffs a `<select>`'s and a radio group's available options, not just the selected one (a dropdown that silently lost its option list previously showed nothing at all); describes markup changes by parsing the HTML — element counts, table row counts and column spans — instead of only matching `data-name` attributes, so a restructured or malformed table is explained rather than handed back as "compare the two `view.html` files yourself"; groups entries reporting the identical finding into one block with the affected entry list, since a single template change lands on every sampled entry of that template; and caps the number of findings and listed entries, disclosing what was elided, like the other tiers already do.
+
 ## [1.59.0] (05/08/2026)
 Expand `silverfin run-sampler --compact`: diff the `results` register, group vanished output per template instead of listing every entry, add a scope-change tier (dependencies/rollforward/required keys) and a visual-only tier for `view.html` changes the data diff can't see, and truncate/cap long output. Also adds `run-sampler --from-zip <path>` to build the compact diff from an already-downloaded `results.zip`.
 
