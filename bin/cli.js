@@ -583,20 +583,33 @@ program
     const outputDirs = [["keepExtracted", "--keep-extracted"], ["extractFlaggedOnly", "--extract-flagged-only"]].filter(([flag]) => options[flag]);
     const nested = (a, b) => {
       const rel = path.relative(b, a);
-      return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
+      // `..cache` is a child; only `..` itself or `../...` leaves the parent.
+      return rel === "" || (rel !== ".." && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel));
     };
     const [kept, flagged] = outputDirs.length === 2 ? [path.resolve(options.keepExtracted), path.resolve(options.extractFlaggedOnly)] : [];
     if (kept && (nested(kept, flagged) || nested(flagged, kept))) {
       consola.error("--keep-extracted and --extract-flagged-only must point at separate, non-nested directories");
       process.exit(1);
     }
-    if (options.json && options.keepExtracted && nested(path.resolve(options.json), path.resolve(options.keepExtracted))) {
-      consola.error("--json must not point inside --keep-extracted, which has to be empty when the tree is copied into it");
-      process.exit(1);
+    for (const [flag, name] of outputDirs) {
+      if (options.json && nested(path.resolve(options.json), path.resolve(options[flag]))) {
+        consola.error(`--json must not point inside ${name}, which has to be empty when it is written`);
+        process.exit(1);
+      }
     }
     if (options.json && fs.existsSync(options.json) && fs.statSync(options.json).isDirectory()) {
       consola.error(`--json: ${options.json} is a directory`);
       process.exit(1);
+    }
+    if (options.json) {
+      // Removed up front, so a run that fails before writing it can't leave an earlier run's
+      // file there to be read as this one's.
+      try {
+        fs.rmSync(options.json, { force: true });
+      } catch (error) {
+        consola.error(`--json: cannot replace ${options.json}: ${error.message}`);
+        process.exit(1);
+      }
     }
     for (const [flag, name] of outputDirs) {
       let usable;
