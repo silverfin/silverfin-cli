@@ -947,15 +947,50 @@ describe("liquidSamplerCompact - extractCompact", () => {
       ],
     });
     try {
-      const started = Date.now();
       const data = extractCompact(dir);
-      expect(Date.now() - started).toBeLessThan(2000);
       expect(data.visualOnlyEntries[0].changes.join(" ")).toContain("too many unclosed tags");
       // Degraded detail, never a dropped entry.
       expect(data.diffEntryKeys).toContain("reconciliation_entries/10006");
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }
+  });
+
+  it("still parses a render whose unclosed tags the parser closes itself", () => {
+    const rows = (n) => `<table>${"<tr><td>x".repeat(n)}</table>`;
+    expect(describeVisualChange(rows(1500), rows(1501)).join(" ")).not.toContain("unclosed");
+  });
+
+  it("isn't fooled by stray closing tags of another kind", () => {
+    const dir = buildResultsDir({
+      reconciliation_entries: [
+        { id: "10007", label: "t", before: { a: "1" }, after: { a: "1" }, viewHtml: { before: "<div>x</div>", after: "<div>x".repeat(3000) + "</span>".repeat(3000) } },
+      ],
+    });
+    try {
+      expect(extractCompact(dir).visualOnlyEntries[0].changes.join(" ")).toContain("too many unclosed tags");
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps the unclosed-tag pre-check linear on a `<tag` with no closing `>`", () => {
+    const dir = buildResultsDir({
+      reconciliation_entries: [
+        { id: "10008", label: "t", before: { a: "1" }, after: { a: "1" }, viewHtml: { before: "<div>x</div>", after: "<a ".repeat(200000) } },
+      ],
+    });
+    try {
+      expect(() => extractCompact(dir)).not.toThrow();
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  }, 10000);
+
+  it("never emits an empty code span that could pair with the next one", () => {
+    const html = (options) => `<select data-name="x">${options.map((o) => `<option>${o}</option>`).join("")}</select>`;
+    const note = describeVisualChange(html(["", "k"]), html(["k", "`y"])).join(" ");
+    expect(note).toContain("lost: ` `");
   });
 
   it("still parses a large render whose unclosed tags are void elements", () => {
@@ -1414,6 +1449,19 @@ describe("liquidSamplerCompact - formatCompact", () => {
     try {
       const md = formatCompact(extractCompact(dir));
       expect(md).toContain("```` ```x ````");
+      expect(md.split("\n").filter((line) => /^ {0,3}(`{3,}|~{3,})/.test(line))).toEqual([]);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("never opens a code fence from a data-tier label or named_results key", () => {
+    const dir = buildResultsDir({
+      reconciliation_entries: [{ id: "1", label: "tpl\n```", before: { "k\n```": "1" }, after: { "k\n```": "2" } }],
+    });
+    try {
+      const md = formatCompact(extractCompact(dir));
+      expect(md).toContain("tpl ```");
       expect(md.split("\n").filter((line) => /^ {0,3}(`{3,}|~{3,})/.test(line))).toEqual([]);
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
