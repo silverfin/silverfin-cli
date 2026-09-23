@@ -1120,14 +1120,14 @@ describe("liquidSamplerCompact - formatCompact", () => {
     expect(md).toContain("2 skipped (unreadable registers.json)");
   });
 
-  it("caps the number of change lines per template and discloses the remainder", () => {
+  it("caps, under budget pressure, the number of change lines per template and discloses the remainder", () => {
     const before = {};
     const after = {};
     for (let i = 0; i < 12; i++) after[`key_${i}`] = `value_${i}`;
     const data = extractCompact(
       buildResultsDir({ reconciliation_entries: [{ id: "1", label: "many_changes", before, after }] }),
     );
-    const md = formatCompact(data);
+    const md = formatCompact(data, { budget: 1 });
     const changeLines = md.split("\n").filter((l) => l.startsWith("- `key_"));
     expect(changeLines).toHaveLength(8);
     expect(md).toContain("+4 more changes");
@@ -1217,7 +1217,7 @@ describe("liquidSamplerCompact - formatCompact", () => {
     }
   });
 
-  it("caps visual-only change notes per entry and discloses the remainder", () => {
+  it("caps, under budget pressure, visual-only change notes per entry and discloses the remainder", () => {
     const fields = Array.from({ length: 8 }, (_, i) => i);
     const html = (val) => fields.map((i) => `<textarea data-name="f${i}">${val}${i}</textarea>`).join("");
     const dir = buildResultsDir({
@@ -1232,7 +1232,7 @@ describe("liquidSamplerCompact - formatCompact", () => {
       ],
     });
     try {
-      const md = formatCompact(extractCompact(dir));
+      const md = formatCompact(extractCompact(dir), { budget: 1 });
       const noteLines = md.split("\n").filter((l) => l.startsWith("- field `f"));
       expect(noteLines).toHaveLength(6);
       expect(md).toContain("+2 more change");
@@ -1266,7 +1266,30 @@ describe("liquidSamplerCompact - formatCompact", () => {
     }
   });
 
-  it("caps the number of visual-only findings shown and discloses the remainder", () => {
+  it("caps, under budget pressure, the number of visual-only findings shown and discloses the remainder", () => {
+    const dir = buildResultsDir({
+      reconciliation_entries: Array.from({ length: 14 }, (_, i) => ({
+        id: `${8000 + i}`,
+        label: `tpl_${i}`,
+        before: { a: "1" },
+        after: { a: "1" },
+        viewHtml: { before: `<td>word_${i}</td>`, after: `<td>changed_${i}</td>` },
+      })),
+    });
+    try {
+      const md = formatCompact(extractCompact(dir), { budget: 1 });
+      const headings = md.split("\n").filter((l) => l.startsWith("**`tpl_"));
+      expect(headings).toHaveLength(10);
+      expect(md).toContain("+4 more visual-only findings");
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("shows every visual-only finding when the whole diff fits the budget", () => {
+    // The same fixture the budget-pressure test above caps at 10. With room to
+    // spare nothing is elided: the caps exist to respect GitHub's comment
+    // limit, not to editorialise a normal run down to a fixed count.
     const dir = buildResultsDir({
       reconciliation_entries: Array.from({ length: 14 }, (_, i) => ({
         id: `${8000 + i}`,
@@ -1279,8 +1302,44 @@ describe("liquidSamplerCompact - formatCompact", () => {
     try {
       const md = formatCompact(extractCompact(dir));
       const headings = md.split("\n").filter((l) => l.startsWith("**`tpl_"));
-      expect(headings).toHaveLength(10);
-      expect(md).toContain("+4 more visual-only findings");
+      expect(headings).toHaveLength(14);
+      expect(md).not.toContain("more visual-only finding");
+      expect(md).not.toContain("more changes");
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("tightens progressively rather than all at once when the budget is tight", () => {
+    const dir = buildResultsDir({
+      reconciliation_entries: Array.from({ length: 30 }, (_, i) => ({
+        id: `${7000 + i}`,
+        label: `tpl_${i}`,
+        before: { a: "1" },
+        after: { a: "1" },
+        viewHtml: { before: `<td>word_${i}</td>`, after: `<td>changed_${i}</td>` },
+      })),
+    });
+    try {
+      // Self-calibrating: ask for one character less than the previous render
+      // each time, which forces the next-tighter tier without hard-coding sizes.
+      const sizes = [];
+      let budget = Infinity;
+      for (let i = 0; i < 4; i++) {
+        const out = formatCompact(extractCompact(dir), { budget });
+        // Every tier but the floor must fit what was asked for; the floor is
+        // returned even when it overflows, since emitting nothing is worse.
+        if (i < 3) expect(out.length).toBeLessThanOrEqual(budget);
+        sizes.push(out.length);
+        budget = out.length - 1;
+      }
+      // It steps down a tier at a time rather than collapsing straight to the
+      // floor. Not all four tiers need differ: a tier whose caps already exceed
+      // what this fixture contains renders identically to the looser one above
+      // it, which is why this asserts "at least three distinct sizes" and a
+      // non-increasing sequence rather than four strictly descending ones.
+      expect(new Set(sizes).size).toBeGreaterThanOrEqual(3);
+      expect(sizes).toEqual([...sizes].sort((a, b) => b - a));
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }
@@ -1333,7 +1392,7 @@ describe("liquidSamplerCompact - formatCompact", () => {
     }
   });
 
-  it("caps the per-finding entry list and discloses the remainder", () => {
+  it("caps, under budget pressure, the per-finding entry list and discloses the remainder", () => {
     const dir = buildResultsDir({
       reconciliation_entries: Array.from({ length: 9 }, (_, i) => ({
         id: `${9000 + i}`,
@@ -1344,7 +1403,7 @@ describe("liquidSamplerCompact - formatCompact", () => {
       })),
     });
     try {
-      const md = formatCompact(extractCompact(dir));
+      const md = formatCompact(extractCompact(dir), { budget: 1 });
       expect(md).toContain("9 entries, 1 shared change");
       expect(md).toContain("entries: `9000`, `9001`, `9002`, `9003`, `9004` +4 more");
     } finally {
