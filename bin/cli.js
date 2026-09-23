@@ -4,7 +4,7 @@ const toolkit = require("../index");
 const liquidTestGenerator = require("../lib/liquidTestGenerator");
 const liquidTestRunner = require("../lib/liquidTestRunner");
 const { ExportFileInstanceGenerator } = require("../lib/exportFileInstanceGenerator");
-const { LiquidSamplerRunner, isAbsentOrEmptyDir } = require("../lib/liquidSamplerRunner");
+const { LiquidSamplerRunner, isAbsentOrEmptyDir, isSameOrInside } = require("../lib/liquidSamplerRunner");
 const stats = require("../lib/cli/stats");
 const { Command, Option } = require("commander");
 const pkg = require("../package.json");
@@ -581,11 +581,7 @@ program
     // Checked before any work, not when the directory is written: a live run takes 30-60 min,
     // and --extract-flagged-only runs after --add-diffs-folder has already rewritten the zip.
     const outputDirs = [["keepExtracted", "--keep-extracted"], ["extractFlaggedOnly", "--extract-flagged-only"]].filter(([flag]) => options[flag]);
-    const nested = (a, b) => {
-      const rel = path.relative(b, a);
-      // `..cache` is a child; only `..` itself or `../...` leaves the parent.
-      return rel === "" || (rel !== ".." && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel));
-    };
+    const nested = isSameOrInside;
     const [kept, flagged] = outputDirs.length === 2 ? [path.resolve(options.keepExtracted), path.resolve(options.extractFlaggedOnly)] : [];
     if (kept && (nested(kept, flagged) || nested(flagged, kept))) {
       consola.error("--keep-extracted and --extract-flagged-only must point at separate, non-nested directories");
@@ -597,19 +593,13 @@ program
         process.exit(1);
       }
     }
+    if (options.json && options.fromZip && path.resolve(options.json) === path.resolve(options.fromZip)) {
+      consola.error("--json must not point at the --from-zip archive");
+      process.exit(1);
+    }
     if (options.json && fs.existsSync(options.json) && fs.statSync(options.json).isDirectory()) {
       consola.error(`--json: ${options.json} is a directory`);
       process.exit(1);
-    }
-    if (options.json) {
-      // Removed up front, so a run that fails before writing it can't leave an earlier run's
-      // file there to be read as this one's.
-      try {
-        fs.rmSync(options.json, { force: true });
-      } catch (error) {
-        consola.error(`--json: cannot replace ${options.json}: ${error.message}`);
-        process.exit(1);
-      }
     }
     for (const [flag, name] of outputDirs) {
       let usable;

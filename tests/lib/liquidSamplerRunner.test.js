@@ -35,7 +35,7 @@ const { spinner } = require("../../lib/cli/spinner");
 const { UrlHandler } = require("../../lib/utils/urlHandler");
 const { ReconciliationText } = require("../../lib/templates/reconciliationText");
 const { SharedPart } = require("../../lib/templates/sharedPart");
-const { LiquidSamplerRunner } = require("../../lib/liquidSamplerRunner");
+const { LiquidSamplerRunner, isSameOrInside } = require("../../lib/liquidSamplerRunner");
 
 const REPORT_URL = "https://reports.example.com/sampler/abc123.html";
 
@@ -817,5 +817,20 @@ describe("LiquidSamplerRunner - keeping and narrowing the extracted output", () 
       expect(fs.readdirSync(path.dirname(jsonPath)).filter((n) => n.startsWith(`.${path.basename(jsonPath)}.`))).toEqual([]);
       expect(consola.warn).toHaveBeenCalledWith(expect.stringContaining("Could not write the JSON sidecar"));
     });
+  });
+});
+
+describe("LiquidSamplerRunner - isSameOrInside", () => {
+  it("treats the same path and any descendant as inside", () => {
+    expect(isSameOrInside("/a/b", "/a/b")).toBe(true);
+    expect(isSameOrInside("/a/b/c/d.json", "/a/b")).toBe(true);
+    expect(isSameOrInside("/a/b/..cache", "/a/b")).toBe(true);
+    expect(isSameOrInside("/x", "/")).toBe(true);
+  });
+
+  it("treats siblings and parents as outside", () => {
+    expect(isSameOrInside("/a/bc", "/a/b")).toBe(false);
+    expect(isSameOrInside("/a", "/a/b")).toBe(false);
+    expect(isSameOrInside("/a/c", "/a/b")).toBe(false);
   });
 });
