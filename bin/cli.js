@@ -4,7 +4,7 @@ const toolkit = require("../index");
 const liquidTestGenerator = require("../lib/liquidTestGenerator");
 const liquidTestRunner = require("../lib/liquidTestRunner");
 const { ExportFileInstanceGenerator } = require("../lib/exportFileInstanceGenerator");
-const { LiquidSamplerRunner } = require("../lib/liquidSamplerRunner");
+const { LiquidSamplerRunner, isAbsentOrEmptyDir } = require("../lib/liquidSamplerRunner");
 const stats = require("../lib/cli/stats");
 const { Command, Option } = require("commander");
 const pkg = require("../package.json");
@@ -550,10 +550,10 @@ program
   )
   .option(
     "--extract-flagged-only <dir>",
-    "With --from-zip: write the flagged entries' before/after view.html into <dir> as loose files - the same selection --add-diffs-folder embeds in the zip, for a consumer that wants only those without unpacking a ~150 MB archive"
+    "With --from-zip: write the flagged entries' before/after view.html into <dir> (which must not exist yet, or be empty) as loose files - the same selection --add-diffs-folder embeds in the zip, for a consumer that wants only those without unpacking a ~150 MB archive"
   )
-  .option("--keep-extracted <dir>", "With --compact: keep the extracted results in <dir> instead of deleting them, so the file paths the diff cites can still be opened afterwards")
-  .option("--json <path>", "With --compact: also write the compact diff's underlying data to <path> as JSON, so a tool can read it directly instead of parsing the rendered markdown")
+  .option("--keep-extracted <dir>", "With --compact or --from-zip: keep the extracted results in <dir> (which must not exist yet, or be empty) instead of deleting them, so the file paths the diff cites can still be opened afterwards")
+  .option("--json <path>", "With --compact or --from-zip: also write the compact diff's underlying data to <path> as JSON, so a tool can read it directly instead of parsing the rendered markdown")
   .action(async (options) => {
     // Commander sets options.open = false when --no-open is passed.
     // In CI, never open regardless of the flag.
@@ -567,6 +567,33 @@ program
     for (const flag of ["addDiffsFolder", "extractFlaggedOnly"]) {
       if (options[flag] && !options.fromZip) {
         consola.error(`--${flag.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)} requires --from-zip <path>`);
+        process.exit(1);
+      }
+    }
+    // Both are written while printing the compact diff, which only a --compact or --from-zip run does.
+    for (const [flag, name] of [["keepExtracted", "--keep-extracted"], ["json", "--json"]]) {
+      if (options[flag] && !options.compact && !options.fromZip) {
+        consola.error(`${name} requires --compact or --from-zip <path>`);
+        process.exit(1);
+      }
+    }
+    // Checked before any work, not when the directory is written: a live run takes 30-60 min,
+    // and --extract-flagged-only runs after --add-diffs-folder has already rewritten the zip.
+    const outputDirs = [["keepExtracted", "--keep-extracted"], ["extractFlaggedOnly", "--extract-flagged-only"]].filter(([flag]) => options[flag]);
+    if (outputDirs.length === 2 && path.resolve(options.keepExtracted) === path.resolve(options.extractFlaggedOnly)) {
+      consola.error("--keep-extracted and --extract-flagged-only must point at different directories");
+      process.exit(1);
+    }
+    for (const [flag, name] of outputDirs) {
+      let usable;
+      try {
+        usable = isAbsentOrEmptyDir(options[flag]);
+      } catch (error) {
+        consola.error(`${name}: cannot use ${options[flag]}: ${error.message}`);
+        process.exit(1);
+      }
+      if (!usable) {
+        consola.error(`${name}: ${options[flag]} already exists and is not an empty directory - remove it or pick another path.`);
         process.exit(1);
       }
     }
