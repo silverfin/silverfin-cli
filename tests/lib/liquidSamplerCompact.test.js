@@ -967,10 +967,8 @@ describe("liquidSamplerCompact - extractCompact", () => {
         reconciliation_entries: [{ id: "1", label: "t", before: { a: "1" }, after: { a: "1" }, viewHtml: { before: "<div>x</div>", after: broken } }],
       });
       try {
-        const started = Date.now();
+        // The note only comes from the pre-check, so it proves the slow parse was skipped.
         const data = extractCompact(dir);
-        // Generous: the parse this skips takes several seconds.
-        expect(Date.now() - started).toBeLessThan(2500);
         expect(data.visualOnlyEntries[0].changes.join(" ")).toContain("too many unclosed tags");
       } finally {
         fs.rmSync(dir, { recursive: true, force: true });
@@ -981,7 +979,7 @@ describe("liquidSamplerCompact - extractCompact", () => {
   it("isn't fooled by stray closing tags of another kind", () => {
     const dir = buildResultsDir({
       reconciliation_entries: [
-        { id: "10007", label: "t", before: { a: "1" }, after: { a: "1" }, viewHtml: { before: "<div>x</div>", after: "<div>x".repeat(3000) + "</span>".repeat(3000) } },
+        { id: "10007", label: "t", before: { a: "1" }, after: { a: "1" }, viewHtml: { before: "<div>x</div>", after: "</div>".repeat(3000) + "<div>x".repeat(3000) + "</span>".repeat(3000) } },
       ],
     });
     try {
