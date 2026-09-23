@@ -10,6 +10,19 @@ const mockOpenFile = jest.fn();
 jest.mock("../../lib/utils/urlHandler", () => ({
   UrlHandler: jest.fn().mockImplementation(() => ({ openFile: mockOpenFile })),
 }));
+// Only the two lookups #resolveTemplateId makes are stubbed; the rest stays
+// real because the template classes read fsUtils.FOLDERS at class-init time.
+jest.mock("../../lib/utils/fsUtils", () => ({
+  ...jest.requireActual("../../lib/utils/fsUtils"),
+  configExists: jest.fn(() => true),
+  readConfig: jest.fn(() => ({ partner_id: { 1: 4242 } })),
+}));
+jest.mock("../../lib/templates/reconciliationText", () => ({
+  ReconciliationText: { read: jest.fn() },
+}));
+jest.mock("../../lib/templates/sharedPart", () => ({
+  SharedPart: { read: jest.fn() },
+}));
 
 const os = require("os");
 const fs = require("fs");
@@ -20,7 +33,9 @@ const SF = require("../../lib/api/sfApi");
 const { consola } = require("consola");
 const { spinner } = require("../../lib/cli/spinner");
 const { UrlHandler } = require("../../lib/utils/urlHandler");
-const { LiquidSamplerRunner } = require("../../lib/liquidSamplerRunner");
+const { ReconciliationText } = require("../../lib/templates/reconciliationText");
+const { SharedPart } = require("../../lib/templates/sharedPart");
+const { LiquidSamplerRunner, isSameOrInside } = require("../../lib/liquidSamplerRunner");
 
 const REPORT_URL = "https://reports.example.com/sampler/abc123.html";
 
@@ -521,5 +536,301 @@ describe("LiquidSamplerRunner - polling status output", () => {
 
     const heartbeats = consola.info.mock.calls.filter(([msg]) => msg.includes("elapsed"));
     expect(heartbeats.length).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe("LiquidSamplerRunner - payload attributes", () => {
+  const originalIsTTY = process.stdout.isTTY;
+  let originalExit;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    process.stdout.isTTY = false;
+    originalExit = process.exit;
+    process.exit = jest.fn();
+    SF.createSamplerRun.mockResolvedValue({ data: { id: "run-1" } });
+    SF.readSamplerRun.mockResolvedValue({ data: { status: "completed", result_url: REPORT_URL } });
+  });
+
+  afterEach(() => {
+    process.stdout.isTTY = originalIsTTY;
+    process.exit = originalExit;
+    jest.useRealTimers();
+  });
+
+  async function runTemplates(templateHandles) {
+    jest.useFakeTimers();
+    const runPromise = new LiquidSamplerRunner("1").run(templateHandles, [7]);
+    await jest.advanceTimersByTimeAsync(15000);
+    await runPromise;
+    jest.useRealTimers();
+    return SF.createSamplerRun.mock.calls[0][1].templates[0];
+  }
+
+  async function runWithConfig(config) {
+    ReconciliationText.read.mockResolvedValue(config);
+    return runTemplates({ reconciliationTexts: ["my_handle"] });
+  }
+
+  it("sends auto_hide_formula and reconciliation_type when present in the local config", async () => {
+    const template = await runWithConfig({
+      text: "{% comment %}main{% endcomment %}",
+      text_parts: [{ name: "part_1", content: "part liquid" }],
+      auto_hide_formula: "{% if period.reconciliations.my_handle.results.total == 0 %}t{% endif %}",
+      reconciliation_type: "only_reconciled_with_data",
+    });
+
+    expect(template).toEqual({
+      type: "reconciliation_text",
+      id: "4242",
+      text: "{% comment %}main{% endcomment %}",
+      text_parts: [{ name: "part_1", content: "part liquid" }],
+      auto_hide_formula: "{% if period.reconciliations.my_handle.results.total == 0 %}t{% endif %}",
+      reconciliation_type: "only_reconciled_with_data",
+    });
+  });
+
+  it("omits attributes that are absent from the local config", async () => {
+    const template = await runWithConfig({ text: "liquid", text_parts: [] });
+
+    expect(Object.keys(template).sort()).toEqual(["id", "text", "text_parts", "type"]);
+  });
+
+  it("omits attributes the config sets to null, rather than nulling the partner's value", async () => {
+    const template = await runWithConfig({ text: "liquid", text_parts: [], name_fi: null, name_de: null });
+
+    expect(template).not.toHaveProperty("name_fi");
+    expect(template).not.toHaveProperty("name_de");
+  });
+
+  it("keeps an empty-string auto_hide_formula (clearing the formula is a real change)", async () => {
+    const template = await runWithConfig({ text: "liquid", text_parts: [], auto_hide_formula: "" });
+
+    expect(template.auto_hide_formula).toBe("");
+  });
+
+  it("sends handle and the localized names present in the config", async () => {
+    const template = await runWithConfig({
+      text: "liquid",
+      text_parts: [],
+      handle: "renamed_handle",
+      name_en: "Renamed",
+      name_nl: "Hernoemd",
+    });
+
+    expect(template.handle).toBe("renamed_handle");
+    expect(template.name_en).toBe("Renamed");
+    expect(template.name_nl).toBe("Hernoemd");
+    expect(template).not.toHaveProperty("name_fr");
+  });
+
+  it("never sends an attribute the API does not declare", async () => {
+    const template = await runWithConfig({
+      text: "liquid",
+      text_parts: [],
+      description_en: "should not be sent",
+      published: true,
+      hide_code: false,
+    });
+
+    expect(template).not.toHaveProperty("description_en");
+    expect(template).not.toHaveProperty("published");
+    expect(template).not.toHaveProperty("hide_code");
+  });
+
+  it("sends nothing but the liquid for a shared part", async () => {
+    SharedPart.read.mockResolvedValue({ text: "shared liquid", name: "my_part", externally_managed: true, used_in: [] });
+
+    const template = await runTemplates({ sharedParts: ["my_part"] });
+
+    expect(template).toEqual({ type: "shared_part", id: "4242", text: "shared liquid" });
+  });
+});
+
+describe("LiquidSamplerRunner - keeping and narrowing the extracted output", () => {
+  let zipPath;
+  let outDir;
+  let keepDir;
+  let jsonPath;
+  let originalExit;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    originalExit = process.exit;
+    process.exit = jest.fn();
+    const stamp = `${process.pid}-${Date.now()}`;
+    zipPath = path.join(os.tmpdir(), `sampler-narrow-${stamp}.zip`);
+    outDir = path.join(os.tmpdir(), `sampler-flagged-${stamp}`);
+    keepDir = path.join(os.tmpdir(), `sampler-keep-${stamp}`);
+    jsonPath = path.join(os.tmpdir(), `sampler-json-${stamp}.json`);
+  });
+
+  afterEach(() => {
+    process.exit = originalExit;
+    fs.rmSync(zipPath, { force: true });
+    fs.rmSync(outDir, { recursive: true, force: true });
+    fs.rmSync(keepDir, { recursive: true, force: true });
+    fs.rmSync(jsonPath, { force: true });
+  });
+
+  // One entry that really differs, one that doesn't, and one flagged on data
+  // alone with byte-identical renders - the three cases that decide what a
+  // narrowed extraction should contain.
+  function writeZip() {
+    const zip = new AdmZip();
+    zip.addFile(
+      "sample_entry_ids.yml",
+      Buffer.from(
+        JSON.stringify({
+          reconciliation_entries: {
+            1: { label: "vkt_1", url: null },
+            2: { label: "vkt_1", url: null },
+            3: { label: "vkt_2", url: null },
+          },
+        })
+      )
+    );
+    const files = [
+      ["output/reconciliation_entries/1/before/registers.json", JSON.stringify({ named_results: { a: "before" } })],
+      ["output/reconciliation_entries/1/after/registers.json", JSON.stringify({ named_results: { a: "after" } })],
+      ["output/reconciliation_entries/1/before/view.html", "<div>1 old</div>"],
+      ["output/reconciliation_entries/1/after/view.html", "<div>1 new</div>"],
+      ["output/reconciliation_entries/2/before/registers.json", JSON.stringify({ named_results: { a: "same" } })],
+      ["output/reconciliation_entries/2/after/registers.json", JSON.stringify({ named_results: { a: "same" } })],
+      ["output/reconciliation_entries/2/before/view.html", "<div>2 unchanged</div>"],
+      ["output/reconciliation_entries/2/after/view.html", "<div>2 unchanged</div>"],
+      ["output/reconciliation_entries/3/before/registers.json", JSON.stringify({ named_results: { a: "before" } })],
+      ["output/reconciliation_entries/3/after/registers.json", JSON.stringify({ named_results: { a: "after" } })],
+      ["output/reconciliation_entries/3/before/view.html", "<div>3 same render</div>"],
+      ["output/reconciliation_entries/3/after/view.html", "<div>3 same render</div>"],
+    ];
+    for (const [name, content] of files) zip.addFile(name, Buffer.from(content));
+    fs.writeFileSync(zipPath, zip.toBuffer());
+  }
+
+  describe("--extract-flagged-only", () => {
+    it("writes before/after only for flagged entries whose renders actually differ", () => {
+      writeZip();
+
+      new LiquidSamplerRunner("1").extractFlaggedOnly(zipPath, outDir);
+
+      expect(fs.existsSync(path.join(outDir, "reconciliation_entries", "1", "before", "view.html"))).toBe(true);
+      expect(fs.existsSync(path.join(outDir, "reconciliation_entries", "1", "after", "view.html"))).toBe(true);
+      expect(fs.readFileSync(path.join(outDir, "reconciliation_entries", "1", "after", "view.html"), "utf8")).toBe("<div>1 new</div>");
+      // Never flagged at all.
+      expect(fs.existsSync(path.join(outDir, "reconciliation_entries", "2"))).toBe(false);
+      // Flagged on data, but the renders are identical - a pair with nothing to compare.
+      expect(fs.existsSync(path.join(outDir, "reconciliation_entries", "3"))).toBe(false);
+    });
+
+    it("reports what it wrote and what it skipped", () => {
+      writeZip();
+
+      new LiquidSamplerRunner("1").extractFlaggedOnly(zipPath, outDir);
+
+      expect(consola.success).toHaveBeenCalledWith(expect.stringContaining("2 view.html file(s) across 1 entry"));
+      expect(consola.success).toHaveBeenCalledWith(expect.stringContaining("identical before/after renders"));
+    });
+
+    it("does not create the directory when nothing differs", () => {
+      const zip = new AdmZip();
+      zip.addFile("sample_entry_ids.yml", Buffer.from(JSON.stringify({ reconciliation_entries: { 1: { label: "vkt_1", url: null } } })));
+      zip.addFile("output/reconciliation_entries/1/before/registers.json", Buffer.from(JSON.stringify({ named_results: { a: "same" } })));
+      zip.addFile("output/reconciliation_entries/1/after/registers.json", Buffer.from(JSON.stringify({ named_results: { a: "same" } })));
+      fs.writeFileSync(zipPath, zip.toBuffer());
+
+      new LiquidSamplerRunner("1").extractFlaggedOnly(zipPath, outDir);
+
+      expect(consola.info).toHaveBeenCalledWith(expect.stringContaining("No differing entries"));
+      expect(fs.existsSync(outDir)).toBe(false);
+    });
+  });
+
+  it("refuses an --extract-flagged-only directory that already has files, rather than mixing runs", () => {
+    writeZip();
+    fs.mkdirSync(outDir, { recursive: true });
+    fs.writeFileSync(path.join(outDir, "stale.html"), "old run");
+
+    new LiquidSamplerRunner("1").extractFlaggedOnly(zipPath, outDir);
+
+    expect(process.exit).toHaveBeenCalledWith(1);
+    expect(fs.readdirSync(outDir)).toEqual(["stale.html"]);
+  });
+
+  describe("--keep-extracted", () => {
+    it("leaves the extracted tree on disk instead of deleting it", async () => {
+      writeZip();
+
+      await new LiquidSamplerRunner("1", { compact: true, keepExtracted: keepDir }).printCompactDiffFromZip(zipPath);
+
+      expect(fs.existsSync(path.join(keepDir, "output", "reconciliation_entries", "1", "after", "view.html"))).toBe(true);
+      expect(consola.info).toHaveBeenCalledWith(expect.stringContaining(keepDir));
+    });
+
+    it("does not merge into a directory that already has files", async () => {
+      writeZip();
+      fs.mkdirSync(keepDir, { recursive: true });
+      fs.writeFileSync(path.join(keepDir, "stale.txt"), "old run");
+
+      await new LiquidSamplerRunner("1", { compact: true, keepExtracted: keepDir }).printCompactDiffFromZip(zipPath);
+
+      expect(fs.readdirSync(keepDir)).toEqual(["stale.txt"]);
+      expect(consola.warn).toHaveBeenCalledWith(expect.stringContaining("not an empty directory"));
+    });
+
+    it("still cleans up when the option is absent", async () => {
+      writeZip();
+      const before = fs.readdirSync(os.tmpdir()).filter((n) => n.startsWith("silverfin-sampler-")).length;
+
+      await new LiquidSamplerRunner("1", { compact: true }).printCompactDiffFromZip(zipPath);
+
+      const after = fs.readdirSync(os.tmpdir()).filter((n) => n.startsWith("silverfin-sampler-")).length;
+      expect(after).toBe(before);
+    });
+  });
+
+  describe("--json sidecar", () => {
+    it("writes the same structured data the markdown is rendered from", async () => {
+      writeZip();
+
+      await new LiquidSamplerRunner("1", { compact: true, jsonOut: jsonPath }).printCompactDiffFromZip(zipPath);
+
+      const data = JSON.parse(fs.readFileSync(jsonPath, "utf8"));
+      expect(data.summary.entriesSampled).toBe(3);
+      expect(data.summary.entriesChanged).toBeGreaterThan(0);
+      expect(Array.isArray(data.templates)).toBe(true);
+      expect(data.templates.map((t) => t.label)).toContain("vkt_1");
+      expect(consola.info).toHaveBeenCalledWith(expect.stringContaining(jsonPath));
+    });
+
+    it("leaves neither a temp file nor an earlier run's file behind when the write fails", async () => {
+      writeZip();
+      fs.writeFileSync(jsonPath, "previous");
+      const rename = jest.spyOn(fs, "renameSync").mockImplementationOnce(() => {
+        throw new Error("EXDEV");
+      });
+
+      await new LiquidSamplerRunner("1", { compact: true, jsonOut: jsonPath }).printCompactDiffFromZip(zipPath);
+
+      rename.mockRestore();
+      expect(fs.existsSync(jsonPath)).toBe(false);
+      expect(fs.readdirSync(path.dirname(jsonPath)).filter((n) => n.startsWith(`.${path.basename(jsonPath)}.`))).toEqual([]);
+      expect(consola.warn).toHaveBeenCalledWith(expect.stringContaining("Could not write the JSON sidecar"));
+    });
+  });
+});
+
+describe("LiquidSamplerRunner - isSameOrInside", () => {
+  it("treats the same path and any descendant as inside", () => {
+    expect(isSameOrInside("/a/b", "/a/b")).toBe(true);
+    expect(isSameOrInside("/a/b/c/d.json", "/a/b")).toBe(true);
+    expect(isSameOrInside("/a/b/..cache", "/a/b")).toBe(true);
+    expect(isSameOrInside("/x", "/")).toBe(true);
+  });
+
+  it("treats siblings and parents as outside", () => {
+    expect(isSameOrInside("/a/bc", "/a/b")).toBe(false);
+    expect(isSameOrInside("/a", "/a/b")).toBe(false);
+    expect(isSameOrInside("/a/c", "/a/b")).toBe(false);
   });
 });
