@@ -803,7 +803,7 @@ describe("LiquidSamplerRunner - keeping and narrowing the extracted output", () 
       expect(consola.info).toHaveBeenCalledWith(expect.stringContaining(jsonPath));
     });
 
-    it("leaves no temp file behind and keeps the previous file when the write fails", async () => {
+    it("leaves neither a temp file nor an earlier run's file behind when the write fails", async () => {
       writeZip();
       fs.writeFileSync(jsonPath, "previous");
       const rename = jest.spyOn(fs, "renameSync").mockImplementationOnce(() => {
@@ -813,8 +813,8 @@ describe("LiquidSamplerRunner - keeping and narrowing the extracted output", () 
       await new LiquidSamplerRunner("1", { compact: true, jsonOut: jsonPath }).printCompactDiffFromZip(zipPath);
 
       rename.mockRestore();
-      expect(fs.readFileSync(jsonPath, "utf8")).toBe("previous");
-      expect(fs.readdirSync(path.dirname(jsonPath)).filter((n) => n.startsWith(`${path.basename(jsonPath)}.`))).toEqual([]);
+      expect(fs.existsSync(jsonPath)).toBe(false);
+      expect(fs.readdirSync(path.dirname(jsonPath)).filter((n) => n.startsWith(`.${path.basename(jsonPath)}.`))).toEqual([]);
       expect(consola.warn).toHaveBeenCalledWith(expect.stringContaining("Could not write the JSON sidecar"));
     });
   });

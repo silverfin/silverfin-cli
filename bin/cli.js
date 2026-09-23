@@ -4,7 +4,7 @@ const toolkit = require("../index");
 const liquidTestGenerator = require("../lib/liquidTestGenerator");
 const liquidTestRunner = require("../lib/liquidTestRunner");
 const { ExportFileInstanceGenerator } = require("../lib/exportFileInstanceGenerator");
-const { LiquidSamplerRunner } = require("../lib/liquidSamplerRunner");
+const { LiquidSamplerRunner, isAbsentOrEmptyDir } = require("../lib/liquidSamplerRunner");
 const stats = require("../lib/cli/stats");
 const { Command, Option } = require("commander");
 const pkg = require("../package.json");
@@ -574,6 +574,26 @@ program
     for (const [flag, name] of [["keepExtracted", "--keep-extracted"], ["json", "--json"]]) {
       if (options[flag] && !options.compact && !options.fromZip) {
         consola.error(`${name} requires --compact or --from-zip <path>`);
+        process.exit(1);
+      }
+    }
+    // Checked before any work, not when the directory is written: a live run takes 30-60 min,
+    // and --extract-flagged-only runs after --add-diffs-folder has already rewritten the zip.
+    const outputDirs = [["keepExtracted", "--keep-extracted"], ["extractFlaggedOnly", "--extract-flagged-only"]].filter(([flag]) => options[flag]);
+    if (outputDirs.length === 2 && path.resolve(options.keepExtracted) === path.resolve(options.extractFlaggedOnly)) {
+      consola.error("--keep-extracted and --extract-flagged-only must point at different directories");
+      process.exit(1);
+    }
+    for (const [flag, name] of outputDirs) {
+      let usable;
+      try {
+        usable = isAbsentOrEmptyDir(options[flag]);
+      } catch (error) {
+        consola.error(`${name}: cannot use ${options[flag]}: ${error.message}`);
+        process.exit(1);
+      }
+      if (!usable) {
+        consola.error(`${name}: ${options[flag]} already exists and is not an empty directory - remove it or pick another path.`);
         process.exit(1);
       }
     }
