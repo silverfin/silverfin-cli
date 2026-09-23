@@ -506,6 +506,25 @@ describe("liquidSamplerCompact - describeVisualChange, structural parsing", () =
     ]);
   });
 
+  it("blanks an object id that follows a quoted value containing `>`", () => {
+    const html = (id) => `<td title="a > b" data-object-id="${id}"><span>x</span></td>`;
+    expect(describeVisualChange(html(1), html(2))).toEqual([
+      "attribute/styling-only change - element structure and visible text are identical",
+    ]);
+  });
+
+  it("never normalizes visible text that merely reads like an object-id attribute", () => {
+    expect(describeVisualChange("<p> data-object-id = 5</p>", "<p> data-object-id = 6</p>").join(" ")).toContain("static text");
+  });
+
+  it("ignores per-entry object ids however the attribute is cased or spaced", () => {
+    const before = "<td DATA-OBJECT-ID = '9001' data-object-ledger-id= 70><span>x</span></td>";
+    const after = "<td DATA-OBJECT-ID = '9002' data-object-ledger-id= 71><span>x</span></td>";
+    expect(describeVisualChange(before, after)).toEqual([
+      "attribute/styling-only change - element structure and visible text are identical",
+    ]);
+  });
+
   it("ignores per-entry object ids, which differ between renders without being a visual change", () => {
     const before = '<td data-object-id="9001" data-object-ledger-id="70"><span>x</span></td>';
     const after = '<td data-object-id="9002" data-object-ledger-id="71"><span>x</span></td>';
@@ -1002,6 +1021,47 @@ describe("liquidSamplerCompact - extractCompact", () => {
     }
   }, 10000);
 
+  it("counts an opener whose quoted attribute contains a `<`", () => {
+    const dir = buildResultsDir({
+      reconciliation_entries: [
+        { id: "10009", label: "t", before: { a: "1" }, after: { a: "1" }, viewHtml: { before: "<div>x</div>", after: '<div title="a<b">x'.repeat(3000) } },
+      ],
+    });
+    try {
+      expect(extractCompact(dir).visualOnlyEntries[0].changes.join(" ")).toContain("too many unclosed tags");
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps counting after a stray or unterminated quote", () => {
+    for (const prefix of ['<i title="x>', "<div a\"b>", "<b>it's</b><p x=don't>"]) {
+      const dir = buildResultsDir({
+        reconciliation_entries: [
+          { id: "10011", label: "t", before: { a: "1" }, after: { a: "1" }, viewHtml: { before: "<div>x</div>", after: prefix + '<div>x'.repeat(3000) } },
+        ],
+      });
+      try {
+        expect(extractCompact(dir).visualOnlyEntries[0].changes.join(" ")).toContain("too many unclosed tags");
+      } finally {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    }
+  });
+
+  it("keeps the unclosed-tag pre-check linear on an unterminated quote", () => {
+    const dir = buildResultsDir({
+      reconciliation_entries: [
+        { id: "10010", label: "t", before: { a: "1" }, after: { a: "1" }, viewHtml: { before: "<div>x</div>", after: `${'<a "'.repeat(300000)}<a b="` } },
+      ],
+    });
+    try {
+      expect(() => extractCompact(dir)).not.toThrow();
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  }, 10000);
+
   it("never emits an empty code span that could pair with the next one", () => {
     const html = (options) => `<select data-name="x">${options.map((o) => `<option>${o}</option>`).join("")}</select>`;
     const note = describeVisualChange(html(["", "k"]), html(["k", "`y"])).join(" ");
@@ -1465,6 +1525,33 @@ describe("liquidSamplerCompact - formatCompact", () => {
       const md = formatCompact(extractCompact(dir));
       expect(md).toContain("```` ```x ````");
       expect(md.split("\n").filter((line) => /^ {0,3}(`{3,}|~{3,})/.test(line))).toEqual([]);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("never opens a code fence from a scope-tier list item", () => {
+    const dir = buildResultsDir({
+      reconciliation_entries: [
+        { id: "1", label: "tpl", before: { a: "1" }, after: { a: "1" }, registers: { before: { required_keys_missing: [] }, after: { required_keys_missing: ["k1", "k2", "k3", "h\n```x"] } } },
+      ],
+    });
+    try {
+      const md = formatCompact(extractCompact(dir));
+      expect(md).toContain("required");
+      expect(md.split("\n").filter((line) => /^ {0,3}(`{3,}|~{3,})/.test(line))).toEqual([]);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps a data-tier value's own backtick inside its code span", () => {
+    const dir = buildResultsDir({
+      reconciliation_entries: [{ id: "1", label: "tpl", before: { k: "a" }, after: { k: "x` [l](http://evil)" } }],
+    });
+    try {
+      const md = formatCompact(extractCompact(dir));
+      expect(md).toContain('``"x` [l](http://evil)"``');
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }
