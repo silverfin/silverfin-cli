@@ -1401,6 +1401,25 @@ describe("liquidSamplerCompact - formatCompact", () => {
     }
   });
 
+  it("never opens a code fence, even for a label or id carrying a backtick run", () => {
+    const dir = buildResultsDir({
+      reconciliation_entries: ["```x", "2"].map((id) => ({
+        id,
+        label: "```tpl\n```",
+        before: { a: "1" },
+        after: { a: "1" },
+        viewHtml: { before: "<td>old</td>", after: "<td>new ```</td>" },
+      })),
+    });
+    try {
+      const md = formatCompact(extractCompact(dir));
+      expect(md).toContain("```` ```x ````");
+      expect(md.split("\n").filter((line) => /^ {0,3}(`{3,}|~{3,})/.test(line))).toEqual([]);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("doesn't let a template label from the zip's yml inject Markdown", () => {
     const dir = buildResultsDir({
       reconciliation_entries: [
