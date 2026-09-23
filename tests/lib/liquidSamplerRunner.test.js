@@ -646,3 +646,139 @@ describe("LiquidSamplerRunner - payload attributes", () => {
     expect(template).toEqual({ type: "shared_part", id: "4242", text: "shared liquid" });
   });
 });
+
+describe("LiquidSamplerRunner - keeping and narrowing the extracted output", () => {
+  let zipPath;
+  let outDir;
+  let keepDir;
+  let jsonPath;
+  let originalExit;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    originalExit = process.exit;
+    process.exit = jest.fn();
+    const stamp = `${process.pid}-${Date.now()}`;
+    zipPath = path.join(os.tmpdir(), `sampler-narrow-${stamp}.zip`);
+    outDir = path.join(os.tmpdir(), `sampler-flagged-${stamp}`);
+    keepDir = path.join(os.tmpdir(), `sampler-keep-${stamp}`);
+    jsonPath = path.join(os.tmpdir(), `sampler-json-${stamp}.json`);
+  });
+
+  afterEach(() => {
+    process.exit = originalExit;
+    fs.rmSync(zipPath, { force: true });
+    fs.rmSync(outDir, { recursive: true, force: true });
+    fs.rmSync(keepDir, { recursive: true, force: true });
+    fs.rmSync(jsonPath, { force: true });
+  });
+
+  // One entry that really differs, one that doesn't, and one flagged on data
+  // alone with byte-identical renders - the three cases that decide what a
+  // narrowed extraction should contain.
+  function writeZip() {
+    const zip = new AdmZip();
+    zip.addFile(
+      "sample_entry_ids.yml",
+      Buffer.from(
+        JSON.stringify({
+          reconciliation_entries: {
+            1: { label: "vkt_1", url: null },
+            2: { label: "vkt_1", url: null },
+            3: { label: "vkt_2", url: null },
+          },
+        })
+      )
+    );
+    const files = [
+      ["output/reconciliation_entries/1/before/registers.json", JSON.stringify({ named_results: { a: "before" } })],
+      ["output/reconciliation_entries/1/after/registers.json", JSON.stringify({ named_results: { a: "after" } })],
+      ["output/reconciliation_entries/1/before/view.html", "<div>1 old</div>"],
+      ["output/reconciliation_entries/1/after/view.html", "<div>1 new</div>"],
+      ["output/reconciliation_entries/2/before/registers.json", JSON.stringify({ named_results: { a: "same" } })],
+      ["output/reconciliation_entries/2/after/registers.json", JSON.stringify({ named_results: { a: "same" } })],
+      ["output/reconciliation_entries/2/before/view.html", "<div>2 unchanged</div>"],
+      ["output/reconciliation_entries/2/after/view.html", "<div>2 unchanged</div>"],
+      ["output/reconciliation_entries/3/before/registers.json", JSON.stringify({ named_results: { a: "before" } })],
+      ["output/reconciliation_entries/3/after/registers.json", JSON.stringify({ named_results: { a: "after" } })],
+      ["output/reconciliation_entries/3/before/view.html", "<div>3 same render</div>"],
+      ["output/reconciliation_entries/3/after/view.html", "<div>3 same render</div>"],
+    ];
+    for (const [name, content] of files) zip.addFile(name, Buffer.from(content));
+    fs.writeFileSync(zipPath, zip.toBuffer());
+  }
+
+  describe("--extract-flagged-only", () => {
+    it("writes before/after only for flagged entries whose renders actually differ", () => {
+      writeZip();
+
+      new LiquidSamplerRunner("1").extractFlaggedOnly(zipPath, outDir);
+
+      expect(fs.existsSync(path.join(outDir, "reconciliation_entries", "1", "before", "view.html"))).toBe(true);
+      expect(fs.existsSync(path.join(outDir, "reconciliation_entries", "1", "after", "view.html"))).toBe(true);
+      expect(fs.readFileSync(path.join(outDir, "reconciliation_entries", "1", "after", "view.html"), "utf8")).toBe("<div>1 new</div>");
+      // Never flagged at all.
+      expect(fs.existsSync(path.join(outDir, "reconciliation_entries", "2"))).toBe(false);
+      // Flagged on data, but the renders are identical - a pair with nothing to compare.
+      expect(fs.existsSync(path.join(outDir, "reconciliation_entries", "3"))).toBe(false);
+    });
+
+    it("reports what it wrote and what it skipped", () => {
+      writeZip();
+
+      new LiquidSamplerRunner("1").extractFlaggedOnly(zipPath, outDir);
+
+      expect(consola.success).toHaveBeenCalledWith(expect.stringContaining("2 view.html file(s) across 1 entry"));
+      expect(consola.success).toHaveBeenCalledWith(expect.stringContaining("identical before/after renders"));
+    });
+
+    it("does not create the directory when nothing differs", () => {
+      const zip = new AdmZip();
+      zip.addFile("sample_entry_ids.yml", Buffer.from(JSON.stringify({ reconciliation_entries: { 1: { label: "vkt_1", url: null } } })));
+      zip.addFile("output/reconciliation_entries/1/before/registers.json", Buffer.from(JSON.stringify({ named_results: { a: "same" } })));
+      zip.addFile("output/reconciliation_entries/1/after/registers.json", Buffer.from(JSON.stringify({ named_results: { a: "same" } })));
+      fs.writeFileSync(zipPath, zip.toBuffer());
+
+      new LiquidSamplerRunner("1").extractFlaggedOnly(zipPath, outDir);
+
+      expect(consola.info).toHaveBeenCalledWith(expect.stringContaining("No differing entries"));
+      expect(fs.existsSync(outDir)).toBe(false);
+    });
+  });
+
+  describe("--keep-extracted", () => {
+    it("leaves the extracted tree on disk instead of deleting it", async () => {
+      writeZip();
+
+      await new LiquidSamplerRunner("1", { compact: true, keepExtracted: keepDir }).printCompactDiffFromZip(zipPath);
+
+      expect(fs.existsSync(path.join(keepDir, "output", "reconciliation_entries", "1", "after", "view.html"))).toBe(true);
+      expect(consola.info).toHaveBeenCalledWith(expect.stringContaining(keepDir));
+    });
+
+    it("still cleans up when the option is absent", async () => {
+      writeZip();
+      const before = fs.readdirSync(os.tmpdir()).filter((n) => n.startsWith("silverfin-sampler-")).length;
+
+      await new LiquidSamplerRunner("1", { compact: true }).printCompactDiffFromZip(zipPath);
+
+      const after = fs.readdirSync(os.tmpdir()).filter((n) => n.startsWith("silverfin-sampler-")).length;
+      expect(after).toBe(before);
+    });
+  });
+
+  describe("--json sidecar", () => {
+    it("writes the same structured data the markdown is rendered from", async () => {
+      writeZip();
+
+      await new LiquidSamplerRunner("1", { compact: true, jsonOut: jsonPath }).printCompactDiffFromZip(zipPath);
+
+      const data = JSON.parse(fs.readFileSync(jsonPath, "utf8"));
+      expect(data.summary.entriesSampled).toBe(3);
+      expect(data.summary.entriesChanged).toBeGreaterThan(0);
+      expect(Array.isArray(data.templates)).toBe(true);
+      expect(data.templates.map((t) => t.label)).toContain("vkt_1");
+      expect(consola.info).toHaveBeenCalledWith(expect.stringContaining(jsonPath));
+    });
+  });
+});

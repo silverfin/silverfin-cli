@@ -548,14 +548,27 @@ program
     "--add-diffs-folder",
     "With --from-zip: add a diffs/ folder to the zip containing before/after pairs for the entries the compact diff flagged (data/scope/vanished-output/visual-only changes) whose renders actually differ, instead of every sampled entry"
   )
+  .option(
+    "--extract-flagged-only <dir>",
+    "With --from-zip: write the flagged entries' before/after view.html into <dir> as loose files - the same selection --add-diffs-folder embeds in the zip, for a consumer that wants only those without unpacking a ~150 MB archive"
+  )
+  .option("--keep-extracted <dir>", "With --compact: keep the extracted results in <dir> instead of deleting them, so the file paths the diff cites can still be opened afterwards")
+  .option("--json <path>", "With --compact: also write the compact diff's underlying data to <path> as JSON, so a tool can read it directly instead of parsing the rendered markdown")
   .action(async (options) => {
     // Commander sets options.open = false when --no-open is passed.
     // In CI, never open regardless of the flag.
-    const runnerOptions = { openReport: options.open && !process.env.CI, compact: options.compact || false };
+    const runnerOptions = {
+      openReport: options.open && !process.env.CI,
+      compact: options.compact || false,
+      keepExtracted: options.keepExtracted,
+      jsonOut: options.json,
+    };
 
-    if (options.addDiffsFolder && !options.fromZip) {
-      consola.error("--add-diffs-folder requires --from-zip <path>");
-      process.exit(1);
+    for (const flag of ["addDiffsFolder", "extractFlaggedOnly"]) {
+      if (options[flag] && !options.fromZip) {
+        consola.error(`--${flag.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)} requires --from-zip <path>`);
+        process.exit(1);
+      }
     }
 
     // A local zip needs no partner API access at all - it's pure offline
@@ -565,6 +578,9 @@ program
       await runner.printCompactDiffFromZip(options.fromZip);
       if (options.addDiffsFolder) {
         runner.addDiffsFolderToZip(options.fromZip);
+      }
+      if (options.extractFlaggedOnly) {
+        runner.extractFlaggedOnly(options.fromZip, options.extractFlaggedOnly);
       }
       return;
     }
