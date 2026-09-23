@@ -746,6 +746,17 @@ describe("LiquidSamplerRunner - keeping and narrowing the extracted output", () 
     });
   });
 
+  it("refuses an --extract-flagged-only directory that already has files, rather than mixing runs", () => {
+    writeZip();
+    fs.mkdirSync(outDir, { recursive: true });
+    fs.writeFileSync(path.join(outDir, "stale.html"), "old run");
+
+    new LiquidSamplerRunner("1").extractFlaggedOnly(zipPath, outDir);
+
+    expect(process.exit).toHaveBeenCalledWith(1);
+    expect(fs.readdirSync(outDir)).toEqual(["stale.html"]);
+  });
+
   describe("--keep-extracted", () => {
     it("leaves the extracted tree on disk instead of deleting it", async () => {
       writeZip();
@@ -754,6 +765,17 @@ describe("LiquidSamplerRunner - keeping and narrowing the extracted output", () 
 
       expect(fs.existsSync(path.join(keepDir, "output", "reconciliation_entries", "1", "after", "view.html"))).toBe(true);
       expect(consola.info).toHaveBeenCalledWith(expect.stringContaining(keepDir));
+    });
+
+    it("does not merge into a directory that already has files", async () => {
+      writeZip();
+      fs.mkdirSync(keepDir, { recursive: true });
+      fs.writeFileSync(path.join(keepDir, "stale.txt"), "old run");
+
+      await new LiquidSamplerRunner("1", { compact: true, keepExtracted: keepDir }).printCompactDiffFromZip(zipPath);
+
+      expect(fs.readdirSync(keepDir)).toEqual(["stale.txt"]);
+      expect(consola.warn).toHaveBeenCalledWith(expect.stringContaining("not an empty directory"));
     });
 
     it("still cleans up when the option is absent", async () => {
@@ -779,6 +801,21 @@ describe("LiquidSamplerRunner - keeping and narrowing the extracted output", () 
       expect(Array.isArray(data.templates)).toBe(true);
       expect(data.templates.map((t) => t.label)).toContain("vkt_1");
       expect(consola.info).toHaveBeenCalledWith(expect.stringContaining(jsonPath));
+    });
+
+    it("leaves no temp file behind and keeps the previous file when the write fails", async () => {
+      writeZip();
+      fs.writeFileSync(jsonPath, "previous");
+      const rename = jest.spyOn(fs, "renameSync").mockImplementationOnce(() => {
+        throw new Error("EXDEV");
+      });
+
+      await new LiquidSamplerRunner("1", { compact: true, jsonOut: jsonPath }).printCompactDiffFromZip(zipPath);
+
+      rename.mockRestore();
+      expect(fs.readFileSync(jsonPath, "utf8")).toBe("previous");
+      expect(fs.readdirSync(path.dirname(jsonPath)).filter((n) => n.startsWith(`${path.basename(jsonPath)}.`))).toEqual([]);
+      expect(consola.warn).toHaveBeenCalledWith(expect.stringContaining("Could not write the JSON sidecar"));
     });
   });
 });
