@@ -224,7 +224,7 @@ describe("liquidSamplerCompact - diffScope", () => {
     const before = { required_keys_missing: [] };
     const after = { required_keys_missing: ["a", "b", "c", "d", "e"] };
     const [change] = diffScope(before, after);
-    expect(change.summary).toBe("+5 keys (a, b, c +2 more)");
+    expect(change.summary).toMatch(/^\+5 keys \(a, b, c \+2 more, #[0-9a-f]{8}\)$/);
   });
 });
 
@@ -465,12 +465,12 @@ describe("liquidSamplerCompact - describeVisualChange, structural parsing", () =
     // real backtick and would close the span the field name is printed in.
     const html = (value) => `<textarea data-name="x&#96; [click](http://evil) &#96;">${value}</textarea>`;
     const notes = describeVisualChange(html("a"), html("b")).join(" ");
-    expect(notes).not.toContain("x` [click](http://evil) `");
+    expect(notes).toContain("`` x` [click](http://evil) ` ``");
   });
 
   it("keeps a crafted tag name inside the code span it's printed in", () => {
     const notes = describeVisualChange("<div>x</div>", "<div><a`b>x</a`b></div>").join(" ");
-    expect(notes).not.toContain("`<a`b>`");
+    expect(notes).toContain("``<a`b>``");
   });
 
   it("keeps a field value's own backticks from escaping the note", () => {
@@ -478,16 +478,14 @@ describe("liquidSamplerCompact - describeVisualChange, structural parsing", () =
     // backticks nor Markdown.
     const html = (value) => `<textarea data-name="note">${value}</textarea>`;
     const notes = describeVisualChange(html("plain"), html("`x` [click](http://evil)")).join(" ");
-    expect(notes).not.toContain("`x`");
+    expect(notes).toContain("``\"`x` [click](http://evil)\"``");
   });
 
   it("keeps option labels and static-text words inside a code span they can't close", () => {
     const select = (label) => `<select data-name="x"><option>keep</option><option>${label}</option></select>`;
     const notes = describeVisualChange(select("a"), select("[l](http://evil)`b"));
-    // The label survives, minus the backtick that would have closed the span
-    // and let `[l](...)` render as a live link in the posted comment.
-    expect(notes.join(" ")).toContain("`[l](http://evil)b`");
-    expect(notes.join(" ")).not.toContain("evil)`b");
+    // The label survives whole, in a span its own backtick can't close.
+    expect(notes.join(" ")).toContain("``[l](http://evil)`b``");
   });
 
   it("distinguishes reordered text from text whose words changed in number", () => {
@@ -535,6 +533,14 @@ describe("liquidSamplerCompact - groupVisualOnlyEntries", () => {
       entry("3", ["a"], "other_tpl"),
     ]);
     expect(groups).toHaveLength(3);
+  });
+
+  it("doesn't group two findings whose lists differ only past the preview", () => {
+    const html = (options) => `<select data-name="x">${options.map((o) => `<option>${o}</option>`).join("")}</select>`;
+    const a = describeVisualChange(html(["a", "b", "c", "d", "e"]), html([]));
+    const b = describeVisualChange(html(["a", "b", "c", "d", "f"]), html([]));
+    expect(a).not.toEqual(b);
+    expect(groupVisualOnlyEntries([entry("1", a), entry("2", b)])).toHaveLength(2);
   });
 
   it("orders groups by how many entries share the finding", () => {
@@ -929,6 +935,32 @@ describe("liquidSamplerCompact - extractCompact", () => {
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }
+  });
+
+  it("degrades to a note instead of parsing a view.html with thousands of unclosed tags", () => {
+    // Small enough to pass the size cap, but the parser is super-linear in
+    // unclosed tags - this would take tens of seconds to parse.
+    const broken = "<div>x".repeat(8000);
+    const dir = buildResultsDir({
+      reconciliation_entries: [
+        { id: "10006", label: "loop_tpl", before: { a: "1" }, after: { a: "1" }, viewHtml: { before: "<div>x</div>", after: broken } },
+      ],
+    });
+    try {
+      const started = Date.now();
+      const data = extractCompact(dir);
+      expect(Date.now() - started).toBeLessThan(2000);
+      expect(data.visualOnlyEntries[0].changes.join(" ")).toContain("too many unclosed tags");
+      // Degraded detail, never a dropped entry.
+      expect(data.diffEntryKeys).toContain("reconciliation_entries/10006");
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("still parses a large render whose unclosed tags are void elements", () => {
+    const inputs = (n) => `<div>${'<input type="text">'.repeat(n)}</div>`;
+    expect(describeVisualChange(inputs(2000), inputs(2001))).toEqual(["structure: `<input>` 2000 → 2001"]);
   });
 
   it("doesn't flag two byte-identical oversized renders as a change", () => {
@@ -1361,9 +1393,9 @@ describe("liquidSamplerCompact - formatCompact", () => {
     });
     try {
       const md = formatCompact(extractCompact(dir));
-      // The id still appears, but only ever inside a code span it can't close.
-      expect(md).toContain("1](x)y");
-      expect(md).not.toContain("1](x)`y");
+      // The id appears unchanged, inside a code span it can't close.
+      expect(md).toContain("``1](x)`y``");
+      expect(md).not.toMatch(/[^`]`1\]\(x\)/);
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }
@@ -1385,7 +1417,7 @@ describe("liquidSamplerCompact - formatCompact", () => {
     });
     try {
       const md = formatCompact(extractCompact(dir));
-      expect(md).not.toContain("tpl` [click](http://evil)");
+      expect(md).toContain("`` tpl` [click](http://evil) - [x](http://evil) ` ``");
       expect(md).not.toContain("\n- [x](http://evil)");
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
