@@ -593,7 +593,14 @@ program
         process.exit(1);
       }
     }
-    if (options.json && options.fromZip && path.resolve(options.json) === path.resolve(options.fromZip)) {
+    // Also by inode: a differently-cased path, a symlink or a hard link can name the same file.
+    const sameFile = (a, b) => {
+      if (path.resolve(a) === path.resolve(b)) return true;
+      if (!fs.existsSync(a) || !fs.existsSync(b)) return false;
+      const [x, y] = [fs.statSync(a), fs.statSync(b)];
+      return x.dev === y.dev && x.ino === y.ino;
+    };
+    if (options.json && options.fromZip && sameFile(options.json, options.fromZip)) {
       consola.error("--json must not point at the --from-zip archive");
       process.exit(1);
     }
