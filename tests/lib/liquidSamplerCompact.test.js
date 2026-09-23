@@ -957,8 +957,25 @@ describe("liquidSamplerCompact - extractCompact", () => {
   });
 
   it("still parses a render whose unclosed tags the parser closes itself", () => {
-    const rows = (n) => `<table>${"<tr><td>x".repeat(n)}</table>`;
-    expect(describeVisualChange(rows(1500), rows(1501)).join(" ")).not.toContain("unclosed");
+    const cells = (n) => `<table><tr>${"<td>x".repeat(n)}</tr></table>`;
+    expect(describeVisualChange(cells(1500), cells(1501)).join(" ")).not.toContain("unclosed");
+  });
+
+  it("doesn't exempt unclosed rows or options, which the parser does not close", () => {
+    for (const broken of [`<table>${"<tr><td>x".repeat(1500)}</table>`, `<select>${"<option>x".repeat(3000)}</select>`]) {
+      const dir = buildResultsDir({
+        reconciliation_entries: [{ id: "1", label: "t", before: { a: "1" }, after: { a: "1" }, viewHtml: { before: "<div>x</div>", after: broken } }],
+      });
+      try {
+        const started = Date.now();
+        const data = extractCompact(dir);
+        // Generous: the parse this skips takes several seconds.
+        expect(Date.now() - started).toBeLessThan(2500);
+        expect(data.visualOnlyEntries[0].changes.join(" ")).toContain("too many unclosed tags");
+      } finally {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    }
   });
 
   it("isn't fooled by stray closing tags of another kind", () => {
@@ -977,7 +994,7 @@ describe("liquidSamplerCompact - extractCompact", () => {
   it("keeps the unclosed-tag pre-check linear on a `<tag` with no closing `>`", () => {
     const dir = buildResultsDir({
       reconciliation_entries: [
-        { id: "10008", label: "t", before: { a: "1" }, after: { a: "1" }, viewHtml: { before: "<div>x</div>", after: "<a ".repeat(200000) } },
+        { id: "10008", label: "t", before: { a: "1" }, after: { a: "1" }, viewHtml: { before: "<div>x</div>", after: `${"<a ".repeat(200000)}<${"a".repeat(200000)}` } },
       ],
     });
     try {
