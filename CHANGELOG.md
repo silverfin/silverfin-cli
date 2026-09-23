@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.59.2] (22/09/2026)
+`silverfin run-sampler` now posts a reconciliation text's non-Liquid attributes alongside its Liquid: `auto_hide_formula`, `reconciliation_type`, `handle` and the localized `name_*` values. Account detail templates additionally post their `name_*` values (`account_range` / `mapping_list_ranges` are still not sent); shared parts are unchanged and still send only `text`. Previously only `text` and `text_parts` were sent, so a change to any of the above rendered an identical before/after diff and looked like "no impact". Attributes the local `config.json` leaves unset or `null` are omitted rather than sent, so they can never blank the partner template's value. Note this posts whatever is in the local `config.json`, not only what the branch changed — the same contract `text` already had.
+
 ## [1.59.1] (22/09/2026)
 Sharpen `silverfin run-sampler --compact`'s visual-only tier. It now diffs a `<select>`'s and a radio/checkbox group's available options, not just the selected one (a dropdown that silently lost its option list previously showed nothing at all), and names a field that changed element type; describes markup changes by parsing the HTML — element counts, table counts, row counts and column spans — instead of only matching `data-name` attributes, so a restructured or malformed table is explained rather than handed back as "compare the two `view.html` files yourself"; groups entries reporting the identical finding into one block with the affected entry list, since a single template change lands on every sampled entry of that template; and caps the number of findings and listed entries, disclosing what was elided, like the other tiers already do.
 
