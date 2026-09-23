@@ -580,8 +580,10 @@ program
     // Checked before any work, not when the directory is written: a live run takes 30-60 min,
     // and --extract-flagged-only runs after --add-diffs-folder has already rewritten the zip.
     const outputDirs = [["keepExtracted", "--keep-extracted"], ["extractFlaggedOnly", "--extract-flagged-only"]].filter(([flag]) => options[flag]);
-    if (outputDirs.length === 2 && path.resolve(options.keepExtracted) === path.resolve(options.extractFlaggedOnly)) {
-      consola.error("--keep-extracted and --extract-flagged-only must point at different directories");
+    const nested = (a, b) => a === b || a.startsWith(`${b}${path.sep}`);
+    const [kept, flagged] = outputDirs.length === 2 ? [path.resolve(options.keepExtracted), path.resolve(options.extractFlaggedOnly)] : [];
+    if (kept && (nested(kept, flagged) || nested(flagged, kept))) {
+      consola.error("--keep-extracted and --extract-flagged-only must point at separate, non-nested directories");
       process.exit(1);
     }
     for (const [flag, name] of outputDirs) {
