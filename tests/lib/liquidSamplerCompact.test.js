@@ -506,6 +506,13 @@ describe("liquidSamplerCompact - describeVisualChange, structural parsing", () =
     ]);
   });
 
+  it("blanks an object id that follows a quoted value containing `>`", () => {
+    const html = (id) => `<td title="a > b" data-object-id="${id}"><span>x</span></td>`;
+    expect(describeVisualChange(html(1), html(2))).toEqual([
+      "attribute/styling-only change - element structure and visible text are identical",
+    ]);
+  });
+
   it("never normalizes visible text that merely reads like an object-id attribute", () => {
     expect(describeVisualChange("<p> data-object-id = 5</p>", "<p> data-object-id = 6</p>").join(" ")).toContain("static text");
   });
