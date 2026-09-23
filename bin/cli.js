@@ -14,6 +14,7 @@ const program = new Command();
 const devMode = require("../lib/cli/devMode");
 const { firmCredentials } = require("../lib/api/firmCredentials");
 const SF = require("../lib/api/sfApi");
+const fs = require("fs");
 const path = require("path");
 const { consola } = require("consola");
 const { runCommandChecks } = require("../lib/cli/utils");
@@ -580,10 +581,21 @@ program
     // Checked before any work, not when the directory is written: a live run takes 30-60 min,
     // and --extract-flagged-only runs after --add-diffs-folder has already rewritten the zip.
     const outputDirs = [["keepExtracted", "--keep-extracted"], ["extractFlaggedOnly", "--extract-flagged-only"]].filter(([flag]) => options[flag]);
-    const nested = (a, b) => a === b || a.startsWith(`${b}${path.sep}`);
+    const nested = (a, b) => {
+      const rel = path.relative(b, a);
+      return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
+    };
     const [kept, flagged] = outputDirs.length === 2 ? [path.resolve(options.keepExtracted), path.resolve(options.extractFlaggedOnly)] : [];
     if (kept && (nested(kept, flagged) || nested(flagged, kept))) {
       consola.error("--keep-extracted and --extract-flagged-only must point at separate, non-nested directories");
+      process.exit(1);
+    }
+    if (options.json && options.keepExtracted && nested(path.resolve(options.json), path.resolve(options.keepExtracted))) {
+      consola.error("--json must not point inside --keep-extracted, which has to be empty when the tree is copied into it");
+      process.exit(1);
+    }
+    if (options.json && fs.existsSync(options.json) && fs.statSync(options.json).isDirectory()) {
+      consola.error(`--json: ${options.json} is a directory`);
       process.exit(1);
     }
     for (const [flag, name] of outputDirs) {
