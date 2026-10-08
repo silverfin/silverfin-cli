@@ -402,6 +402,7 @@ Source: `lib/api/firmCredentials.js`
 | `saveCredentials` | handles file system error when saving credentials | Verifies that a filesystem error during save is caught and logged without throwing. |
 | `setHost` / `getHost` | should set and get the host correctly | Verifies that `setHost` persists the host to disk and `getHost` returns the updated value. |
 | `setHost` / `getHost` | should return environment variable host if set | Verifies that `getHost` returns the `SF_HOST` env var value instead of the stored host when the env var is set. |
+| `isHostFromEnv` | should report whether the host comes from SF_HOST | Verifies that `isHostFromEnv` is true only while the `SF_HOST` env var is set. |
 | `setHost` / `getHost` | should return default host if not set | Verifies that `getHost` returns the default live host when neither `SF_HOST` nor a stored value is present. |
 
 ---
@@ -593,6 +594,9 @@ Source: `lib/cli/utils.js`
 | `checkPartnerSupport` | should not call process.exit when only all is set (without partner) | Verifies that no error is raised when only the all flag is set. |
 | `logCurrentHost` | should NOT log when current host is the default host | Verifies that no info message is logged when the current host matches the default live host. |
 | `logCurrentHost` | should log info with host details when host differs from default | Verifies that an info message containing the non-default host URL is logged. |
+| `logCurrentHost` | should warn about SF_HOST when the host comes from the environment, even for the default host | Verifies that a warning naming `SF_HOST` and the host is logged instead of the info message, also for the live default host. |
+| `promptConfirmation` | should name the current host in the confirmation prompt | Verifies that the overwrite confirmation prompt includes the host the command will write to. |
+| `promptConfirmation` | should exit when the user does not confirm | Verifies that answering anything other than yes exits with code 1. |
 
 ---
 

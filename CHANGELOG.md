@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.60.1] (08/10/2026)
+Make the host in use visible when the deprecated `SF_HOST` environment variable overrides it. `SF_HOST` takes precedence over the host stored with `silverfin config --set-host`, but nothing said so: `--set-host` reported success while every following command kept using the `SF_HOST` host, and no host was shown when it was the live default. A user switching to a staging host could therefore write to live without noticing.
+- Every command now warns when the host comes from `SF_HOST`, including when it is the live default.
+- `silverfin config --set-host` warns when `SF_HOST` overrides the host just set, and `silverfin config --get-host` says when the host comes from `SF_HOST`.
+- The "This will overwrite existing templates" confirmation now names the host it will write to.
+
 ## [1.60.0] (10/09/2026)
 Added `update-text-properties` command. It uploads custom text properties from a Liquid Test YAML file to a company file at company, period, reconciliation and account levels for the entries referenced in the test scenario. Usage: `silverfin update-text-properties -u <url> -t <test-name>`. The YAML file read is the one referenced by the template's `config.json` `test` key (same as `run-test`); pass `--file <exact-file-name>` to read another file, e.g. a year variant like `*_TY25_liquid_test.yml`. When the test name exists in several templates the command lists them and asks for `--handle` instead of guessing. Also supports `--dry-run` to preview the payload and `--yes` to skip the confirmation prompt.
 

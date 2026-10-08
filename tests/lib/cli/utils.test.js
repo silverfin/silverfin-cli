@@ -3,6 +3,7 @@ jest.mock("../../../lib/api/firmCredentials", () => ({
   firmCredentials: {
     getDefaultFirmId: jest.fn(),
     getHost: jest.fn(),
+    isHostFromEnv: jest.fn(),
     SF_DEFAULT_HOST: "https://live.getsilverfin.com",
   },
 }));
@@ -12,12 +13,16 @@ jest.mock("../../../lib/utils/errorUtils", () => ({
   invalidHandleFormat: jest.fn(),
 }));
 // Mock prompt-sync so no interactive prompts run in tests
-jest.mock("prompt-sync", () => () => jest.fn());
+jest.mock("prompt-sync", () => {
+  const mockPrompt = jest.fn();
+  return () => mockPrompt;
+});
 
 const { consola } = require("consola");
 const { firmCredentials } = require("../../../lib/api/firmCredentials");
 const errorUtils = require("../../../lib/utils/errorUtils");
 const cliUtils = require("../../../lib/cli/utils");
+const mockPrompt = require("prompt-sync")();
 
 describe("cli/utils", () => {
   let mockExit;
@@ -292,6 +297,10 @@ describe("cli/utils", () => {
   // ─── logCurrentHost ────────────────────────────────────────────────────────
 
   describe("logCurrentHost", () => {
+    beforeEach(() => {
+      firmCredentials.isHostFromEnv.mockReturnValue(false);
+    });
+
     it("should NOT log when current host is the default host", () => {
       firmCredentials.getHost.mockReturnValue("https://live.getsilverfin.com");
       cliUtils.logCurrentHost();
@@ -302,6 +311,33 @@ describe("cli/utils", () => {
       firmCredentials.getHost.mockReturnValue("https://staging.getsilverfin.com");
       cliUtils.logCurrentHost();
       expect(consola.info).toHaveBeenCalledWith(expect.stringContaining("staging.getsilverfin.com"));
+    });
+
+    it("should warn about SF_HOST when the host comes from the environment, even for the default host", () => {
+      firmCredentials.getHost.mockReturnValue("https://live.getsilverfin.com");
+      firmCredentials.isHostFromEnv.mockReturnValue(true);
+      cliUtils.logCurrentHost();
+      expect(consola.warn).toHaveBeenCalledWith(expect.stringContaining("SF_HOST"));
+      expect(consola.warn).toHaveBeenCalledWith(expect.stringContaining("https://live.getsilverfin.com"));
+      expect(consola.info).not.toHaveBeenCalled();
+    });
+  });
+
+  // ─── promptConfirmation ────────────────────────────────────────────────────
+
+  describe("promptConfirmation", () => {
+    it("should name the current host in the confirmation prompt", () => {
+      firmCredentials.getHost.mockReturnValue("https://live.getsilverfin.com");
+      mockPrompt.mockReturnValue("y");
+      cliUtils.promptConfirmation();
+      expect(mockPrompt).toHaveBeenCalledWith(expect.stringContaining("on https://live.getsilverfin.com"));
+    });
+
+    it("should exit when the user does not confirm", () => {
+      firmCredentials.getHost.mockReturnValue("https://live.getsilverfin.com");
+      mockPrompt.mockReturnValue("n");
+      cliUtils.promptConfirmation();
+      expect(mockExit).toHaveBeenCalledWith(1);
     });
   });
 });

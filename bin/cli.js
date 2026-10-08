@@ -884,10 +884,14 @@ program
     if (options.setHost) {
       firmCredentials.setHost(options.setHost);
       consola.success(`Host set to: ${options.setHost}`);
+      if (firmCredentials.isHostFromEnv()) {
+        consola.warn(`The SF_HOST environment variable is set to ${firmCredentials.getHost()} and overrides this host. Remove SF_HOST from your shell profile for this host to take effect.`);
+      }
     }
     if (options.getHost) {
       const host = firmCredentials.getHost();
-      consola.info(`Current host: ${host}`);
+      const source = firmCredentials.isHostFromEnv() ? " (from the SF_HOST environment variable)" : "";
+      consola.info(`Current host: ${host}${source}`);
     }
     if (options.setAutocompletion) {
       AutoCompletions.set();

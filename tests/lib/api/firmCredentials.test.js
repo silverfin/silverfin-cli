@@ -270,6 +270,14 @@ describe("FirmCredentials", () => {
       delete process.env.SF_HOST;
     });
 
+    it("should report whether the host comes from SF_HOST", () => {
+      process.env.SF_HOST = "https://env.getsilverfin.com";
+      expect(firmCredentials.isHostFromEnv()).toBe(true);
+
+      delete process.env.SF_HOST;
+      expect(firmCredentials.isHostFromEnv()).toBe(false);
+    });
+
     it("should return default host if not set", () => {
       delete process.env.SF_HOST;
       fs.readFileSync.mockReturnValue(JSON.stringify({}));
