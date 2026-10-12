@@ -339,4 +339,67 @@ describe("FirmCredentials", () => {
       expect(firmCredentials.getHost()).toBe("https://live.getsilverfin.com");
     });
   });
+
+  describe("isAutoRenewEnabled", () => {
+    const loadWith = (firmRecord) => {
+      fs.existsSync.mockReturnValue(true);
+      fs.readFileSync.mockReturnValue(JSON.stringify({ defaultFirmIDs: {}, 100: firmRecord }));
+      firmCredentials.loadCredentials();
+    };
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it("is disabled only when autoRenew is the boolean false", () => {
+      loadWith({ accessToken: "a", refreshToken: "r", autoRenew: false });
+      expect(firmCredentials.isAutoRenewEnabled(100)).toBe(false);
+    });
+
+    it("is enabled when autoRenew is the boolean true", () => {
+      loadWith({ accessToken: "a", refreshToken: "r", autoRenew: true });
+      expect(firmCredentials.isAutoRenewEnabled(100)).toBe(true);
+    });
+
+    it("is enabled when the flag is absent, so an unseeded config keeps renewing", () => {
+      loadWith({ accessToken: "a", refreshToken: "r" });
+      expect(firmCredentials.isAutoRenewEnabled(100)).toBe(true);
+    });
+
+    it("is enabled when autoRenew is null", () => {
+      loadWith({ accessToken: "a", refreshToken: "r", autoRenew: null });
+      expect(firmCredentials.isAutoRenewEnabled(100)).toBe(true);
+    });
+
+    it("is enabled when autoRenew is the string \"false\", which is not a boolean", () => {
+      loadWith({ accessToken: "a", refreshToken: "r", autoRenew: "false" });
+      expect(firmCredentials.isAutoRenewEnabled(100)).toBe(true);
+    });
+
+    it("is enabled for a firm that is not in the config at all", () => {
+      loadWith({ accessToken: "a", refreshToken: "r", autoRenew: false });
+      expect(firmCredentials.isAutoRenewEnabled(999)).toBe(true);
+    });
+
+    it("accepts the firm id as a string, as the 401 interceptor passes it", () => {
+      loadWith({ accessToken: "a", refreshToken: "r", autoRenew: false });
+      expect(firmCredentials.isAutoRenewEnabled("100")).toBe(false);
+    });
+  });
+
+  describe("getPartnerCredentials", () => {
+    it("exits with the auth-failure code for a partner with no stored credential", () => {
+      fs.existsSync.mockReturnValue(true);
+      fs.readFileSync.mockReturnValue(JSON.stringify({ defaultFirmIDs: {}, partnerCredentials: { 1: { token: "t" } } }));
+      firmCredentials.loadCredentials();
+      const exitSpy = jest.spyOn(process, "exit").mockImplementation((code) => {
+        throw new Error(`Process.exit called with code ${code}`);
+      });
+
+      expect(() => firmCredentials.getPartnerCredentials(999)).toThrow("Process.exit called with code 2");
+      expect(consola.error).toHaveBeenCalledWith("Missing authorization for partner id: 999");
+
+      exitSpy.mockRestore();
+    });
+  });
 });
