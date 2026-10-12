@@ -325,4 +325,20 @@ describe("FirmCredentials", () => {
       expect(firmCredentials.isAutoRenewEnabled("100")).toBe(false);
     });
   });
+
+  describe("getPartnerCredentials", () => {
+    it("exits with the auth-failure code for a partner with no stored credential", () => {
+      fs.existsSync.mockReturnValue(true);
+      fs.readFileSync.mockReturnValue(JSON.stringify({ defaultFirmIDs: {}, partnerCredentials: { 1: { token: "t" } } }));
+      firmCredentials.loadCredentials();
+      const exitSpy = jest.spyOn(process, "exit").mockImplementation((code) => {
+        throw new Error(`Process.exit called with code ${code}`);
+      });
+
+      expect(() => firmCredentials.getPartnerCredentials(999)).toThrow("Process.exit called with code 2");
+      expect(consola.error).toHaveBeenCalledWith("Missing authorization for partner id: 999");
+
+      exitSpy.mockRestore();
+    });
+  });
 });

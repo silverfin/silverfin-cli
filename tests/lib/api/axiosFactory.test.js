@@ -91,10 +91,10 @@ describe("AxiosFactory", () => {
 
       expect(() => {
         AxiosFactory.createInstance("firm", firmId);
-      }).toThrow("Process.exit called with code 1");
+      }).toThrow("Process.exit called with code 2");
 
       expect(consola.error).toHaveBeenCalledWith("Missing authorization for firm id: 50000");
-      expect(exitSpy).toHaveBeenCalledWith(1);
+      expect(exitSpy).toHaveBeenCalledWith(2);
     });
 
     it("should refresh tokens on 401 Unauthorized error", async () => {
@@ -311,10 +311,10 @@ describe("AxiosFactory", () => {
 
       expect(() => {
         AxiosFactory.createInstance("partner", partnerId);
-      }).toThrow("Process.exit called with code 1");
+      }).toThrow("Process.exit called with code 2");
 
       expect(consola.error).toHaveBeenCalledWith("Missing authorization for partner id: 100");
-      expect(exitSpy).toHaveBeenCalledWith(1);
+      expect(exitSpy).toHaveBeenCalledWith(2);
     });
 
     it("should refresh API key on 401 Unauthorized error", async () => {
