@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.60.2] (13/10/2026)
+`company-data-copier` now explains a 422 response:
+After the API error it warns that the source company and the destination firm (`-f`) are usually on different stacks, the most common cause of `source_company_id <id> does not exist`.
+
 ## [1.60.1] (12/10/2026)
 Add a test asserting that unknown per-firm credential fields survive a store -> save -> load cycle, so fields written by other tools are not silently dropped. No behaviour change. Dependencies updated.
 
