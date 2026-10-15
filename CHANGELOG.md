@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.60.3] (16/10/2026)
+Fix the default `config.json` created by `create-reconciliation` and `get-reconciliation-id`: it used `allow_duplicate_reconciliation` instead of `allow_duplicate_reconciliations`. Existing config files with the old key can have it renamed.
+
 ## [1.60.2] (13/10/2026)
 `company-data-copier` now explains a 422 response:
 After the API error it warns that the source company and the destination firm (`-f`) are usually on different stacks, the most common cause of `source_company_id <id> does not exist`.
