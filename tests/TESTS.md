@@ -413,7 +413,8 @@ Source: `lib/api/sfApi.js`
 
 | Function | Test | Description |
 |---|---|---|
-| `authorizeFirm` | should delegate to SilverfinAuthorizer.authorizeFirm | Verifies that calling `SF.authorizeFirm` passes the firm ID straight through to `SilverfinAuthorizer.authorizeFirm`. |
+| `authorizeFirm` | should delegate to SilverfinAuthorizer.authorizeFirm | Verifies that calling `SF.authorizeFirm` passes the firm ID and empty options straight through to `SilverfinAuthorizer.authorizeFirm`. |
+| `authorizeFirm` | should pass the solid option to SilverfinAuthorizer.authorizeFirm | Verifies that the `solid` option reaches `SilverfinAuthorizer.authorizeFirm`. |
 | `refreshFirmTokens` | should delegate to SilverfinAuthorizer.refreshFirm | Verifies that calling `SF.refreshFirmTokens` delegates to `SilverfinAuthorizer.refreshFirm` and returns its result. |
 | `refreshPartnerToken` | should delegate to SilverfinAuthorizer.refreshPartner | Verifies that calling `SF.refreshPartnerToken` delegates to `SilverfinAuthorizer.refreshPartner` and returns its result. |
 | `createReconciliationText` | should POST to reconciliations and return response on success (201) | Verifies that a POST to `reconciliations` succeeds with a 201 and the response data is returned. |
@@ -458,6 +459,8 @@ Source: `lib/api/silverfinAuthorizer.js`
 |---|---|---|
 | `SilverfinAuthorizer.authorizeFirm` | should successfully store new tokens when they dont exist | Verifies the full OAuth flow: the browser is opened, the authorization code is exchanged for tokens, firm details are fetched, and tokens are stored. |
 | `SilverfinAuthorizer.authorizeFirm` | should succesfully store new tokens when they exist | Verifies that re-authorizing an already-authorized firm also completes the OAuth flow and stores the new tokens. |
+| `SilverfinAuthorizer.authorizeFirm` | should request the full firm scopes by default | Verifies that the authorize URL requests the administration, financials and workflows scopes when no option is given. |
+| `SilverfinAuthorizer.authorizeFirm` | should request only the solid:publish scope with the solid option | Verifies that the authorize URL requests only `solid:publish` when `solid` is true, and that the tokens are stored as the firm's tokens. |
 | `SilverfinAuthorizer.authorizeFirm` | should raise an error when firm id is missing | Verifies that when the user enters an empty firm ID an error is logged and the process exits without opening the browser. |
 | `SilverfinAuthorizer.authorizeFirm` | should handle response errors | Verifies that an HTTP error response during token exchange logs the status, error description, and exits the process without storing tokens. |
 | `SilverfinAuthorizer.authorizeFirm` | should not raise errors when getting the firm name fails | Verifies that a failure to fetch the firm name is silently ignored and the tokens are still stored. |
