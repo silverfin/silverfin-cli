@@ -2,11 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.61.0] (12/10/2026)
+## [1.61.0] (28/10/2026)
 Honour a per-firm `autoRenew` flag in the stored credentials, so a firm can be opted out of automatic token renewal, and report an authentication failure as a known error with its own exit code instead of a crash.
 - When a firm's credential record carries `autoRenew: false`, a `401` from the platform no longer triggers a token refresh for that firm. Only the boolean `false` opts a firm out: a firm with no flag, a `null`, or a string keeps renewing exactly as before, so an existing credentials file is unaffected. The flag applies to the *automatic* renewal the CLI performs mid-request; `config --refresh-token` still renews on request, since that is the command a refresher runs deliberately.
 - An authentication failure now ends the command with a message naming the firm and pointing at `silverfin authorize`, instead of a stack trace and a request to open an issue. An expired credential is a routine operational state, not a defect.
 - **Exit code change:** authentication failures now exit with code `2` rather than `1`. This covers a renewal skipped by the flag, a refresh that fails, and a firm or partner with no stored credential at all — including `config --refresh-token` and the partner API key path. A caller can therefore treat `2` as "this credential cannot be used and retrying will not help" and distinguish it from any other failure without parsing the log. Scripts testing for a specific exit code of `1` need updating; scripts testing for a non-zero exit are unaffected.
+- Dependencies updated.
+
+## [1.60.3] (16/10/2026)
+Fix the default `config.json` created by `create-reconciliation` and `get-reconciliation-id`: it used `allow_duplicate_reconciliation` instead of `allow_duplicate_reconciliations`. Existing config files with the old key can have it renamed.
+
+## [1.60.2] (13/10/2026)
+`company-data-copier` now explains a 422 response:
+After the API error it warns that the source company and the destination firm (`-f`) are usually on different stacks, the most common cause of `source_company_id <id> does not exist`.
 
 ## [1.60.1] (12/10/2026)
 Add a test asserting that unknown per-firm credential fields survive a store -> save -> load cycle, so fields written by other tools are not silently dropped. No behaviour change. Dependencies updated.

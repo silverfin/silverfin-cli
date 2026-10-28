@@ -1377,6 +1377,15 @@ async function copyCompanyData(destinationFirmId, sourceCompanyId, sourceLedgerI
 
     const response = await SF.runCompanyDataCopier("firm", destinationFirmId, attributes);
 
+    // The endpoint answers 422 "source_company_id <id> does not exist" when the source company lives on
+    // another stack than the destination firm. It also uses 422 for other causes, hence "usually".
+    if (response?.status === 422) {
+      consola.warn(
+        `This usually means the source company and the destination firm (-f ${destinationFirmId}) are on different stacks. Try using a destination dev firm on the same stack as the source.`
+      );
+      return false;
+    }
+
     if (!response || !response.data) {
       consola.error(`Data Copier request failed for firm ${destinationFirmId}. Verify the source company id and period ids exist, and that you are an admin of the source firm.`);
       return false;

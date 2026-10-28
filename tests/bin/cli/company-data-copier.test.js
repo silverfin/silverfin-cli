@@ -87,5 +87,16 @@ describe("company-data-copier", () => {
       expect(consola.error).toHaveBeenCalled();
       expect(result).toBe(false);
     });
+
+    it("should hint at a stack mismatch and return false when the API returns 422", async () => {
+      SF.runCompanyDataCopier.mockResolvedValue({ status: 422, data: { error: `source_company_id ${sourceCompanyId} does not exist` } });
+
+      const result = await toolkit.copyCompanyData(destinationFirmId, sourceCompanyId, sourceLedgerIds);
+
+      // "usually", not "always": the endpoint also returns 422 for other causes.
+      expect(consola.warn).toHaveBeenCalledWith(expect.stringMatching(/usually.*different stacks/i));
+      expect(consola.success).not.toHaveBeenCalled();
+      expect(result).toBe(false);
+    });
   });
 });

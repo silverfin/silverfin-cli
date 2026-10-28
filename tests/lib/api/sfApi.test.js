@@ -672,12 +672,23 @@ describe("sfApi", () => {
     });
 
     it("should delegate to the error handler on failure", async () => {
-      axiosMock.onPost("company_data_copier/run").reply(422, { error: "invalid" });
+      axiosMock.onPost("company_data_copier/run").reply(404, { error: "not found" });
 
       const result = await SF.runCompanyDataCopier("firm", 100, attributes);
 
       // responseErrorHandler is mocked to resolve undefined
       expect(result).toBeUndefined();
+    });
+
+    it("should return the 422 response instead of exiting so the caller can explain it", async () => {
+      const apiUtils = require("../../../lib/utils/apiUtils");
+      axiosMock.onPost("company_data_copier/run").reply(422, { error: "source_company_id 1224550 does not exist" });
+
+      const result = await SF.runCompanyDataCopier("firm", 100, attributes);
+
+      expect(apiUtils.responseErrorHandler).not.toHaveBeenCalled();
+      expect(result.status).toBe(422);
+      expect(result.data).toEqual({ error: "source_company_id 1224550 does not exist" });
     });
   });
 });

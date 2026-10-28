@@ -124,6 +124,7 @@ describe("import-reconciliation", () => {
             reconciliation_type: "can_be_reconciled_without_data",
             use_full_width: true,
             virtual_account_number: "",
+            allow_duplicate_reconciliations: false,
           });
         });
       });

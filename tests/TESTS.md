@@ -170,6 +170,7 @@ Source: `index.js` → `lib/api/sfApi.js`
 | `copyCompanyData` | should error and return false when no source company id is given | Verifies that the API is not called, an error is logged, and `false` is returned when the source company id is missing. |
 | `copyCompanyData` | should error and return false when no source ledger ids are given | Verifies that the API is not called, an error is logged, and `false` is returned when the ledger id list is empty. |
 | `copyCompanyData` | should error and return false when the API returns no data | Verifies that an error is logged and `false` is returned when the Data Copier response has no data. |
+| `copyCompanyData` | should hint at a stack mismatch and return false when the API returns 422 | Verifies that a 422 response logs a warning that the source company and destination firm are usually on different stacks, no success is logged, and `false` is returned. |
 
 ---
 
@@ -446,7 +447,8 @@ Source: `lib/api/sfApi.js`
 | `findAccountTemplateByName` | should find account template by name_nl | Verifies that the matching account template is returned when its `name_nl` is found in the list. |
 | `findAccountTemplateByName` | should return null when list is empty | Verifies that `null` is returned when the list API returns an empty array. |
 | `runCompanyDataCopier` | should POST to the firm-scoped company_data_copier/run route with the attributes and return the response | Verifies that the Data Copier attributes are POSTed to the relative `company_data_copier/run` path on the firm-scoped `/api/v4/f/:id` baseURL (not an absolute public-v3 URL) and the response is returned. |
-| `runCompanyDataCopier` | should delegate to the error handler on failure | Verifies that a non-2xx response is routed through `responseErrorHandler`. |
+| `runCompanyDataCopier` | should delegate to the error handler on failure | Verifies that a non-2xx, non-422 response is routed through `responseErrorHandler`. |
+| `runCompanyDataCopier` | should return the 422 response instead of exiting so the caller can explain it | Verifies that a 422 bypasses `responseErrorHandler` (which exits) and the error response is returned to the caller. |
 
 ---
 
