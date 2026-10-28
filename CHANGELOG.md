@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.62.0] (30/10/2026)
+Added a `--solid` option to `silverfin authorize`. It requests only the `solid:publish` scope, for a token that can only publish Solid templates. Your API application must have `solid:publish` in its scopes.
+
 ## [1.61.0] (29/10/2026)
 Honour a per-firm `autoRenew` flag in the stored credentials and report authentication failures cleanly.
 - A firm with `autoRenew: false` no longer renews its token automatically on a `401`; any other value keeps the current behaviour. `config --refresh-token` still renews on request.

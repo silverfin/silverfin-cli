@@ -764,8 +764,9 @@ program
 program
   .command("authorize")
   .description("Authorize the CLI by entering your Silverfin API credentials")
-  .action(() => {
-    SF.authorizeFirm(firmIdDefault);
+  .option("--solid", "Request only the solid:publish scope, to publish Solid templates", false)
+  .action((options) => {
+    SF.authorizeFirm(firmIdDefault, { solid: options.solid });
   });
 
 // Authorize PARTNER
