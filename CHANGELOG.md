@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.61.0] (28/10/2026)
+Added a `--solid` option to `silverfin authorize`. It requests only the `solid:publish` scope, for a token that can only publish Solid templates. Your API application must have `solid:publish` in its scopes.
+
 ## [1.60.3] (16/10/2026)
 Fix the default `config.json` created by `create-reconciliation` and `get-reconciliation-id`: it used `allow_duplicate_reconciliation` instead of `allow_duplicate_reconciliations`. Existing config files with the old key can have it renamed.
 

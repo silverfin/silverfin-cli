@@ -122,6 +122,21 @@ describe("SilverfinAuthorizer", () => {
       expect(consola.error).not.toHaveBeenCalled();
     });
 
+    it("should request the full firm scopes by default", async () => {
+      await SilverfinAuthorizer.authorizeFirm(mockFirmId);
+
+      const url = new URL(open.mock.calls[0][0]);
+      expect(url.searchParams.get("scope")).toBe("administration:read administration:write financials:read financials:write workflows:read");
+    });
+
+    it("should request only the solid:publish scope with the solid option", async () => {
+      await SilverfinAuthorizer.authorizeFirm(mockFirmId, { solid: true });
+
+      const url = new URL(open.mock.calls[0][0]);
+      expect(url.searchParams.get("scope")).toBe("solid:publish");
+      expect(firmCredentials.storeNewTokenPair).toHaveBeenCalledWith(mockFirmId, mockTokenResponse.data);
+    });
+
     it("should raise an error when firm id is missing", async () => {
       mockPrompt.mockReset();
       mockPrompt.mockReturnValueOnce(""); // First prompt for firm ID
