@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.61.0] (29/10/2026)
+Honour a per-firm `autoRenew` flag in the stored credentials and report authentication failures cleanly.
+- A firm with `autoRenew: false` no longer renews its token automatically on a `401`; any other value keeps the current behaviour. `config --refresh-token` still renews on request.
+- Authentication failures now end with a message naming the firm instead of a stack trace, and exit with code `2` instead of `1`.
+- Dependencies updated.
+
 ## [1.60.3] (16/10/2026)
 Fix the default `config.json` created by `create-reconciliation` and `get-reconciliation-id`: it used `allow_duplicate_reconciliation` instead of `allow_duplicate_reconciliations`. Existing config files with the old key can have it renamed.
 

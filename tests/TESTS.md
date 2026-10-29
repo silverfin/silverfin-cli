@@ -405,6 +405,7 @@ Source: `lib/api/firmCredentials.js`
 | `setHost` / `getHost` | should set and get the host correctly | Verifies that `setHost` persists the host to disk and `getHost` returns the updated value. |
 | `setHost` / `getHost` | should return environment variable host if set | Verifies that `getHost` returns the `SF_HOST` env var value instead of the stored host when the env var is set. |
 | `setHost` / `getHost` | should return default host if not set | Verifies that `getHost` returns the default live host when neither `SF_HOST` nor a stored value is present. |
+| `getPartnerCredentials` | exits with the auth-failure code for a partner with no stored credential | Verifies that an unknown partner id logs the missing-authorization error and exits with code 2. |
 
 ---
 
