@@ -2,11 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.61.0] (28/10/2026)
-Honour a per-firm `autoRenew` flag in the stored credentials, so a firm can be opted out of automatic token renewal, and report an authentication failure as a known error with its own exit code instead of a crash.
-- When a firm's credential record carries `autoRenew: false`, a `401` from the platform no longer triggers a token refresh for that firm. Only the boolean `false` opts a firm out: a firm with no flag, a `null`, or a string keeps renewing exactly as before, so an existing credentials file is unaffected. The flag applies to the *automatic* renewal the CLI performs mid-request; `config --refresh-token` still renews on request, since that is the command a refresher runs deliberately.
-- An authentication failure now ends the command with a message naming the firm and pointing at `silverfin authorize`, instead of a stack trace and a request to open an issue. An expired credential is a routine operational state, not a defect.
-- **Exit code change:** authentication failures now exit with code `2` rather than `1`. This covers a renewal skipped by the flag, a refresh that fails, and a firm or partner with no stored credential at all — including `config --refresh-token` and the partner API key path. A caller can therefore treat `2` as "this credential cannot be used and retrying will not help" and distinguish it from any other failure without parsing the log. Scripts testing for a specific exit code of `1` need updating; scripts testing for a non-zero exit are unaffected.
+## [1.61.0] (29/10/2026)
+Honour a per-firm `autoRenew` flag in the stored credentials and report authentication failures cleanly.
+- A firm with `autoRenew: false` no longer renews its token automatically on a `401`; any other value keeps the current behaviour. `config --refresh-token` still renews on request.
+- Authentication failures now end with a message naming the firm instead of a stack trace, and exit with code `2` instead of `1`.
 - Dependencies updated.
 
 ## [1.60.3] (16/10/2026)
