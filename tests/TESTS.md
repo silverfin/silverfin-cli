@@ -405,6 +405,10 @@ Source: `lib/api/firmCredentials.js`
 | `setHost` / `getHost` | should set and get the host correctly | Verifies that `setHost` persists the host to disk and `getHost` returns the updated value. |
 | `setHost` / `getHost` | should return environment variable host if set | Verifies that `getHost` returns the `SF_HOST` env var value instead of the stored host when the env var is set. |
 | `setHost` / `getHost` | should return default host if not set | Verifies that `getHost` returns the default live host when neither `SF_HOST` nor a stored value is present. |
+| `storeNewSolidTokenPair` | stores the solid:publish tokens next to the firm's tokens | Verifies that the solid:publish pair is written as `solidAccessToken` and `solidRefreshToken`, and the other firm fields are kept. |
+| `getSolidTokenPair` | returns the stored solid:publish tokens | Verifies that a stored solid:publish pair is returned as `accessToken` and `refreshToken`. |
+| `getSolidTokenPair` | returns null for a firm without solid:publish tokens | Verifies that a firm with only its own tokens returns `null`. |
+| `getSolidTokenPair` | returns null for a firm that is not in the config at all | Verifies that an unknown firm id returns `null`. |
 | `getPartnerCredentials` | exits with the auth-failure code for a partner with no stored credential | Verifies that an unknown partner id logs the missing-authorization error and exits with code 2. |
 
 ---
@@ -461,13 +465,18 @@ Source: `lib/api/silverfinAuthorizer.js`
 | `SilverfinAuthorizer.authorizeFirm` | should successfully store new tokens when they dont exist | Verifies the full OAuth flow: the browser is opened, the authorization code is exchanged for tokens, firm details are fetched, and tokens are stored. |
 | `SilverfinAuthorizer.authorizeFirm` | should succesfully store new tokens when they exist | Verifies that re-authorizing an already-authorized firm also completes the OAuth flow and stores the new tokens. |
 | `SilverfinAuthorizer.authorizeFirm` | should request the full firm scopes by default | Verifies that the authorize URL requests the administration, financials and workflows scopes when no option is given. |
-| `SilverfinAuthorizer.authorizeFirm` | should request only the solid:publish scope with the solid option | Verifies that the authorize URL requests only `solid:publish` when `solid` is true, and that the tokens are stored as the firm's tokens. |
+| `SilverfinAuthorizer.authorizeFirm` | should request only the solid:publish scope with the solid option | Verifies that the authorize URL requests only `solid:publish` when `solid` is true. |
+| `SilverfinAuthorizer.authorizeFirm` | should store the tokens next to the firm's tokens with the solid option | Verifies that with `solid` the tokens are stored with `storeNewSolidTokenPair`, and the firm's tokens are not replaced. |
+| `SilverfinAuthorizer.authorizeFirm` | should not fetch the firm name with the solid option | Verifies that with `solid` no request is made for the firm name, because the firm may have no token that can read it. |
 | `SilverfinAuthorizer.authorizeFirm` | should raise an error when firm id is missing | Verifies that when the user enters an empty firm ID an error is logged and the process exits without opening the browser. |
 | `SilverfinAuthorizer.authorizeFirm` | should handle response errors | Verifies that an HTTP error response during token exchange logs the status, error description, and exits the process without storing tokens. |
 | `SilverfinAuthorizer.authorizeFirm` | should not raise errors when getting the firm name fails | Verifies that a failure to fetch the firm name is silently ignored and the tokens are still stored. |
 | `SilverfinAuthorizer.refreshFirm` | should store provided tokens | Verifies that when valid stored tokens exist a refresh request is made with the correct parameters and new tokens are stored. |
 | `SilverfinAuthorizer.refreshFirm` | should raise an error when there are no previous tokens | Verifies that when no existing tokens are stored an error is logged, no refresh request is made, and the process exits. |
 | `SilverfinAuthorizer.refreshFirm` | should handle response errors | Verifies that an HTTP error during token refresh logs the status and description and exits without storing tokens. |
+| `SilverfinAuthorizer.refreshFirm` | should refresh the solid:publish tokens too when the firm has them | Verifies that a firm with both pairs gets two refresh requests, and each new pair is stored in its own place. |
+| `SilverfinAuthorizer.refreshFirm` | should refresh only the solid:publish tokens when the firm has no other tokens | Verifies that a firm with only the solid:publish pair gets one refresh request, stored as the solid:publish pair. |
+| `SilverfinAuthorizer.refreshFirm` | should fail when the solid:publish refresh fails after the firm refresh succeeds | Verifies that a failed solid:publish refresh exits with code 2, after the firm's new tokens are stored. |
 | `SilverfinAuthorizer.refreshPartner` | should store the new API key | Verifies that when valid stored credentials exist the refresh endpoint is called and the new API key is persisted. |
 | `SilverfinAuthorizer.refreshPartner` | should raise an error when there are no previous tokens | Verifies that when no partner credentials are stored an error is logged, no refresh request is made, and the process exits. |
 | `SilverfinAuthorizer.refreshPartner` | should handle response errors | Verifies that an HTTP error during API key refresh logs the status and exits without storing the new key. |

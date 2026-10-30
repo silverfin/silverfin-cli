@@ -192,7 +192,7 @@ To publish Solid templates, you can authorize with a token that can only publish
 silverfin authorize --solid
 ```
 
-This requests only the `solid:publish` scope. First add `solid:publish` to the scopes of your API application in Silverfin, or the authorization fails with `invalid_scope`. The new token replaces the firm's current token, so you cannot use it for Liquid templates. Run `silverfin authorize` without `--solid` to get the full token back.
+This requests only the `solid:publish` scope. First add `solid:publish` to the scopes of your API application in Silverfin, or the authorization fails with `invalid_scope`. The CLI stores this token next to the firm's current token, so Liquid commands keep using the current token. `silverfin config --refresh-token` renews both tokens. A firm can have only the `--solid` token, if you never run `silverfin authorize` without `--solid` for it.
 
 ### Set up a default firm
 

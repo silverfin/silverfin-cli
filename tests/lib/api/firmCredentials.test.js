@@ -387,6 +387,44 @@ describe("FirmCredentials", () => {
     });
   });
 
+  describe("storeNewSolidTokenPair and getSolidTokenPair", () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+      fs.existsSync.mockReturnValue(true);
+      fs.readFileSync.mockReturnValue(
+        JSON.stringify({ defaultFirmIDs: {}, 100: { accessToken: "a", refreshToken: "r", firmName: "Firm", autoRenew: false } })
+      );
+      firmCredentials.loadCredentials();
+    });
+
+    it("stores the solid:publish tokens next to the firm's tokens", () => {
+      firmCredentials.storeNewSolidTokenPair(100, { access_token: "solid-a", refresh_token: "solid-r" });
+
+      expect(JSON.parse(fs.writeFileSync.mock.calls[0][1])[100]).toEqual({
+        accessToken: "a",
+        refreshToken: "r",
+        firmName: "Firm",
+        autoRenew: false,
+        solidAccessToken: "solid-a",
+        solidRefreshToken: "solid-r",
+      });
+    });
+
+    it("returns the stored solid:publish tokens", () => {
+      firmCredentials.storeNewSolidTokenPair(100, { access_token: "solid-a", refresh_token: "solid-r" });
+
+      expect(firmCredentials.getSolidTokenPair(100)).toEqual({ accessToken: "solid-a", refreshToken: "solid-r" });
+    });
+
+    it("returns null for a firm without solid:publish tokens", () => {
+      expect(firmCredentials.getSolidTokenPair(100)).toBeNull();
+    });
+
+    it("returns null for a firm that is not in the config at all", () => {
+      expect(firmCredentials.getSolidTokenPair(999)).toBeNull();
+    });
+  });
+
   describe("getPartnerCredentials", () => {
     it("exits with the auth-failure code for a partner with no stored credential", () => {
       fs.existsSync.mockReturnValue(true);
