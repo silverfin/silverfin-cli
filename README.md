@@ -186,6 +186,14 @@ silverfin authorize
 
 This will open a new tab in your browser, where you would need to login in to Silverfin. Once you have authorized the use of the API, you will need to provide the authorization code you get to the CLI.
 
+To publish Solid templates, you can authorize with a token that can only publish Solid templates:
+
+```bash
+silverfin authorize --solid
+```
+
+This requests only the `solid:publish` scope. First add `solid:publish` to the scopes of your API application in Silverfin, or the authorization fails with `invalid_scope`. The CLI stores this token next to the firm's current token, so Liquid commands keep using the current token. `silverfin config --refresh-token` renews both tokens. A firm can have only the `--solid` token, if you never run `silverfin authorize` without `--solid` for it.
+
 ### Set up a default firm
 
 If you are going to work with a single firm, you can set it up as the default firm for the CLI. This will save you from having to provide the firm id every time you run a command.

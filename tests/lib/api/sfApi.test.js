@@ -66,7 +66,13 @@ describe("sfApi", () => {
     it("should delegate to SilverfinAuthorizer.authorizeFirm", async () => {
       const { SilverfinAuthorizer } = require("../../../lib/api/silverfinAuthorizer");
       await SF.authorizeFirm(100);
-      expect(SilverfinAuthorizer.authorizeFirm).toHaveBeenCalledWith(100);
+      expect(SilverfinAuthorizer.authorizeFirm).toHaveBeenCalledWith(100, {});
+    });
+
+    it("should pass the solid option to SilverfinAuthorizer.authorizeFirm", async () => {
+      const { SilverfinAuthorizer } = require("../../../lib/api/silverfinAuthorizer");
+      await SF.authorizeFirm(100, { solid: true });
+      expect(SilverfinAuthorizer.authorizeFirm).toHaveBeenCalledWith(100, { solid: true });
     });
   });
 
