@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.62.0] (30/10/2026)
+## [1.62.0] (02/11/2026)
 Added a `--solid` option to `silverfin authorize`. It requests only the `solid:publish` scope, for a token that can only publish Solid templates, and stores that token as `solidAccessToken` and `solidRefreshToken` next to the firm's current token. Your API application must have `solid:publish` in its scopes. `config --refresh-token` renews both tokens, and fails if one of them fails.
 
 ## [1.61.0] (29/10/2026)
