@@ -373,6 +373,7 @@ describe("LiquidSamplerRunner - add diffs folder to a local zip (--add-diffs-fol
 
   afterEach(() => {
     process.exit = originalExit;
+    process.exitCode = undefined;
     fs.rmSync(zipPath, { force: true });
   });
 
@@ -539,10 +540,10 @@ describe("LiquidSamplerRunner - add diffs folder to a local zip (--add-diffs-fol
   it("exits non-zero (rather than throwing) when the zip is unreadable", () => {
     fs.writeFileSync(zipPath, "not a zip file");
 
-    new LiquidSamplerRunner("1").addDiffsFolderToZip(zipPath);
+    expect(new LiquidSamplerRunner("1").addDiffsFolderToZip(zipPath)).toBe(false);
 
     expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("Could not build diffs/ folder"));
-    expect(process.exit).toHaveBeenCalledWith(1);
+    expect(process.exitCode).toBe(1);
   });
 
   it("replaces an earlier diffs/ folder rather than adding to it", () => {
@@ -606,6 +607,26 @@ describe("LiquidSamplerRunner - polling status output", () => {
     await runPromise;
 
     expect(spinner.spin).toHaveBeenCalledWith("Running sampler...");
+  });
+
+  it("rides out a transient failed status poll instead of ending the wait", async () => {
+    process.stdout.isTTY = false;
+    jest.useFakeTimers();
+    const originalExit = process.exit;
+    const exit = jest.fn();
+    process.exit = exit;
+    SF.readSamplerRun
+      .mockRejectedValueOnce(new Error("socket hang up"))
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValue({ data: { status: "completed", result_url: REPORT_URL } });
+
+    const runPromise = new LiquidSamplerRunner("1", { openReport: false }).run();
+    await jest.advanceTimersByTimeAsync(45000);
+    await runPromise;
+    process.exit = originalExit;
+
+    expect(exit).not.toHaveBeenCalled();
+    expect(consola.success).toHaveBeenCalledWith("Sampler run completed successfully");
   });
 
   it("falls back to a log line when stdout is not a TTY, even outside CI", async () => {
@@ -1000,7 +1021,7 @@ describe("LiquidSamplerRunner - keeping and narrowing the extracted output", () 
 
       write.mockRestore();
       expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("ENOSPC"));
-      expect(process.exit).toHaveBeenCalledWith(1);
+      expect(process.exitCode).toBe(1);
       expect(fs.existsSync(path.join(keepDir, "output"))).toBe(true);
       expect(fs.existsSync(outDir)).toBe(false);
     });
@@ -1010,9 +1031,9 @@ describe("LiquidSamplerRunner - keeping and narrowing the extracted output", () 
       zip.addFile("readme.txt", Buffer.from("not sampler output"));
       fs.writeFileSync(zipPath, zip.toBuffer());
 
-      new LiquidSamplerRunner("1").extractFlaggedOnly(zipPath, outDir);
+      expect(new LiquidSamplerRunner("1").extractFlaggedOnly(zipPath, outDir)).toBe(false);
       expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("is it a sampler results.zip?"));
-      expect(process.exit).toHaveBeenCalledWith(1);
+      expect(process.exitCode).toBe(1);
 
       jest.clearAllMocks();
       await new LiquidSamplerRunner("1").printCompactDiffFromZip(zipPath);

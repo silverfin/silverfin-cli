@@ -766,6 +766,26 @@ describe("liquidSamplerCompact - extractCompact", () => {
     expect(data.templates[0].changes.map((c) => c.key).sort()).toEqual(["a", "b", "c"]);
   });
 
+  it("reports a render that is missing on one side as missing, even when the other side is oversized", () => {
+    const dir = buildResultsDir({ reconciliation_entries: [{ id: "1", label: "big", before: { a: "1" }, after: { a: "1" } }] });
+    const big = new Map([["output/reconciliation_entries/1/before/view.html", "123:99999999"]]);
+    expect(extractCompact(dir, { oversizedEntries: big }).visualOnlyEntries[0].changes).toEqual(["`view.html` missing after the change"]);
+  });
+
+  it("counts `results: null` after as vanished output too", () => {
+    const dir = buildResultsDir({
+      reconciliation_entries: [
+        { id: "1", label: "gone", before: { a: "1", b: "2", c: "3" }, after: {}, registers: { before: { results: ["1.0", "0.0"] }, after: { results: null } } },
+      ],
+    });
+    expect(extractCompact(dir).collapsedTemplates).toHaveLength(1);
+  });
+
+  it("keeps a non-Silverfin URL out of the data --json writes", () => {
+    const dir = buildResultsDir({ reconciliation_entries: [{ id: "1", label: "a", url: "javascript:alert(1)", before: { a: "1" }, after: { a: "2" } }] });
+    expect(extractCompact(dir).templates[0].exampleUrl).toBeNull();
+  });
+
   it("doesn't flag two oversized renders the zip says are identical", () => {
     const dir = buildResultsDir({ reconciliation_entries: [{ id: "1", label: "big", before: { a: "1" }, after: { a: "1" } }] });
     const same = new Map([

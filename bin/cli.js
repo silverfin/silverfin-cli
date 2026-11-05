@@ -573,9 +573,8 @@ program
     if (options.fromZip) {
       const runner = new LiquidSamplerRunner(options.partner, runnerOptions);
       await runner.printCompactDiffFromZip(options.fromZip);
-      if (options.addDiffsFolder) {
-        runner.addDiffsFolderToZip(options.fromZip);
-      }
+      // Stop after a failed step, as a hard exit used to (process.exit would cut off the diff's output)
+      if (options.addDiffsFolder && runner.addDiffsFolderToZip(options.fromZip) === false) return;
       if (options.extractFlaggedOnly) {
         runner.extractFlaggedOnly(options.fromZip, options.extractFlaggedOnly);
       }

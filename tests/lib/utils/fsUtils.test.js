@@ -525,6 +525,11 @@ describe("fsUtils", () => {
       expect(fs.statSync(target).mode & 0o777).toBe(0o640);
     });
 
+    it("should write straight to a device instead of replacing it", () => {
+      expect(() => fsUtils.writeFileAtomic("/dev/null", "x")).not.toThrow();
+      expect(fs.statSync("/dev/null").isCharacterDevice()).toBe(true);
+    });
+
     it("should create missing parent directories", () => {
       const filePath = path.join(tempDir, "nested", "out.json");
       fsUtils.writeFileAtomic(filePath, "new");
@@ -663,6 +668,17 @@ describe("fsUtils", () => {
       fs.symlinkSync(path.join(tempDir, "a", "b"), path.join(tempDir, "linkdir"));
       fs.symlinkSync(`linkdir${path.sep}..${path.sep}x.json`, path.join(tempDir, "out.json"));
       expect(fsUtils.followSymlinks(path.join(tempDir, "out.json"))).toBe(path.join(fs.realpathSync(tempDir), "a", "x.json"));
+    });
+  });
+
+  describe("removeFileThroughSymlinks", () => {
+    it("should remove a regular file and leave a device alone", () => {
+      const filePath = path.join(tempDir, "old.json");
+      fs.writeFileSync(filePath, "old");
+      fsUtils.removeFileThroughSymlinks(filePath);
+      expect(fs.existsSync(filePath)).toBe(false);
+      expect(() => fsUtils.removeFileThroughSymlinks("/dev/null")).not.toThrow();
+      expect(fs.existsSync("/dev/null")).toBe(true);
     });
   });
 
