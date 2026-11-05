@@ -531,10 +531,10 @@ describe("LiquidSamplerRunner - add diffs folder to a local zip (--add-diffs-fol
   });
 
   it("exits non-zero with a clear error when the path doesn't exist", () => {
-    new LiquidSamplerRunner("1").addDiffsFolderToZip("/no/such/results.zip");
+    expect(new LiquidSamplerRunner("1").addDiffsFolderToZip("/no/such/results.zip")).toBe(false);
 
     expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("Could not read zip"));
-    expect(process.exit).toHaveBeenCalledWith(1);
+    expect(process.exitCode).toBe(1);
   });
 
   it("exits non-zero (rather than throwing) when the zip is unreadable", () => {
@@ -627,6 +627,45 @@ describe("LiquidSamplerRunner - polling status output", () => {
 
     expect(exit).not.toHaveBeenCalled();
     expect(consola.success).toHaveBeenCalledWith("Sampler run completed successfully");
+  });
+
+  it("still stops after three polls in a row that find no run", async () => {
+    process.stdout.isTTY = false;
+    jest.useFakeTimers();
+    const originalExit = process.exit;
+    const exit = jest.fn(() => {
+      throw new Error("exit");
+    });
+    process.exit = exit;
+    SF.readSamplerRun.mockRejectedValueOnce(new Error("socket hang up")).mockResolvedValue(undefined);
+
+    const runPromise = new LiquidSamplerRunner("1", { openReport: false }).run();
+    await jest.advanceTimersByTimeAsync(60000);
+    await runPromise;
+    process.exit = originalExit;
+
+    expect(exit).toHaveBeenCalledWith(1);
+    expect(SF.readSamplerRun).toHaveBeenCalledTimes(3);
+  });
+
+  it("asks CI to re-attach when status reads keep failing, since the run may still be going", async () => {
+    process.stdout.isTTY = false;
+    jest.useFakeTimers();
+    const originalExit = process.exit;
+    const exit = jest.fn(() => {
+      throw new Error("exit");
+    });
+    process.exit = exit;
+    SF.readSamplerRun.mockRejectedValue(new Error("socket hang up"));
+
+    const runPromise = new LiquidSamplerRunner("1", { openReport: false }).run();
+    await jest.advanceTimersByTimeAsync(60000);
+    await runPromise;
+    process.exit = originalExit;
+
+    expect(exit).toHaveBeenCalledWith(1);
+    expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("Timeout. Try to fetch the status by using the --id flag"));
+    expect(consola.warn).toHaveBeenCalledWith(expect.stringContaining("Status poll failed (1/3)"));
   });
 
   it("falls back to a log line when stdout is not a TTY, even outside CI", async () => {
@@ -907,9 +946,9 @@ describe("LiquidSamplerRunner - keeping and narrowing the extracted output", () 
     fs.mkdirSync(outDir, { recursive: true });
     fs.writeFileSync(path.join(outDir, "stale.html"), "old run");
 
-    new LiquidSamplerRunner("1").extractFlaggedOnly(zipPath, outDir);
+    expect(new LiquidSamplerRunner("1").extractFlaggedOnly(zipPath, outDir)).toBe(false);
 
-    expect(process.exit).toHaveBeenCalledWith(1);
+    expect(process.exitCode).toBe(1);
     expect(fs.readdirSync(outDir)).toEqual(["stale.html"]);
   });
 
