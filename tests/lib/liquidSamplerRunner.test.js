@@ -18,10 +18,10 @@ jest.mock("../../lib/utils/fsUtils", () => ({
   readConfig: jest.fn(() => ({ partner_id: { 1: 4242 } })),
 }));
 jest.mock("../../lib/templates/reconciliationText", () => ({
-  ReconciliationText: { read: jest.fn() },
+  ReconciliationText: { read: jest.fn(), SAMPLER_ATTRS: jest.requireActual("../../lib/templates/reconciliationText").ReconciliationText.SAMPLER_ATTRS },
 }));
 jest.mock("../../lib/templates/sharedPart", () => ({
-  SharedPart: { read: jest.fn() },
+  SharedPart: { read: jest.fn(), SAMPLER_ATTRS: jest.requireActual("../../lib/templates/sharedPart").SharedPart.SAMPLER_ATTRS },
 }));
 
 const os = require("os");
@@ -35,6 +35,7 @@ const { spinner } = require("../../lib/cli/spinner");
 const { UrlHandler } = require("../../lib/utils/urlHandler");
 const { ReconciliationText } = require("../../lib/templates/reconciliationText");
 const { SharedPart } = require("../../lib/templates/sharedPart");
+const fsUtils = require("../../lib/utils/fsUtils");
 const { LiquidSamplerRunner } = require("../../lib/liquidSamplerRunner");
 
 const REPORT_URL = "https://reports.example.com/sampler/abc123.html";
@@ -144,7 +145,7 @@ describe("LiquidSamplerRunner - compact diff", () => {
     const output = logSpy.mock.calls.map((c) => c[0]).join("\n");
     expect(output).toContain("<!-- SAMPLER_COMPACT_START -->");
     expect(output).toContain("<!-- SAMPLER_COMPACT_END -->");
-    expect(output).toContain("### vkt_1");
+    expect(output).toContain("### `vkt_1`");
     expect(output).toContain("[2×] `street_var`: `\"\"` → `null`");
   });
 
@@ -283,7 +284,7 @@ describe("LiquidSamplerRunner - compact diff from a local zip (--from-zip)", () 
     expect(SF.readSamplerRun).not.toHaveBeenCalled();
     const output = logSpy.mock.calls.map((c) => c[0]).join("\n");
     expect(output).toContain("<!-- SAMPLER_COMPACT_START -->");
-    expect(output).toContain("### vkt_1");
+    expect(output).toContain("### `vkt_1`");
   });
 
   it("exits non-zero with a clear error when the path doesn't exist", async () => {
@@ -487,6 +488,39 @@ describe("LiquidSamplerRunner - add diffs folder to a local zip (--add-diffs-fol
     expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("Could not build diffs/ folder"));
     expect(process.exit).toHaveBeenCalledWith(1);
   });
+
+  it("replaces an earlier diffs/ folder rather than adding to it", () => {
+    writeZip([
+      ["output/reconciliation_entries/1/before/registers.json", JSON.stringify({ named_results: { a: "before" } })],
+      ["output/reconciliation_entries/1/after/registers.json", JSON.stringify({ named_results: { a: "after" } })],
+      ["output/reconciliation_entries/1/before/view.html", "<div>1 old</div>"],
+      ["output/reconciliation_entries/1/after/view.html", "<div>1 new</div>"],
+      ["diffs/reconciliation_entries/2/before/view.html", "<div>no longer flagged</div>"],
+    ]);
+
+    new LiquidSamplerRunner("1").addDiffsFolderToZip(zipPath);
+
+    const names = new AdmZip(fs.readFileSync(zipPath)).getEntries().map((e) => e.entryName);
+    expect(names).toContain("diffs/reconciliation_entries/1/after/view.html");
+    expect(names).not.toContain("diffs/reconciliation_entries/2/before/view.html");
+    expect(consola.success).toHaveBeenCalledWith(expect.stringContaining("Removed the earlier diffs/ folder"));
+  });
+
+  it("treats a directory where a view.html should be as a missing render", () => {
+    writeZip([
+      ["output/reconciliation_entries/1/before/registers.json", JSON.stringify({ named_results: { a: "before" } })],
+      ["output/reconciliation_entries/1/after/registers.json", JSON.stringify({ named_results: { a: "after" } })],
+      ["output/reconciliation_entries/1/before/view.html/registers.json", "{}"],
+      ["output/reconciliation_entries/1/after/view.html", "<div>1 new</div>"],
+    ]);
+
+    new LiquidSamplerRunner("1").addDiffsFolderToZip(zipPath);
+
+    expect(process.exit).not.toHaveBeenCalled();
+    const names = new AdmZip(fs.readFileSync(zipPath)).getEntries().map((e) => e.entryName);
+    expect(names).toContain("diffs/reconciliation_entries/1/after/view.html");
+    expect(names).not.toContain("diffs/reconciliation_entries/1/before/view.html");
+  });
 });
 
 describe("LiquidSamplerRunner - polling status output", () => {
@@ -682,6 +716,8 @@ describe("LiquidSamplerRunner - keeping and narrowing the extracted output", () 
 
   afterEach(() => {
     process.exit = originalExit;
+    // A failed optional output sets a non-zero exit code; don't let it fail the jest run.
+    process.exitCode = undefined;
     fs.rmSync(zipPath, { force: true });
     fs.rmSync(outDir, { recursive: true, force: true });
     fs.rmSync(keepDir, { recursive: true, force: true });
@@ -819,6 +855,7 @@ describe("LiquidSamplerRunner - keeping and narrowing the extracted output", () 
 
       expect(fs.readdirSync(keepDir)).toEqual(["stale.txt"]);
       expect(consola.warn).toHaveBeenCalledWith(expect.stringContaining("not an empty directory"));
+      expect(process.exitCode).toBe(1);
     });
 
     it("still cleans up when the option is absent", async () => {
@@ -846,6 +883,16 @@ describe("LiquidSamplerRunner - keeping and narrowing the extracted output", () 
       expect(consola.info).toHaveBeenCalledWith(expect.stringContaining(jsonPath));
     });
 
+    it("removes an earlier run's file before a run that fails before writing its own", async () => {
+      fs.writeFileSync(zipPath, "not a zip file");
+      fs.writeFileSync(jsonPath, "previous");
+
+      await new LiquidSamplerRunner("1", { compact: true, jsonOut: jsonPath }).printCompactDiffFromZip(zipPath);
+
+      expect(process.exit).toHaveBeenCalledWith(1);
+      expect(fs.existsSync(jsonPath)).toBe(false);
+    });
+
     it("leaves neither a temp file nor an earlier run's file behind when the write fails", async () => {
       writeZip();
       fs.writeFileSync(jsonPath, "previous");
@@ -859,6 +906,35 @@ describe("LiquidSamplerRunner - keeping and narrowing the extracted output", () 
       expect(fs.existsSync(jsonPath)).toBe(false);
       expect(fs.readdirSync(path.dirname(jsonPath)).filter((n) => n.startsWith(`.${path.basename(jsonPath)}.`))).toEqual([]);
       expect(consola.warn).toHaveBeenCalledWith(expect.stringContaining("Could not write the JSON sidecar"));
+      expect(process.exitCode).toBe(1);
+    });
+  });
+
+  describe("on failure", () => {
+    it("still cleans up the extracted tree, and keeps it when asked, before exiting 1", () => {
+      writeZip();
+      const write = jest.spyOn(fsUtils, "writeDirectoryAtomic").mockImplementationOnce(() => {
+        throw new Error("ENOSPC");
+      });
+
+      new LiquidSamplerRunner("1", { keepExtracted: keepDir }).extractFlaggedOnly(zipPath, outDir);
+
+      write.mockRestore();
+      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("ENOSPC"));
+      expect(process.exit).toHaveBeenCalledWith(1);
+      expect(fs.existsSync(path.join(keepDir, "output"))).toBe(true);
+      expect(fs.existsSync(outDir)).toBe(false);
+    });
+
+    it("refuses a zip with no sampled entries instead of reporting no changes", () => {
+      const zip = new AdmZip();
+      zip.addFile("readme.txt", Buffer.from("not sampler output"));
+      fs.writeFileSync(zipPath, zip.toBuffer());
+
+      new LiquidSamplerRunner("1").extractFlaggedOnly(zipPath, outDir);
+
+      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("no sampled entries"));
+      expect(process.exit).toHaveBeenCalledWith(1);
     });
   });
 });

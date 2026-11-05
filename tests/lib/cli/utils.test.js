@@ -333,6 +333,12 @@ describe("cli/utils", () => {
       expect(mockExit).not.toHaveBeenCalled();
     });
 
+    it("should require a partner unless --from-zip is used", () => {
+      expectRejected({ handle: ["a"] }, "You need to specify a partner using -p or --partner");
+      jest.clearAllMocks();
+      expect(cliUtils.checkSamplerOptions({ fromZip: "r.zip" })).toBe(true);
+    });
+
     it("should reject --add-diffs-folder and --extract-flagged-only without --from-zip", () => {
       expectRejected({ addDiffsFolder: true }, "--add-diffs-folder requires --from-zip");
       jest.clearAllMocks();
@@ -350,7 +356,7 @@ describe("cli/utils", () => {
     });
 
     it("should reject --json inside an output directory", () => {
-      expectRejected({ compact: true, keepExtracted: tempDir, json: path.join(tempDir, "d.json") }, "--json must not point inside --keep-extracted");
+      expectRejected({ partner: "1", compact: true, keepExtracted: tempDir, json: path.join(tempDir, "d.json") }, "--json must not point inside --keep-extracted");
     });
 
     it("should reject --json pointing at the --from-zip archive", () => {
@@ -358,17 +364,17 @@ describe("cli/utils", () => {
     });
 
     it("should reject --json pointing at a directory", () => {
-      expectRejected({ compact: true, json: tempDir }, "is a directory");
+      expectRejected({ partner: "1", compact: true, json: tempDir }, "is a directory");
     });
 
     it("should reject an output directory that already has files", () => {
       fs.writeFileSync(path.join(tempDir, "old.html"), "x");
-      expectRejected({ compact: true, keepExtracted: tempDir }, "already exists and is not an empty directory");
+      expectRejected({ partner: "1", compact: true, keepExtracted: tempDir }, "already exists and is not an empty directory");
     });
 
     it("should reject an output directory it cannot inspect", () => {
       fs.writeFileSync(path.join(tempDir, "results.zip"), "zip");
-      expectRejected({ compact: true, keepExtracted: path.join(tempDir, "results.zip", "out") }, "--keep-extracted: cannot use");
+      expectRejected({ partner: "1", compact: true, keepExtracted: path.join(tempDir, "results.zip", "out") }, "--keep-extracted: cannot use");
     });
   });
 });

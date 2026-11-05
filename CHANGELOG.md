@@ -3,8 +3,8 @@
 All notable changes to this project will be documented in this file.
 
 ## [1.63.0] (05/11/2026)
-`silverfin run-sampler --compact` now also diffs the `results` register and adds scope and visual-only tiers.
-New flags `--from-zip`, `--add-diffs-folder`, `--extract-flagged-only`, `--keep-extracted` and `--json` rebuild the diff from a downloaded `results.zip` and save its renders or data.
+`silverfin run-sampler --compact` now also diffs the `results` register, adds output-vanished, scope and visual-only tiers, and waits up to 2 hours (was 1) for a live run.
+New flags `--from-zip`, `--add-diffs-folder`, `--extract-flagged-only`, `--keep-extracted` and `--json` rebuild the diff from a downloaded `results.zip` and save its renders or data, exiting 1 when a requested output can't be written.
 The sampler also sends `auto_hide_formula`, `reconciliation_type`, `handle` and `name_*`, and dependencies are updated.
 
 ## [1.62.1] (05/11/2026)

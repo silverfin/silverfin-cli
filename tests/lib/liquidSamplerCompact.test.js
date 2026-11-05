@@ -186,7 +186,7 @@ describe("liquidSamplerCompact - diffScope", () => {
     const [change] = diffScope(before, after);
     expect(change.key).toBe("dependencies");
     expect(change.subLines).toHaveLength(2);
-    expect(change.subLines[0]).toBe("−1 ledger (2)");
+    expect(change.subLines[0]).toBe("−1 ledger (`2`)");
     expect(change.subLines[1]).toContain("handle");
     expect(change.subLines[1]).toContain("b");
     expect(change.subLines[1]).toContain("c");
@@ -201,8 +201,8 @@ describe("liquidSamplerCompact - diffScope", () => {
     expect(() => diffScope(before, after)).not.toThrow();
     const [change] = diffScope(before, after);
     expect(change.key).toBe("dependencies");
-    expect(change.subLines.join(" ")).toContain("+2 ledgers (1, 2)");
-    expect(change.subLines.join(" ")).toContain('+1 account range (60)');
+    expect(change.subLines.join(" ")).toContain("+2 ledgers (`1`, `2`)");
+    expect(change.subLines.join(" ")).toContain('+1 account range (`60`)');
   });
 
   it("summarizes rollforward_params by name", () => {
@@ -210,7 +210,7 @@ describe("liquidSamplerCompact - diffScope", () => {
     const after = { rollforward_params: [{ name: "selected.size_company" }, { name: "show_prev_year_balance.presentation" }] };
     const [change] = diffScope(before, after);
     expect(change.key).toBe("rollforward_params");
-    expect(change.summary).toBe("−1 param (deposit_layout.dropdown), +1 param (show_prev_year_balance.presentation)");
+    expect(change.summary).toBe("−1 param (`deposit_layout.dropdown`), +1 param (`show_prev_year_balance.presentation`)");
   });
 
   it("summarizes required_keys_missing as added/removed keys", () => {
@@ -218,14 +218,14 @@ describe("liquidSamplerCompact - diffScope", () => {
     const after = { required_keys_missing: ["letter_of_representation.date", "report.period", "statements.signed"] };
     const [change] = diffScope(before, after);
     expect(change.key).toBe("required_keys_missing");
-    expect(change.summary).toBe("+2 keys (report.period, statements.signed)");
+    expect(change.summary).toBe("+2 keys (`report.period`, `statements.signed`)");
   });
 
   it("caps preview lists and discloses the remainder", () => {
     const before = { required_keys_missing: [] };
     const after = { required_keys_missing: ["a", "b", "c", "d", "e"] };
     const [change] = diffScope(before, after);
-    expect(change.summary).toMatch(/^\+5 keys \(a, b, c \+2 more, #[0-9a-f]{8}\)$/);
+    expect(change.summary).toMatch(/^\+5 keys \(`a`, `b`, `c` \+2 more, #[0-9a-f]{8}\)$/);
   });
 });
 
@@ -1193,12 +1193,64 @@ describe("liquidSamplerCompact - extractCompact", () => {
 });
 
 describe("liquidSamplerCompact - formatCompact", () => {
+  it("reads a numeric label as a string instead of throwing while sorting", () => {
+    const data = extractCompact(
+      buildResultsDir({
+        reconciliation_entries: [
+          { id: "1", label: 2023, before: { a: "1" }, after: { a: "2" } },
+          { id: "2", label: "vkt_1", before: { a: "1" }, after: { a: "2" } },
+        ],
+      }),
+    );
+    expect(formatCompact(data)).toContain("### `2023`");
+  });
+
+  it("code-spans the template label in every tier's heading, so it can't add links or mentions", () => {
+    const label = "[x](https://evil) @org/team";
+    const data = extractCompact(
+      buildResultsDir({
+        reconciliation_entries: [
+          { id: "1", label, before: { a: "1" }, after: { a: "2" } },
+          { id: "2", label, before: { a: "1", b: "2", c: "3" }, after: {} },
+        ],
+      }),
+    );
+    const md = formatCompact(data);
+    expect(md).toContain(`### \`${label}\``);
+    expect(md).toContain(`**\`${label}\`**`);
+    expect(md).not.toMatch(/(^|[^`])\[x\]\(https:\/\/evil\)/m);
+  });
+
+  it("links only to Silverfin's own app", () => {
+    const data = extractCompact(
+      buildResultsDir({
+        reconciliation_entries: [
+          { id: "1", label: "a", url: "https://phish.example/f/1", before: { a: "1" }, after: { a: "2" } },
+          { id: "2", label: "b", url: "https://live.getsilverfin.com/f/1", before: { a: "1" }, after: { a: "2" } },
+        ],
+      }),
+    );
+    const md = formatCompact(data);
+    expect(md).not.toContain("phish.example");
+    expect(md).toContain("[example](https://live.getsilverfin.com/f/1)");
+  });
+
+  it("cuts the tightest tier at a line boundary when it is still over the hard limit", () => {
+    const after = {};
+    for (let i = 0; i < 40; i++) after[`key_${i}`] = `value_${i}`;
+    const data = extractCompact(buildResultsDir({ reconciliation_entries: [{ id: "1", label: "big", before: {}, after }] }));
+    const md = formatCompact(data, { budget: 1, hardLimit: 300 });
+    expect(md.length).toBeLessThanOrEqual(300);
+    expect(md).toMatch(/cut to fit the comment limit/);
+    expect(md.split("\n").every((line) => !line.startsWith("- `key_") || line.endsWith("`"))).toBe(true);
+  });
+
   it("renders a markdown summary with per-template sections and an example link", () => {
     const md = formatCompact(extractCompact(FIXTURE_DIR));
     expect(md).toContain("## 🧪 Sampler compact diff");
-    expect(md).toContain("### vkt_1");
+    expect(md).toContain("### `vkt_1`");
     expect(md).toContain("[2×] `street_var`: `\"\"` → `null`");
-    expect(md).toContain("### liquidation_reserve");
+    expect(md).toContain("### `liquidation_reserve`");
     expect(md).toContain("[example](https://example.staging.getsilverfin.com");
   });
 
@@ -1312,7 +1364,7 @@ describe("liquidSamplerCompact - formatCompact", () => {
   it("renders the collapsed-output section with a file/url pointer, ahead of the normal template sections", () => {
     const dir = buildResultsDir({
       reconciliation_entries: [
-        { id: "1", label: "collapsed_tpl", before: { a: "1", b: "2", c: "3" }, after: {}, url: "https://app.example.com/entry/1" },
+        { id: "1", label: "collapsed_tpl", before: { a: "1", b: "2", c: "3" }, after: {}, url: "https://app.getsilverfin.com/entry/1" },
       ],
     });
     try {
@@ -1320,7 +1372,7 @@ describe("liquidSamplerCompact - formatCompact", () => {
       expect(md).toContain("⚠️ Output vanished");
       expect(md).toContain("collapsed_tpl");
       expect(md).toContain("3 value(s) lost");
-      expect(md).toContain("[example](https://app.example.com/entry/1)");
+      expect(md).toContain("[example](https://app.getsilverfin.com/entry/1)");
       expect(md.indexOf("⚠️ Output vanished")).toBeLessThan(md.indexOf("🔧 Scope") === -1 ? Infinity : md.indexOf("🔧 Scope"));
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
@@ -1336,7 +1388,7 @@ describe("liquidSamplerCompact - formatCompact", () => {
           before: {},
           after: {},
           registers: { before: { required_keys_missing: [] }, after: { required_keys_missing: ["report.period"] } },
-          url: "https://app.example.com/entry/1",
+          url: "https://app.getsilverfin.com/entry/1",
         },
       ],
     });
@@ -1345,7 +1397,7 @@ describe("liquidSamplerCompact - formatCompact", () => {
       expect(md).toContain("🔧 Scope/dependency changes");
       expect(md).toContain("required_keys_missing");
       expect(md).toContain("report.period");
-      expect(md).toContain("[example](https://app.example.com/entry/1)");
+      expect(md).toContain("[example](https://app.getsilverfin.com/entry/1)");
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }
@@ -1363,7 +1415,7 @@ describe("liquidSamplerCompact - formatCompact", () => {
             before: '<textarea data-name="salutation.header" placeholder="">Geacht bestuur,</textarea>',
             after: '<textarea data-name="salutation.header" placeholder="Geacht bestuur,">Geacht bestuur,</textarea>',
           },
-          url: "https://app.example.com/entry/1",
+          url: "https://app.getsilverfin.com/entry/1",
         },
       ],
     });
@@ -1371,7 +1423,7 @@ describe("liquidSamplerCompact - formatCompact", () => {
       const md = formatCompact(extractCompact(dir));
       expect(md).toContain("👁️ Visual-only changes");
       expect(md).toContain("visual_tpl");
-      expect(md).toContain("[open in app](https://app.example.com/entry/1)");
+      expect(md).toContain("[open in app](https://app.getsilverfin.com/entry/1)");
       expect(md).toContain("output/reconciliation_entries/1/{before,after}/view.html");
       expect(md).toContain('- field `salutation.header` placeholder: `""` → `"Geacht bestuur,"`');
     } finally {
@@ -1655,8 +1707,8 @@ describe("liquidSamplerCompact - formatCompact", () => {
       // No colon-separated summary crammed onto the key line itself.
       expect(lines[keyLineIndex].trim()).toMatch(/`dependencies`:$/);
       // Each category is its own indented sub-bullet underneath.
-      expect(lines[keyLineIndex + 1]).toMatch(/^ {2}- −1 ledger \(2\)$/);
-      expect(lines[keyLineIndex + 2]).toMatch(/^ {2}- −1 account range \(A%\)$/);
+      expect(lines[keyLineIndex + 1]).toMatch(/^ {2}- −1 ledger \(`2`\)$/);
+      expect(lines[keyLineIndex + 2]).toMatch(/^ {2}- −1 account range \(`A%`\)$/);
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }

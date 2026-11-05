@@ -510,6 +510,68 @@ describe("fsUtils", () => {
       expect(fs.readFileSync(filePath, "utf8")).toBe("old");
       expect(fs.readdirSync(tempDir)).toEqual(["out.json"]);
     });
+
+    it("should write through a symlink to its target and keep the file's mode", () => {
+      const target = path.join(tempDir, "results.zip");
+      const link = path.join(tempDir, "link.zip");
+      fs.writeFileSync(target, "old");
+      fs.chmodSync(target, 0o640);
+      fs.symlinkSync(target, link);
+
+      fsUtils.writeFileAtomic(link, "new");
+
+      expect(fs.lstatSync(link).isSymbolicLink()).toBe(true);
+      expect(fs.readFileSync(target, "utf8")).toBe("new");
+      expect(fs.statSync(target).mode & 0o777).toBe(0o640);
+    });
+
+    it("should create missing parent directories", () => {
+      const filePath = path.join(tempDir, "nested", "out.json");
+      fsUtils.writeFileAtomic(filePath, "new");
+      expect(fs.readFileSync(filePath, "utf8")).toBe("new");
+    });
+  });
+
+  describe("writeDirectoryAtomic", () => {
+    it("should write every file into an absent or empty directory", () => {
+      const dir = path.join(tempDir, "out");
+      fs.mkdirSync(dir);
+      fsUtils.writeDirectoryAtomic(dir, [{ relPath: path.join("a", "view.html"), contents: "a" }]);
+      expect(fs.readFileSync(path.join(dir, "a", "view.html"), "utf8")).toBe("a");
+      expect(fs.readdirSync(tempDir)).toEqual(["out"]);
+    });
+
+    it("should leave nothing behind when a write fails", () => {
+      const dir = path.join(tempDir, "out");
+      const writeSpy = jest.spyOn(fs, "writeFileSync").mockImplementationOnce(() => {
+        throw new Error("ENOSPC");
+      });
+      try {
+        expect(() => fsUtils.writeDirectoryAtomic(dir, [{ relPath: "a.html", contents: "a" }])).toThrow("ENOSPC");
+      } finally {
+        writeSpy.mockRestore();
+      }
+      expect(fs.readdirSync(tempDir)).toEqual([]);
+    });
+  });
+
+  describe("copyDirectory", () => {
+    it("should copy a tree into a destination whose parent does not exist yet", () => {
+      fs.mkdirSync(path.join(tempDir, "src", "sub"), { recursive: true });
+      fs.writeFileSync(path.join(tempDir, "src", "sub", "a.txt"), "a");
+      fsUtils.copyDirectory(path.join(tempDir, "src"), path.join(tempDir, "x", "dest"));
+      expect(fs.readFileSync(path.join(tempDir, "x", "dest", "sub", "a.txt"), "utf8")).toBe("a");
+    });
+  });
+
+  describe("readFileIfPresent", () => {
+    it("should return the contents of a file, and null for a directory or a missing path", () => {
+      fs.writeFileSync(path.join(tempDir, "a.html"), "a");
+      fs.mkdirSync(path.join(tempDir, "dir.html"));
+      expect(fsUtils.readFileIfPresent(path.join(tempDir, "a.html")).toString()).toBe("a");
+      expect(fsUtils.readFileIfPresent(path.join(tempDir, "dir.html"))).toBeNull();
+      expect(fsUtils.readFileIfPresent(path.join(tempDir, "missing.html"))).toBeNull();
+    });
   });
 
   // ─── getAllWorkflowHandles ─────────────────────────────────────────────────

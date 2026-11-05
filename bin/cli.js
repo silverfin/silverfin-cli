@@ -582,13 +582,6 @@ program
       return;
     }
 
-    // Every other path talks to the partner/sampler API, so -p/--partner is
-    // required there - it's just not required for --from-zip's offline path.
-    if (!options.partner) {
-      consola.error("You need to specify a partner using -p or --partner");
-      process.exit(1);
-    }
-
     // If an existing sampler ID is provided, fetch and display results
     if (options.id) {
       if (!/^\d+$/.test(options.id)) {
