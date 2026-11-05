@@ -43,6 +43,7 @@ tests/
     │   ├── changelogReader.test.js
     │   ├── cliUpdater.test.js
     │   ├── cwdValidator.test.js
+    │   ├── stats.test.js
     │   └── utils.test.js
     ├── templates/
     │   ├── reconciliationTexts.test.js
@@ -169,6 +170,7 @@ Source: `index.js` → `lib/api/sfApi.js`
 | `copyCompanyData` | should error and return false when no source company id is given | Verifies that the API is not called, an error is logged, and `false` is returned when the source company id is missing. |
 | `copyCompanyData` | should error and return false when no source ledger ids are given | Verifies that the API is not called, an error is logged, and `false` is returned when the ledger id list is empty. |
 | `copyCompanyData` | should error and return false when the API returns no data | Verifies that an error is logged and `false` is returned when the Data Copier response has no data. |
+| `copyCompanyData` | should hint at a stack mismatch and return false when the API returns 422 | Verifies that a 422 response logs a warning that the source company and destination firm are usually on different stacks, no success is logged, and `false` is returned. |
 
 ---
 
@@ -399,9 +401,16 @@ Source: `lib/api/firmCredentials.js`
 | `loadCredentials` | loads credentials from file successfully | Verifies that calling `loadCredentials` replaces the in-memory data with freshly read credentials from disk. |
 | `saveCredentials` | writes credentials to file successfully | Verifies that `saveCredentials` calls `fs.writeFileSync` with the current in-memory credentials serialised as JSON. |
 | `saveCredentials` | handles file system error when saving credentials | Verifies that a filesystem error during save is caught and logged without throwing. |
+| `storeNewTokenPair` / `loadCredentials` | keeps a per-firm field it doesn't recognize through storeNewTokenPair, saveCredentials, and loadCredentials | Verifies that an unrecognized per-firm field (e.g. one written by a newer CLI version) survives a full store -> save -> load cycle instead of being silently dropped. |
+| `listAuthorizedFirms` | does not list the host key as a firm | Verifies that the configured `host` and `partnerCredentials` keys are not returned as if they were authorized firms. |
 | `setHost` / `getHost` | should set and get the host correctly | Verifies that `setHost` persists the host to disk and `getHost` returns the updated value. |
 | `setHost` / `getHost` | should return environment variable host if set | Verifies that `getHost` returns the `SF_HOST` env var value instead of the stored host when the env var is set. |
 | `setHost` / `getHost` | should return default host if not set | Verifies that `getHost` returns the default live host when neither `SF_HOST` nor a stored value is present. |
+| `storeNewSolidTokenPair` | stores the solid:publish tokens next to the firm's tokens | Verifies that the solid:publish pair is written as `solidAccessToken` and `solidRefreshToken`, and the other firm fields are kept. |
+| `getSolidTokenPair` | returns the stored solid:publish tokens | Verifies that a stored solid:publish pair is returned as `accessToken` and `refreshToken`. |
+| `getSolidTokenPair` | returns null for a firm without solid:publish tokens | Verifies that a firm with only its own tokens returns `null`. |
+| `getSolidTokenPair` | returns null for a firm that is not in the config at all | Verifies that an unknown firm id returns `null`. |
+| `getPartnerCredentials` | exits with the auth-failure code for a partner with no stored credential | Verifies that an unknown partner id logs the missing-authorization error and exits with code 2. |
 
 ---
 
@@ -410,7 +419,8 @@ Source: `lib/api/sfApi.js`
 
 | Function | Test | Description |
 |---|---|---|
-| `authorizeFirm` | should delegate to SilverfinAuthorizer.authorizeFirm | Verifies that calling `SF.authorizeFirm` passes the firm ID straight through to `SilverfinAuthorizer.authorizeFirm`. |
+| `authorizeFirm` | should delegate to SilverfinAuthorizer.authorizeFirm | Verifies that calling `SF.authorizeFirm` passes the firm ID and empty options straight through to `SilverfinAuthorizer.authorizeFirm`. |
+| `authorizeFirm` | should pass the solid option to SilverfinAuthorizer.authorizeFirm | Verifies that the `solid` option reaches `SilverfinAuthorizer.authorizeFirm`. |
 | `refreshFirmTokens` | should delegate to SilverfinAuthorizer.refreshFirm | Verifies that calling `SF.refreshFirmTokens` delegates to `SilverfinAuthorizer.refreshFirm` and returns its result. |
 | `refreshPartnerToken` | should delegate to SilverfinAuthorizer.refreshPartner | Verifies that calling `SF.refreshPartnerToken` delegates to `SilverfinAuthorizer.refreshPartner` and returns its result. |
 | `createReconciliationText` | should POST to reconciliations and return response on success (201) | Verifies that a POST to `reconciliations` succeeds with a 201 and the response data is returned. |
@@ -443,7 +453,8 @@ Source: `lib/api/sfApi.js`
 | `findAccountTemplateByName` | should find account template by name_nl | Verifies that the matching account template is returned when its `name_nl` is found in the list. |
 | `findAccountTemplateByName` | should return null when list is empty | Verifies that `null` is returned when the list API returns an empty array. |
 | `runCompanyDataCopier` | should POST to the firm-scoped company_data_copier/run route with the attributes and return the response | Verifies that the Data Copier attributes are POSTed to the relative `company_data_copier/run` path on the firm-scoped `/api/v4/f/:id` baseURL (not an absolute public-v3 URL) and the response is returned. |
-| `runCompanyDataCopier` | should delegate to the error handler on failure | Verifies that a non-2xx response is routed through `responseErrorHandler`. |
+| `runCompanyDataCopier` | should delegate to the error handler on failure | Verifies that a non-2xx, non-422 response is routed through `responseErrorHandler`. |
+| `runCompanyDataCopier` | should return the 422 response instead of exiting so the caller can explain it | Verifies that a 422 bypasses `responseErrorHandler` (which exits) and the error response is returned to the caller. |
 
 ---
 
@@ -454,12 +465,19 @@ Source: `lib/api/silverfinAuthorizer.js`
 |---|---|---|
 | `SilverfinAuthorizer.authorizeFirm` | should successfully store new tokens when they dont exist | Verifies the full OAuth flow: the browser is opened, the authorization code is exchanged for tokens, firm details are fetched, and tokens are stored. |
 | `SilverfinAuthorizer.authorizeFirm` | should succesfully store new tokens when they exist | Verifies that re-authorizing an already-authorized firm also completes the OAuth flow and stores the new tokens. |
+| `SilverfinAuthorizer.authorizeFirm` | should request the full firm scopes by default | Verifies that the authorize URL requests the administration, financials and workflows scopes when no option is given. |
+| `SilverfinAuthorizer.authorizeFirm` | should request only the solid:publish scope with the solid option | Verifies that the authorize URL requests only `solid:publish` when `solid` is true. |
+| `SilverfinAuthorizer.authorizeFirm` | should store the tokens next to the firm's tokens with the solid option | Verifies that with `solid` the tokens are stored with `storeNewSolidTokenPair`, and the firm's tokens are not replaced. |
+| `SilverfinAuthorizer.authorizeFirm` | should not fetch the firm name with the solid option | Verifies that with `solid` no request is made for the firm name, because the firm may have no token that can read it. |
 | `SilverfinAuthorizer.authorizeFirm` | should raise an error when firm id is missing | Verifies that when the user enters an empty firm ID an error is logged and the process exits without opening the browser. |
 | `SilverfinAuthorizer.authorizeFirm` | should handle response errors | Verifies that an HTTP error response during token exchange logs the status, error description, and exits the process without storing tokens. |
 | `SilverfinAuthorizer.authorizeFirm` | should not raise errors when getting the firm name fails | Verifies that a failure to fetch the firm name is silently ignored and the tokens are still stored. |
 | `SilverfinAuthorizer.refreshFirm` | should store provided tokens | Verifies that when valid stored tokens exist a refresh request is made with the correct parameters and new tokens are stored. |
 | `SilverfinAuthorizer.refreshFirm` | should raise an error when there are no previous tokens | Verifies that when no existing tokens are stored an error is logged, no refresh request is made, and the process exits. |
 | `SilverfinAuthorizer.refreshFirm` | should handle response errors | Verifies that an HTTP error during token refresh logs the status and description and exits without storing tokens. |
+| `SilverfinAuthorizer.refreshFirm` | should refresh the solid:publish tokens too when the firm has them | Verifies that a firm with both pairs gets two refresh requests, and each new pair is stored in its own place. |
+| `SilverfinAuthorizer.refreshFirm` | should refresh only the solid:publish tokens when the firm has no other tokens | Verifies that a firm with only the solid:publish pair gets one refresh request, stored as the solid:publish pair. |
+| `SilverfinAuthorizer.refreshFirm` | should fail when the solid:publish refresh fails after the firm refresh succeeds | Verifies that a failed solid:publish refresh exits with code 2, after the firm's new tokens are stored. |
 | `SilverfinAuthorizer.refreshPartner` | should store the new API key | Verifies that when valid stored credentials exist the refresh endpoint is called and the new API key is persisted. |
 | `SilverfinAuthorizer.refreshPartner` | should raise an error when there are no previous tokens | Verifies that when no partner credentials are stored an error is logged, no refresh request is made, and the process exits. |
 | `SilverfinAuthorizer.refreshPartner` | should handle response errors | Verifies that an HTTP error during API key refresh logs the status and exits without storing the new key. |
@@ -510,6 +528,43 @@ Source: `lib/cli/cwdValidator.js`
 
 ---
 
+### `tests/lib/cli/stats.test.js`
+Source: `lib/cli/stats.js`
+
+| Function | Test | Description |
+|---|---|---|
+| `generateWorkflowOverview` (no handle) | should inform the user and stop when the workflows folder is missing | Verifies that an error naming the `workflows` folder is logged and no `stats` folder is written when the folder does not exist. |
+| `generateWorkflowOverview` (no handle) | should inform the user and stop when the workflows folder is empty | Verifies that an empty `workflows` folder produces the same message and no exit. |
+| `generateWorkflowOverview` (no handle) | should ignore non-JSON files when discovering workflows | Verifies that a `README.md` in the `workflows` folder is not treated as a workflow. |
+| `generateWorkflowOverview` (no handle) | should skip a faulty workflow and still process the valid ones | Verifies that an unparsable workflow is skipped with a warning while the valid one still produces its CSV. |
+| `generateWorkflowOverview` (no handle) | should report a tally so a partial run is not mistaken for a complete one | Verifies that the number of skipped workflows and their handles are reported after the loop, and that a partial run still returns `true`. |
+| `generateWorkflowOverview` (no handle) | should report a failure when every workflow was skipped | Verifies that `false` is returned when not a single workflow could be reported on. |
+| `generateWorkflowOverview` (no handle) | should not report a tally when every workflow is valid | Verifies that no skip summary is printed when nothing was skipped. |
+| `generateWorkflowOverview` (handle) | should report a failure when the requested workflow does not exist | Verifies that `false` is returned, the handle is named, and the function does not exit the process itself. |
+| `generateWorkflowOverview` (handle) | should report a failure when the requested workflow is malformed | Verifies that the missing attribute is named and `false` is returned. |
+| `generateWorkflowOverview` (handle) | should report a failure on a handle which points outside the workflows folder | Verifies that a traversal handle (`../escape`) is refused and writes no file outside the repository. |
+| `generateWorkflowOverview` (handle) | should not skip the workflow it was asked for | Verifies that the batch "Skipping workflow" wording is not used when a single handle was requested. |
+| `generateWorkflowOverview` (handle) | should produce a CSV named after the workflow handle | Verifies that the statistics are written to `stats/<handle>_stats.csv`. |
+| `generateWorkflowOverview` (handle) | should count only the templates belonging to the workflow | Verifies that templates outside the workflow are excluded from the counts. |
+| `generateWorkflowOverview` (no templates) | should report zero without silently matching every template | Verifies that an empty template list does not fall back to the `.*` pattern used by the repository-wide overview. |
+| `generateWorkflowOverview` (no templates) | should explain that no YAML changes can be counted | Verifies that the user is told why the YAML activity counts are empty. |
+| `generateWorkflowOverview` (no templates) | should not run the git scan when there is nothing to match | Verifies that `git whatchanged` is not invoked when the workflow holds no templates. |
+| `generateWorkflowOverview` (regex characters) | should treat a quantifier in a name literally | Verifies that a template name containing `+` or `*` is escaped before being interpolated into the match pattern. |
+| `generateWorkflowOverview` (regex characters) | should not build an invalid regular expression from a name with brackets | Verifies that a name containing brackets does not throw when the pattern is compiled. |
+| `generateWorkflowOverview` (missing templates) | should leave the missing template out of the counts | Verifies that a handle listed in the workflow but not stored in the repository is excluded from the totals. |
+| `generateWorkflowOverview` (missing templates) | should name the missing templates | Verifies that the warning names the workflow and every handle which has no template folder. |
+| `generateWorkflowOverview` (missing templates) | should not create a folder or a config for the missing template | Verifies that reading the statistics never scaffolds a template folder or a `config.json` for an unknown handle. |
+| `generateWorkflowOverview` (missing templates) | should not report the workflow as skipped | Verifies that missing templates lower the totals but still count as a successful report. |
+| `countYamlFiles` (several test files) | should count the template once and add up its unit tests in the repository overview | Verifies that two liquid test files in one `tests` folder produce one template and the sum of their unit tests. |
+| `countYamlFiles` (several test files) | should count the template once and add up its unit tests in a workflow overview | Verifies the same grouping when the counts are filtered by a workflow. |
+| `countYamlFiles` (several test files) | should count the template towards at least two tests on its combined total | Verifies that two files holding one unit test each make the template count as having at least two tests. |
+| `countYamlFiles` (several test files) | should never report more than 100% of the templates as covered | Verifies that three test files for one template give a coverage percentage of 100, not 300. |
+| `generateOverview` | should count every template in the repository | Verifies that the repository-wide overview counts all templates and writes `stats/stats.csv`. |
+| `generateOverview` | should report a write failure instead of throwing | Verifies that a failing `appendFileSync` is reported with the CSV path and the reason, without exiting. |
+| `generateOverview` | should append a row when run a second time | Verifies that a second run adds a row rather than replacing the file. |
+
+---
+
 ### `tests/lib/cli/utils.test.js`
 Source: `lib/cli/utils.js`
 
@@ -524,6 +579,22 @@ Source: `lib/cli/utils.js`
 | `formatOption` | should convert camelCase to kebab-case with leading dash on uppercase | Verifies that `listAll` is converted to `list-all`. |
 | `formatOption` | should handle single word with no uppercase | Verifies that a single lowercase word is returned unchanged. |
 | `formatOption` | should convert multiple uppercase letters | Verifies that `importReconciliationText` is converted to `import-reconciliation-text`. |
+| `checkDateFormat` | should return true for a valid YYYY-MM-DD date | Verifies that a correctly formatted date is accepted. |
+| `checkDateFormat` | should accept a leap day in a leap year | Verifies that `2024-02-29` is accepted. |
+| `checkDateFormat` | should call process.exit(1) for a date in the wrong format | Verifies that a date which is not `YYYY-MM-DD` stops the command. |
+| `checkDateFormat` | should call process.exit(1) for a non-date string | Verifies that arbitrary text stops the command. |
+| `checkDateFormat` | should call process.exit(1) for an empty string | Verifies that an empty value stops the command. |
+| `checkDateFormat` | should call process.exit(1) when the value is not a string | Verifies that a non-string value stops the command instead of throwing. |
+| `checkDateFormat` | should reject a correctly formatted but impossible calendar date | Verifies that a well-formed but non-existent date is rejected. |
+| `checkDateFormat` | should reject a leap day outside a leap year | Verifies that `2023-02-29` is rejected. |
+| `checkDateFormat` | should reject a month outside the valid range | Verifies that a month above 12 is rejected. |
+| `checkDateFormat` | should reject input containing shell metacharacters | Verifies that the date cannot carry shell syntax into the `git` command built from it. |
+| `checkHandleFormat` | should return true for a handle which names a file | Verifies that an ordinary handle is accepted without exiting. |
+| `checkHandleFormat` | should call process.exit(1) for the handle %p | Verifies that separators, `..` and leading dots are reported through `errorUtils.invalidHandleFormat` and stop the command. |
+| `checkHandleFormat` | should report a blank handle %p as missing | Verifies that an empty or whitespace handle goes to `errorUtils.missingHandle` rather than being reported as malformed. |
+| `checkHandleFormat` | should report a missing handle as missing | Verifies that `undefined` goes to `errorUtils.missingHandle`. |
+| `checkHandleFormat` | should pass the suggested command on to the error message | Verifies that the command the caller offers reaches `errorUtils.invalidHandleFormat`. |
+| `checkHandleFormat` | should pass the suggested command on when the handle is missing | Verifies that the command the caller offers reaches `errorUtils.missingHandle`. |
 | `checkUniqueOption` | should return true when exactly one unique option is used | Verifies that `true` is returned and no error is logged when exactly one of the mutually exclusive options is set. |
 | `checkUniqueOption` | should call process.exit(1) when none of the unique options are used | Verifies that an error is logged and `process.exit(1)` is called when none of the required options are present. |
 | `checkUniqueOption` | should call process.exit(1) when more than one unique option is used | Verifies that an error about incompatible options is logged and `process.exit(1)` is called when multiple exclusive options are set. |
@@ -657,6 +728,25 @@ Source: `lib/utils/fsUtils.js` (`checkLiquidTestDependencies`)
 
 ---
 
+### `tests/lib/utils/errorUtils.test.js`
+Source: `lib/utils/errorUtils.js`
+
+| Function | Test | Description |
+|---|---|---|
+| `missingHandle` | should name the label and mention an unset variable | Verifies that the message names the kind of handle expected and points at an unset variable as the likely cause. |
+| `missingHandle` | should suggest the command which lists the handles available | Verifies that the caller's command is printed as the next step. |
+| `missingHandle` | should ask for a valid handle when no command is suggested | Verifies that the user is still told what to do when the caller offers no command. |
+| `missingHandle` | should return false | Verifies that the caller decides what happens next. |
+| `invalidHandleFormat` | should name the handle and the label | Verifies that the rejected handle appears in the message. |
+| `invalidHandleFormat` | should say what a handle cannot contain | Verifies that the message explains why the handle cannot be used as a file name. |
+| `invalidHandleFormat` | should suggest the command which lists the handles available | Verifies that the caller's command is printed as the next step. |
+| `invalidHandleFormat` | should ask for a valid handle when no command is suggested | Verifies that the user is still told what to do when the caller offers no command. |
+| `invalidHandleFormat` | should return false | Verifies that the caller decides what happens next. |
+| `noWorkflowsStored` | should point at the workflows folder fsUtils reads from | Verifies that the folder named in the message comes from `lib/utils/constants.js`, so it cannot drift from the folder `fsUtils` reads. |
+| `unparsableWorkflow` | should point at the workflow file inside that folder | Verifies that the file path offered to the user is built from the same shared constant. |
+
+---
+
 ### `tests/lib/utils/findTemplatesWithLiquidTests.test.js`
 Source: `lib/utils/fsUtils.js` (`findTemplatesWithLiquidTests`)
 
@@ -717,6 +807,24 @@ Source: `lib/utils/fsUtils.js`
 | `createConfigIfMissing` | should create a default config for exportFile when missing | Verifies that a default `config.json` with `name_nl` and `encoding` fields is created for an export file. |
 | `createConfigIfMissing` | should create a default config for accountTemplate when missing | Verifies that a default `config.json` with `name_nl` and `account_range` fields is created for an account template. |
 | `createConfigIfMissing` | should not overwrite an existing config | Verifies that calling `createConfigIfMissing` when a `config.json` already exists leaves the file unchanged. |
+| `getAllWorkflowHandles` | should return an empty array when the workflows folder does not exist | Verifies that a missing `workflows` folder is not an error. |
+| `getAllWorkflowHandles` | should return an empty array when the workflows folder is empty | Verifies that an empty folder returns no handles. |
+| `getAllWorkflowHandles` | should return the handles of every workflow file | Verifies that each `.json` file name is returned without its extension. |
+| `getAllWorkflowHandles` | should ignore files which are not JSON | Verifies that `README.md` and `.DS_Store` are excluded. |
+| `getWorkflow` | should return the parsed workflow when it is valid | Verifies that a valid workflow file is parsed and returned without any error. |
+| `getWorkflow` | should accept a workflow with empty template lists | Verifies that empty (but present) template arrays are valid. |
+| `getWorkflow` | should return undefined and warn when the workflow does not exist | Verifies that a missing workflow returns `undefined` and names the handle. |
+| `getWorkflow` | should list the available handles when the workflow does not exist | Verifies that the workflows actually stored are offered as alternatives. |
+| `getWorkflow` | should report when there are no workflows stored at all | Verifies that the message distinguishes "typo" from "nothing imported yet". |
+| `getWorkflow` | should return undefined and warn when the file is not valid JSON | Verifies that a parse failure is reported rather than thrown. |
+| `getWorkflow` | should return undefined and name the missing attribute when templates.accounts is absent | Verifies that the specific missing attribute is named. |
+| `getWorkflow` | should return undefined when templates is missing entirely | Verifies that a workflow without a `templates` object is refused. |
+| `getWorkflow` | should return undefined when name is missing | Verifies that a workflow without a `name` is refused. |
+| `getWorkflow` | should return undefined when a template attribute is not an array | Verifies that a string where an array is expected is refused. |
+| `getWorkflow` | should return undefined when the file holds a JSON array instead of an object | Verifies that a top-level array is refused. |
+| `getWorkflow` | should refuse the unsafe handle %p without reading any file | Verifies that a traversal handle is rejected before `readFileSync` is reached. |
+| `getWorkflow` | should accept a handle containing a dot | Verifies that a dot inside the name (as opposed to a leading dot or `..`) is allowed. |
+| `getWorkflow` | should not exit the process on any invalid workflow | Verifies that the helper leaves the exit decision to its caller. |
 
 ---
 
@@ -760,6 +868,13 @@ Source: `lib/utils/templateUtils.js`
 | `checkValidName` | should return true for empty string (reconciliationText) | Verifies that an empty string passes the reconciliation text regex (matches zero characters). |
 | `checkValidName` | should return false for string with unicode characters (reconciliationText) | Verifies that a handle with non-ASCII characters fails validation and a warning is logged. |
 | `checkValidName` | should return true for valid alphanumeric sharedPart name | Verifies that a shared part name with alphanumerics and underscores passes validation. |
+| `isSafeName` | should accept the name %p | Verifies that ordinary handles, including ones with dots, spaces and brackets, are accepted. |
+| `isSafeName` | should refuse the name %p | Verifies that separators, `..`, leading dots and null bytes are refused. |
+| `isSafeName` | should refuse the non-string value %p | Verifies that a non-string value is refused rather than throwing. |
+| `fileNameProblem` | should report no problem for the name %p | Verifies that `null` is returned for a usable name. |
+| `fileNameProblem` | should report %p as blank | Verifies that empty, whitespace, `undefined` and `null` are reported as `BLANK`. |
+| `fileNameProblem` | should report %p as unsafe | Verifies that a path-escaping name is reported as `UNSAFE`, so the caller can word a different message. |
+| `fileNameProblem` | should report the non-string value %p as blank | Verifies that non-string values fall into the `BLANK` case. |
 | `filterParts` | should reduce text_parts array to {name: content} object with 2 parts | Verifies that an array of `{ name, content }` objects is transformed into a `{ name: content }` map. |
 | `filterParts` | should return empty object for empty array | Verifies that an empty `text_parts` array produces an empty object. |
 | `filterParts` | should include part with empty name as key | Verifies that a text part with an empty string name is included in the output with `""` as the key. |

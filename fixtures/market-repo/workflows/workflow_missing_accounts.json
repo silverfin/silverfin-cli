@@ -1,0 +1,7 @@
+{
+  "name": "Workflow Missing Accounts",
+  "templates": {
+    "reconciliations": ["reconciliation_text_1"],
+    "exports": []
+  }
+}

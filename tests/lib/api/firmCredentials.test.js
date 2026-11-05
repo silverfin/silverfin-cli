@@ -221,6 +221,93 @@ describe("FirmCredentials", () => {
     });
   });
 
+  describe("field preservation across a store -> save -> load cycle", () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it("keeps a per-firm field it doesn't recognize through storeNewTokenPair, saveCredentials, and loadCredentials", () => {
+      const initialCredentials = {
+        firm123: { accessToken: "old-token", refreshToken: "old-refresh", futureFlag: true },
+        defaultFirmIDs: {},
+        host: "https://test.getsilverfin.com",
+      };
+
+      let testFirmCredentials;
+      let writtenData;
+
+      jest.isolateModules(() => {
+        fs.existsSync.mockReturnValue(true);
+        fs.readFileSync.mockReturnValueOnce(JSON.stringify(initialCredentials));
+
+        const module = require("../../../lib/api/firmCredentials");
+        testFirmCredentials = module.firmCredentials;
+
+        fs.writeFileSync.mockImplementationOnce((_, data) => {
+          writtenData = data;
+        });
+
+        testFirmCredentials.storeNewTokenPair("firm123", {
+          access_token: "new-token",
+          refresh_token: "new-refresh",
+        });
+
+        // Assert the write actually happened before relying on it - otherwise a regression that
+        // skips the save shows up here as an opaque "undefined" JSON-parse failure instead.
+        expect(fs.writeFileSync).toHaveBeenCalled();
+        expect(writtenData).toBeDefined();
+
+        // Pin what actually gets serialized to disk - this is what step 8 depends on, since it's
+        // what lands in CONFIG_JSON, independent of whether this in-memory instance ever reloads.
+        expect(JSON.parse(writtenData).firm123).toEqual({
+          accessToken: "new-token",
+          refreshToken: "new-refresh",
+          futureFlag: true,
+        });
+
+        // Complete the cycle: load back exactly what was just written. Clear the in-memory data
+        // first (a real process restart would have none) so this assertion actually depends on
+        // loadCredentials() reconstructing it from writtenData, not on leftover in-memory state
+        // from storeNewTokenPair's own mutation above happening to already match.
+        fs.readFileSync.mockReturnValueOnce(writtenData);
+        testFirmCredentials.data = null;
+        testFirmCredentials.loadCredentials();
+
+        expect(testFirmCredentials.data.firm123).toEqual({
+          accessToken: "new-token",
+          refreshToken: "new-refresh",
+          futureFlag: true,
+        });
+      });
+    });
+  });
+
+  describe("listAuthorizedFirms", () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it("does not list the host key as a firm", () => {
+      const mockCredentials = {
+        defaultFirmIDs: {},
+        host: "https://test.getsilverfin.com",
+        partnerCredentials: { 1: { name: "Partner", token: "t" } },
+        12345: { accessToken: "a", refreshToken: "b", firmName: "Good Firm" },
+      };
+
+      let testFirmCredentials;
+      jest.isolateModules(() => {
+        fs.existsSync.mockReturnValue(true);
+        fs.readFileSync.mockReturnValueOnce(JSON.stringify(mockCredentials));
+
+        const module = require("../../../lib/api/firmCredentials");
+        testFirmCredentials = module.firmCredentials;
+      });
+
+      expect(testFirmCredentials.listAuthorizedFirms()).toEqual([["12345", "Good Firm"]]);
+    });
+  });
+
   describe("setHost and getHost", () => {
     let mockConfig;
 
@@ -276,6 +363,107 @@ describe("FirmCredentials", () => {
       jest.resetModules();
 
       expect(firmCredentials.getHost()).toBe("https://live.getsilverfin.com");
+    });
+  });
+
+  describe("isAutoRenewEnabled", () => {
+    const loadWith = (firmRecord) => {
+      fs.existsSync.mockReturnValue(true);
+      fs.readFileSync.mockReturnValue(JSON.stringify({ defaultFirmIDs: {}, 100: firmRecord }));
+      firmCredentials.loadCredentials();
+    };
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it("is disabled only when autoRenew is the boolean false", () => {
+      loadWith({ accessToken: "a", refreshToken: "r", autoRenew: false });
+      expect(firmCredentials.isAutoRenewEnabled(100)).toBe(false);
+    });
+
+    it("is enabled when autoRenew is the boolean true", () => {
+      loadWith({ accessToken: "a", refreshToken: "r", autoRenew: true });
+      expect(firmCredentials.isAutoRenewEnabled(100)).toBe(true);
+    });
+
+    it("is enabled when the flag is absent, so an unseeded config keeps renewing", () => {
+      loadWith({ accessToken: "a", refreshToken: "r" });
+      expect(firmCredentials.isAutoRenewEnabled(100)).toBe(true);
+    });
+
+    it("is enabled when autoRenew is null", () => {
+      loadWith({ accessToken: "a", refreshToken: "r", autoRenew: null });
+      expect(firmCredentials.isAutoRenewEnabled(100)).toBe(true);
+    });
+
+    it("is enabled when autoRenew is the string \"false\", which is not a boolean", () => {
+      loadWith({ accessToken: "a", refreshToken: "r", autoRenew: "false" });
+      expect(firmCredentials.isAutoRenewEnabled(100)).toBe(true);
+    });
+
+    it("is enabled for a firm that is not in the config at all", () => {
+      loadWith({ accessToken: "a", refreshToken: "r", autoRenew: false });
+      expect(firmCredentials.isAutoRenewEnabled(999)).toBe(true);
+    });
+
+    it("accepts the firm id as a string, as the 401 interceptor passes it", () => {
+      loadWith({ accessToken: "a", refreshToken: "r", autoRenew: false });
+      expect(firmCredentials.isAutoRenewEnabled("100")).toBe(false);
+    });
+  });
+
+  describe("storeNewSolidTokenPair and getSolidTokenPair", () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+      fs.existsSync.mockReturnValue(true);
+      fs.readFileSync.mockReturnValue(
+        JSON.stringify({ defaultFirmIDs: {}, 100: { accessToken: "a", refreshToken: "r", firmName: "Firm", autoRenew: false } })
+      );
+      firmCredentials.loadCredentials();
+    });
+
+    it("stores the solid:publish tokens next to the firm's tokens", () => {
+      firmCredentials.storeNewSolidTokenPair(100, { access_token: "solid-a", refresh_token: "solid-r" });
+
+      expect(JSON.parse(fs.writeFileSync.mock.calls[0][1])[100]).toEqual({
+        accessToken: "a",
+        refreshToken: "r",
+        firmName: "Firm",
+        autoRenew: false,
+        solidAccessToken: "solid-a",
+        solidRefreshToken: "solid-r",
+      });
+    });
+
+    it("returns the stored solid:publish tokens", () => {
+      firmCredentials.storeNewSolidTokenPair(100, { access_token: "solid-a", refresh_token: "solid-r" });
+
+      expect(firmCredentials.getSolidTokenPair(100)).toEqual({ accessToken: "solid-a", refreshToken: "solid-r" });
+    });
+
+    it("returns null for a firm without solid:publish tokens", () => {
+      expect(firmCredentials.getSolidTokenPair(100)).toBeNull();
+    });
+
+    it("returns null for a firm that is not in the config at all", () => {
+      expect(firmCredentials.getSolidTokenPair(999)).toBeNull();
+    });
+  });
+
+  describe("getPartnerCredentials", () => {
+    it("exits with the auth-failure code for a partner with no stored credential", () => {
+      fs.existsSync.mockReturnValue(true);
+      fs.readFileSync.mockReturnValue(JSON.stringify({ defaultFirmIDs: {}, partnerCredentials: { 1: { token: "t" } } }));
+      firmCredentials.loadCredentials();
+      const exitSpy = jest.spyOn(process, "exit").mockImplementation((code) => {
+        throw new Error(`Process.exit called with code ${code}`);
+      });
+
+      expect(() => firmCredentials.getPartnerCredentials(999)).toThrow("Process.exit called with code 2");
+      expect(consola.error).toHaveBeenCalledWith("Missing authorization for partner id: 999");
+
+      exitSpy.mockRestore();
     });
   });
 });

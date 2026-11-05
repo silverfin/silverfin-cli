@@ -1,8 +1,9 @@
 const axios = require("axios");
 const AxiosMockAdapter = require("axios-mock-adapter");
 
-// Mock apiUtils to prevent env var check at module load time
+// Mock apiUtils to prevent env var check at module load time; keep batchResponseErrorHandler real
 jest.mock("../../../lib/utils/apiUtils", () => ({
+  ...jest.requireActual("../../../lib/utils/apiUtils"),
   checkRequiredEnvVariables: jest.fn(),
   responseSuccessHandler: jest.fn(),
   responseErrorHandler: jest.fn().mockResolvedValue(undefined),
@@ -65,7 +66,13 @@ describe("sfApi", () => {
     it("should delegate to SilverfinAuthorizer.authorizeFirm", async () => {
       const { SilverfinAuthorizer } = require("../../../lib/api/silverfinAuthorizer");
       await SF.authorizeFirm(100);
-      expect(SilverfinAuthorizer.authorizeFirm).toHaveBeenCalledWith(100);
+      expect(SilverfinAuthorizer.authorizeFirm).toHaveBeenCalledWith(100, {});
+    });
+
+    it("should pass the solid option to SilverfinAuthorizer.authorizeFirm", async () => {
+      const { SilverfinAuthorizer } = require("../../../lib/api/silverfinAuthorizer");
+      await SF.authorizeFirm(100, { solid: true });
+      expect(SilverfinAuthorizer.authorizeFirm).toHaveBeenCalledWith(100, { solid: true });
     });
   });
 
@@ -588,6 +595,69 @@ describe("sfApi", () => {
     });
   });
 
+  // ─── getAllPeriods ────────────────────────────────────────────────────────
+
+  describe("getAllPeriods", () => {
+    it("should paginate until a short page is returned", async () => {
+      const companyId = 200;
+      const page1 = Array.from({ length: 200 }, (_, index) => ({ id: index + 1, end_date: "2023-12-31" }));
+      const page2 = [{ id: 201, end_date: "2024-12-31" }];
+      axiosMock.onGet(`/companies/${companyId}/periods`, { params: { page: 1, per_page: 200 } }).reply(200, page1);
+      axiosMock.onGet(`/companies/${companyId}/periods`, { params: { page: 2, per_page: 200 } }).reply(200, page2);
+
+      const result = await SF.getAllPeriods(100, companyId);
+
+      expect(result).toHaveLength(201);
+    });
+  });
+
+  // ─── updateCompanyCustom ──────────────────────────────────────────────────
+
+  describe("updateCompanyCustom", () => {
+    const companyId = 200;
+    const properties = [
+      { namespace: "ns", key: "a", value: "1" },
+      { namespace: "ns", key: "b", value: "2" },
+      { namespace: "ns", key: "c", value: "3" },
+    ];
+
+    it("should POST each property and return all responses on success", async () => {
+      axiosMock.onPost(`/companies/${companyId}/custom`).reply(201, { ok: true });
+
+      const results = await SF.updateCompanyCustom(100, companyId, properties);
+
+      expect(results).toHaveLength(3);
+      expect(results.every((response) => response.status === 201)).toBe(true);
+    });
+
+    it("should keep per-property results when a network error occurs mid-batch", async () => {
+      axiosMock.onPost(`/companies/${companyId}/custom`).replyOnce(201, { ok: true });
+      axiosMock.onPost(`/companies/${companyId}/custom`).networkErrorOnce("timeout");
+      axiosMock.onPost(`/companies/${companyId}/custom`).replyOnce(201, { ok: true });
+
+      const results = await SF.updateCompanyCustom(100, companyId, properties);
+
+      expect(results).toHaveLength(3);
+      expect(results[0].status).toBe(201);
+      expect(results[1].status).toBe(0);
+      expect(results[1].statusText).toMatch(/network error/i);
+      expect(results[2].status).toBe(201);
+    });
+
+    it("should return an error response for HTTP failures without aborting the batch", async () => {
+      axiosMock.onPost(`/companies/${companyId}/custom`).replyOnce(201, { ok: true });
+      axiosMock.onPost(`/companies/${companyId}/custom`).replyOnce(422, { error: "invalid" });
+      axiosMock.onPost(`/companies/${companyId}/custom`).replyOnce(201, { ok: true });
+
+      const results = await SF.updateCompanyCustom(100, companyId, properties);
+
+      expect(results).toHaveLength(3);
+      expect(results[0].status).toBe(201);
+      expect(results[1].status).toBe(422);
+      expect(results[2].status).toBe(201);
+    });
+  });
+
   // ─── runCompanyDataCopier ─────────────────────────────────────────────────
 
   describe("runCompanyDataCopier", () => {
@@ -608,12 +678,23 @@ describe("sfApi", () => {
     });
 
     it("should delegate to the error handler on failure", async () => {
-      axiosMock.onPost("company_data_copier/run").reply(422, { error: "invalid" });
+      axiosMock.onPost("company_data_copier/run").reply(404, { error: "not found" });
 
       const result = await SF.runCompanyDataCopier("firm", 100, attributes);
 
       // responseErrorHandler is mocked to resolve undefined
       expect(result).toBeUndefined();
+    });
+
+    it("should return the 422 response instead of exiting so the caller can explain it", async () => {
+      const apiUtils = require("../../../lib/utils/apiUtils");
+      axiosMock.onPost("company_data_copier/run").reply(422, { error: "source_company_id 1224550 does not exist" });
+
+      const result = await SF.runCompanyDataCopier("firm", 100, attributes);
+
+      expect(apiUtils.responseErrorHandler).not.toHaveBeenCalled();
+      expect(result.status).toBe(422);
+      expect(result.data).toEqual({ error: "source_company_id 1224550 does not exist" });
     });
   });
 });

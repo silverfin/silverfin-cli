@@ -194,6 +194,34 @@ describe("apiUtils", () => {
     });
   });
 
+  // ─── batchResponseErrorHandler ────────────────────────────────────────────
+
+  describe("batchResponseErrorHandler", () => {
+    it("should log and return the error response for HTTP failures", () => {
+      const error = {
+        response: {
+          status: 422,
+          statusText: "Unprocessable Entity",
+          config: { method: "POST", url: "/api/test" },
+          data: { error: "invalid" },
+        },
+      };
+
+      const result = apiUtils.batchResponseErrorHandler(error);
+
+      expect(consola.error).toHaveBeenCalled();
+      expect(result).toBe(error.response);
+      expect(mockExit).not.toHaveBeenCalled();
+    });
+
+    it("should rethrow network-level errors without calling process.exit", () => {
+      const error = new Error("Network timeout");
+
+      expect(() => apiUtils.batchResponseErrorHandler(error)).toThrow("Network timeout");
+      expect(mockExit).not.toHaveBeenCalled();
+    });
+  });
+
   // ─── checkAuthorizePartners ───────────────────────────────────────────────
 
   describe("checkAuthorizePartners", () => {
