@@ -747,6 +747,20 @@ describe("LiquidSamplerRunner - keeping and narrowing the extracted output", () 
       expect(consola.success).toHaveBeenCalledWith(expect.stringContaining("identical before/after renders"));
     });
 
+    it("skips a flagged entry whose renders differ only in per-entry object ids, like --add-diffs-folder", () => {
+      const zip = new AdmZip();
+      zip.addFile("sample_entry_ids.yml", Buffer.from(JSON.stringify({ reconciliation_entries: { 1: { label: "vkt_1", url: null } } })));
+      zip.addFile("output/reconciliation_entries/1/before/registers.json", Buffer.from(JSON.stringify({ named_results: { a: "before" } })));
+      zip.addFile("output/reconciliation_entries/1/after/registers.json", Buffer.from(JSON.stringify({ named_results: { a: "after" } })));
+      zip.addFile("output/reconciliation_entries/1/before/view.html", Buffer.from('<div data-object-id="11">same</div>'));
+      zip.addFile("output/reconciliation_entries/1/after/view.html", Buffer.from('<div data-object-id="12">same</div>'));
+      fs.writeFileSync(zipPath, zip.toBuffer());
+
+      new LiquidSamplerRunner("1").extractFlaggedOnly(zipPath, outDir);
+
+      expect(consola.info).toHaveBeenCalledWith(expect.stringContaining("1 flagged entry had identical before/after renders, ignoring per-entry object ids"));
+      expect(fs.existsSync(outDir)).toBe(false);
+    });
 
     it("does not create the directory when nothing differs", () => {
       const zip = new AdmZip();
