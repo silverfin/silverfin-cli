@@ -420,4 +420,93 @@ describe("fsUtils", () => {
       expect(config.id[100]).toBe(12345);
     });
   });
+
+  // ─── path helpers ─────────────────────────────────────────────────────────
+
+  describe("isAbsentOrEmptyDir", () => {
+    it("should be true for a missing path or an empty directory", () => {
+      expect(fsUtils.isAbsentOrEmptyDir(path.join(tempDir, "missing"))).toBe(true);
+      fs.mkdirSync(path.join(tempDir, "empty"));
+      expect(fsUtils.isAbsentOrEmptyDir(path.join(tempDir, "empty"))).toBe(true);
+    });
+
+    it("should be false for a directory with files, or a file", () => {
+      fs.mkdirSync(path.join(tempDir, "full"));
+      fs.writeFileSync(path.join(tempDir, "full", "a.txt"), "a");
+      expect(fsUtils.isAbsentOrEmptyDir(path.join(tempDir, "full"))).toBe(false);
+      expect(fsUtils.isAbsentOrEmptyDir(path.join(tempDir, "full", "a.txt"))).toBe(false);
+    });
+
+    it("should throw for a path under a regular file instead of calling it absent", () => {
+      fs.writeFileSync(path.join(tempDir, "results.zip"), "zip");
+      expect(() => fsUtils.isAbsentOrEmptyDir(path.join(tempDir, "results.zip", "out"))).toThrow(/ENOTDIR/);
+    });
+  });
+
+  describe("isDirectory", () => {
+    it("should be true for a directory and false for a file or a missing path", () => {
+      fs.writeFileSync(path.join(tempDir, "a.txt"), "a");
+      expect(fsUtils.isDirectory(tempDir)).toBe(true);
+      expect(fsUtils.isDirectory(path.join(tempDir, "a.txt"))).toBe(false);
+      expect(fsUtils.isDirectory(path.join(tempDir, "missing"))).toBe(false);
+    });
+  });
+
+  describe("isSameOrInside", () => {
+    it("should treat the same path and any descendant as inside", () => {
+      expect(fsUtils.isSameOrInside("/a/b", "/a/b")).toBe(true);
+      expect(fsUtils.isSameOrInside("/a/b/c/d.json", "/a/b")).toBe(true);
+      expect(fsUtils.isSameOrInside("/a/b/..cache", "/a/b")).toBe(true);
+      expect(fsUtils.isSameOrInside("/x", "/")).toBe(true);
+    });
+
+    it("should treat siblings and parents as outside", () => {
+      expect(fsUtils.isSameOrInside("/a/bc", "/a/b")).toBe(false);
+      expect(fsUtils.isSameOrInside("/a", "/a/b")).toBe(false);
+      expect(fsUtils.isSameOrInside("/a/c", "/a/b")).toBe(false);
+    });
+  });
+
+  describe("isSameFile", () => {
+    it("should match equal paths, even when neither exists", () => {
+      expect(fsUtils.isSameFile("out.json", path.join(process.cwd(), "out.json"))).toBe(true);
+    });
+
+    it("should match a hard link to the same file", () => {
+      fs.writeFileSync(path.join(tempDir, "a.zip"), "zip");
+      fs.linkSync(path.join(tempDir, "a.zip"), path.join(tempDir, "b.zip"));
+      expect(fsUtils.isSameFile(path.join(tempDir, "a.zip"), path.join(tempDir, "b.zip"))).toBe(true);
+    });
+
+    it("should not match two different files", () => {
+      fs.writeFileSync(path.join(tempDir, "a.zip"), "zip");
+      fs.writeFileSync(path.join(tempDir, "b.zip"), "zip");
+      expect(fsUtils.isSameFile(path.join(tempDir, "a.zip"), path.join(tempDir, "b.zip"))).toBe(false);
+    });
+  });
+
+  describe("writeFileAtomic", () => {
+    it("should replace the file's contents and leave no temp file behind", () => {
+      const filePath = path.join(tempDir, "out.json");
+      fs.writeFileSync(filePath, "old");
+      fsUtils.writeFileAtomic(filePath, "new");
+      expect(fs.readFileSync(filePath, "utf8")).toBe("new");
+      expect(fs.readdirSync(tempDir)).toEqual(["out.json"]);
+    });
+
+    it("should leave the existing file and no temp file when the write fails", () => {
+      const filePath = path.join(tempDir, "out.json");
+      fs.writeFileSync(filePath, "old");
+      const renameSpy = jest.spyOn(fs, "renameSync").mockImplementation(() => {
+        throw new Error("EXDEV");
+      });
+      try {
+        expect(() => fsUtils.writeFileAtomic(filePath, "new")).toThrow("EXDEV");
+      } finally {
+        renameSpy.mockRestore();
+      }
+      expect(fs.readFileSync(filePath, "utf8")).toBe("old");
+      expect(fs.readdirSync(tempDir)).toEqual(["out.json"]);
+    });
+  });
 });
