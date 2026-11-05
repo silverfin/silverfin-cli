@@ -613,6 +613,25 @@ describe("fsUtils", () => {
       expect(fs.readdirSync(dir)).toEqual(["a.html"]);
     });
 
+    it("should fill the directory the kernel resolves to, and never overwrite what is there", () => {
+      fs.mkdirSync(path.join(tempDir, "real", "inner"), { recursive: true });
+      fs.mkdirSync(path.join(tempDir, "new"));
+      fs.writeFileSync(path.join(tempDir, "new", "a.html"), "keep me");
+      fs.symlinkSync(path.join(tempDir, "real", "inner"), path.join(tempDir, "link"));
+      // link/../new is real/new to the kernel, not tempDir/new
+      fsUtils.writeDirectoryAtomic(`${tempDir}${path.sep}link${path.sep}..${path.sep}new`, [{ relPath: "a.html", contents: "a" }]);
+      expect(fs.readFileSync(path.join(tempDir, "new", "a.html"), "utf8")).toBe("keep me");
+      expect(fs.readFileSync(path.join(tempDir, "real", "new", "a.html"), "utf8")).toBe("a");
+    });
+
+    it("should refuse to fill a directory that is not empty", () => {
+      const dir = path.join(tempDir, "out");
+      fs.mkdirSync(dir);
+      fs.writeFileSync(path.join(dir, "x.html"), "x");
+      expect(() => fsUtils.writeDirectoryAtomic(dir, [{ relPath: "a.html", contents: "a" }])).toThrow(/not an empty directory/);
+      expect(fs.readdirSync(dir)).toEqual(["x.html"]);
+    });
+
     it("should refuse a path that leaves the directory", () => {
       const dir = path.join(tempDir, "out");
       expect(() => fsUtils.writeDirectoryAtomic(dir, [{ relPath: path.join("..", "escaped.html"), contents: "x" }])).toThrow(/outside/);
