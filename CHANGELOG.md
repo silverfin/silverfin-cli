@@ -3,7 +3,7 @@
 All notable changes to this project will be documented in this file.
 
 ## [1.63.0] (05/11/2026)
-`silverfin run-sampler` now waits up to 2 hours (was 1) for a live run, and its `--compact` diff also covers the `results` register, adds output-vanished, scope and visual-only tiers, and shortens long values and oversized diffs to fit a PR comment.
+`silverfin run-sampler` now waits up to 2 hours (was 1) for a live run and rides out up to two failed status polls in a row, and its `--compact` diff also covers the `results` register, adds output-vanished, scope and visual-only tiers, and shortens long values and oversized diffs to fit a PR comment.
 New flag `--from-zip` (no `--partner` needed) rebuilds the diff from a downloaded `results.zip`, `--add-diffs-folder` (rewrites that zip in place) and `--extract-flagged-only <dir>` save the flagged entries' before/after `view.html`, and `--keep-extracted` and `--json` save the extracted files or diff data from that or a live `--compact` run, exiting 1 when a requested output can't be written.
 The sampler also sends `auto_hide_formula`, `reconciliation_type`, `handle` and `name_*`, and dependencies are updated.
 

@@ -363,6 +363,14 @@ describe("cli/utils", () => {
       expectRejected({ fromZip: "r.zip", json: "./r.zip" }, "--json must not point at the --from-zip archive");
     });
 
+    it("should reject --json pointing at a symlink or a device", () => {
+      fs.writeFileSync(path.join(tempDir, "real.json"), "x");
+      fs.symlinkSync(path.join(tempDir, "real.json"), path.join(tempDir, "link.json"));
+      expectRejected({ partner: "1", compact: true, json: path.join(tempDir, "link.json") }, "must be a regular file path");
+      jest.clearAllMocks();
+      expectRejected({ partner: "1", compact: true, json: "/dev/stdout" }, "must be a regular file path");
+    });
+
     it("should reject --json pointing at a directory", () => {
       expectRejected({ partner: "1", compact: true, json: tempDir }, "is a directory");
     });

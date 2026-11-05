@@ -690,6 +690,18 @@ describe("fsUtils", () => {
     });
   });
 
+  describe("isRegularFileOrAbsent", () => {
+    it("should accept a missing path or a regular file, and refuse a symlink, directory or device", () => {
+      fs.writeFileSync(path.join(tempDir, "a.json"), "a");
+      fs.symlinkSync(path.join(tempDir, "a.json"), path.join(tempDir, "link.json"));
+      expect(fsUtils.isRegularFileOrAbsent(path.join(tempDir, "missing.json"))).toBe(true);
+      expect(fsUtils.isRegularFileOrAbsent(path.join(tempDir, "a.json"))).toBe(true);
+      expect(fsUtils.isRegularFileOrAbsent(path.join(tempDir, "link.json"))).toBe(false);
+      expect(fsUtils.isRegularFileOrAbsent(tempDir)).toBe(false);
+      expect(fsUtils.isRegularFileOrAbsent("/dev/null")).toBe(false);
+    });
+  });
+
   describe("removeFileThroughSymlinks", () => {
     it("should remove a regular file and leave a device alone", () => {
       const filePath = path.join(tempDir, "old.json");

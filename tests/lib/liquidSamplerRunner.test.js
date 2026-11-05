@@ -668,6 +668,26 @@ describe("LiquidSamplerRunner - polling status output", () => {
     expect(consola.warn).toHaveBeenCalledWith(expect.stringContaining("Status poll failed (1/3)"));
   });
 
+  it("says staging is unreachable, not a timeout, when every failed poll found no run", async () => {
+    process.stdout.isTTY = false;
+    jest.useFakeTimers();
+    const originalExit = process.exit;
+    const exit = jest.fn(() => {
+      throw new Error("exit");
+    });
+    process.exit = exit;
+    SF.readSamplerRun.mockResolvedValue(undefined);
+
+    const runPromise = new LiquidSamplerRunner("1", { openReport: false }).run();
+    await jest.advanceTimersByTimeAsync(60000);
+    await runPromise;
+    process.exit = originalExit;
+
+    expect(exit).toHaveBeenCalledWith(1);
+    expect(consola.error).toHaveBeenCalledWith("Failed to fetch sampler run status. Is staging running?");
+    expect(consola.error).not.toHaveBeenCalledWith(expect.stringContaining("Timeout."));
+  });
+
   it("falls back to a log line when stdout is not a TTY, even outside CI", async () => {
     process.stdout.isTTY = false;
     delete process.env.CI;
