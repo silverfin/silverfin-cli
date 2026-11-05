@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.62.1] (05/11/2026)
+`config --list-all` no longer lists the configured host as if it were an authorized firm. Dependencies updated.
+
 ## [1.62.0] (02/11/2026)
 Added a `--solid` option to `silverfin authorize`. It requests only the `solid:publish` scope, for a token that can only publish Solid templates, and stores that token as `solidAccessToken` and `solidRefreshToken` next to the firm's current token. Your API application must have `solid:publish` in its scopes. `config --refresh-token` renews both tokens, and fails if one of them fails.
 
