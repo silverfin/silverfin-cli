@@ -914,6 +914,17 @@ describe("LiquidSamplerRunner - keeping and narrowing the extracted output", () 
       expect(fs.existsSync(path.join(keepDir, "output"))).toBe(true);
     });
 
+    it("doesn't keep the tree of a zip it refused", async () => {
+      const zip = new AdmZip();
+      zip.addFile("readme.txt", Buffer.from("x"));
+      fs.writeFileSync(zipPath, zip.toBuffer());
+
+      await new LiquidSamplerRunner("1", { compact: true, keepExtracted: keepDir }).printCompactDiffFromZip(zipPath);
+
+      expect(process.exit).toHaveBeenCalledWith(1);
+      expect(fs.existsSync(keepDir)).toBe(false);
+    });
+
     it("does not merge into a directory that already has files", async () => {
       writeZip();
       fs.mkdirSync(keepDir, { recursive: true });

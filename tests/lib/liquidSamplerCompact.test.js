@@ -1227,6 +1227,28 @@ describe("liquidSamplerCompact - formatCompact", () => {
     expect(md).not.toMatch(/(^|[^`])\[x\]\(https:\/\/evil\)/m);
   });
 
+  it("doesn't link a URL whose Markdown escape would move the host", () => {
+    const data = extractCompact(
+      buildResultsDir({
+        reconciliation_entries: [{ id: "1", label: "a", url: "https://a.getsilverfin.com\\@evil.example/x", before: { a: "1" }, after: { a: "2" } }],
+      }),
+    );
+    expect(formatCompact(data)).not.toContain("evil.example");
+  });
+
+  it("reports a view.html that exists on one side only, or was too large to extract", () => {
+    const dir = buildResultsDir({
+      reconciliation_entries: [
+        { id: "1", label: "gone", before: { a: "1" }, after: { a: "1" }, viewHtml: { before: "<div>x</div>" } },
+        { id: "2", label: "huge", before: { a: "1" }, after: { a: "1" }, viewHtml: { before: "<div>x</div>", after: "<div>x</div>" } },
+      ],
+    });
+    const data = extractCompact(dir, { oversizedEntries: new Set(["output/reconciliation_entries/2/after/view.html"]) });
+    const md = formatCompact(data);
+    expect(md).toContain("`view.html` missing after the change");
+    expect(md).toContain("too large to extract from the zip");
+  });
+
   it("links only to Silverfin's own app", () => {
     const data = extractCompact(
       buildResultsDir({

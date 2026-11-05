@@ -580,7 +580,7 @@ describe("fsUtils", () => {
           fsUtils.writeDirectoryAtomic(dir, [
             { relPath: "a.html", contents: "a" },
             { relPath: "b.html", contents: "b" },
-          ]),
+          ])
         ).toThrow("EACCES");
       } finally {
         renameSpy.mockRestore();
@@ -588,9 +588,15 @@ describe("fsUtils", () => {
       expect(fs.readdirSync(dir)).toEqual([]);
     });
 
+    it("should not treat a user's own .staging-* entry as a leftover", () => {
+      const dir = path.join(tempDir, "out");
+      fs.mkdirSync(path.join(dir, ".staging-mine"), { recursive: true });
+      expect(fsUtils.isAbsentOrEmptyDir(dir)).toBe(false);
+    });
+
     it("should clear a staging directory an interrupted fill left behind", () => {
       const dir = path.join(tempDir, "out");
-      fs.mkdirSync(path.join(dir, ".staging-old"), { recursive: true });
+      fs.mkdirSync(path.join(dir, ".silverfin-staging-Ab12Cd"), { recursive: true });
       expect(fsUtils.isAbsentOrEmptyDir(dir)).toBe(true);
       fsUtils.writeDirectoryAtomic(dir, [{ relPath: "a.html", contents: "a" }]);
       expect(fs.readdirSync(dir)).toEqual(["a.html"]);
@@ -631,6 +637,13 @@ describe("fsUtils", () => {
       fs.symlinkSync(path.join(tempDir, "real", "sub"), path.join(tempDir, "alias"));
       fs.symlinkSync(path.join("..", "target.json"), path.join(tempDir, "real", "sub", "link.json"));
       expect(fsUtils.followSymlinks(path.join(tempDir, "alias", "link.json"))).toBe(path.join(fs.realpathSync(tempDir), "real", "target.json"));
+    });
+
+    it("should resolve `..` after a symlinked directory the way the kernel does", () => {
+      fs.mkdirSync(path.join(tempDir, "a", "b"), { recursive: true });
+      fs.symlinkSync(path.join(tempDir, "a", "b"), path.join(tempDir, "linkdir"));
+      // Not path.join: it would collapse the `..` before the call
+      expect(fsUtils.followSymlinks(`${tempDir}${path.sep}linkdir${path.sep}..${path.sep}out.json`)).toBe(path.join(fs.realpathSync(tempDir), "a", "out.json"));
     });
 
     it("should follow a dangling symlink to where a write would land", () => {
