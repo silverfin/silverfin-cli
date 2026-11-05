@@ -1,5 +1,6 @@
 const { firmCredentials } = require("../../../lib/api/firmCredentials");
 const { AxiosFactory } = require("../../../lib/api/axiosFactory");
+const { EXIT_AUTH_FAILURE } = require("../../../lib/utils/authError");
 const open = require("open");
 const { consola } = require("consola");
 
@@ -15,6 +16,8 @@ jest.mock("../../../lib/api/firmCredentials", () => ({
     getHost: jest.fn(),
     getTokenPair: jest.fn(),
     storeNewTokenPair: jest.fn(),
+    getSolidTokenPair: jest.fn(),
+    storeNewSolidTokenPair: jest.fn(),
     getPartnerCredentials: jest.fn(),
     storePartnerApiKey: jest.fn(),
   },
@@ -60,6 +63,7 @@ describe("SilverfinAuthorizer", () => {
     jest.clearAllMocks();
 
     firmCredentials.getHost.mockReturnValue("https://api.test.com");
+    firmCredentials.getSolidTokenPair.mockReturnValue(null);
     process.env.SF_API_CLIENT_ID = "test_client_id";
     process.env.SF_API_SECRET = "test_secret";
 
@@ -120,6 +124,34 @@ describe("SilverfinAuthorizer", () => {
       expect(firmCredentials.storeNewTokenPair).toHaveBeenCalledWith(mockFirmId, mockTokenResponse.data);
 
       expect(consola.error).not.toHaveBeenCalled();
+    });
+
+    it("should request the full firm scopes by default", async () => {
+      await SilverfinAuthorizer.authorizeFirm(mockFirmId);
+
+      const url = new URL(open.mock.calls[0][0]);
+      expect(url.searchParams.get("scope")).toBe("administration:read administration:write financials:read financials:write workflows:read");
+    });
+
+    it("should request only the solid:publish scope with the solid option", async () => {
+      await SilverfinAuthorizer.authorizeFirm(mockFirmId, { solid: true });
+
+      const url = new URL(open.mock.calls[0][0]);
+      expect(url.searchParams.get("scope")).toBe("solid:publish");
+    });
+
+    it("should store the tokens next to the firm's tokens with the solid option", async () => {
+      await SilverfinAuthorizer.authorizeFirm(mockFirmId, { solid: true });
+
+      expect(firmCredentials.storeNewSolidTokenPair).toHaveBeenCalledWith(mockFirmId, mockTokenResponse.data);
+      expect(firmCredentials.storeNewTokenPair).not.toHaveBeenCalled();
+    });
+
+    it("should not fetch the firm name with the solid option", async () => {
+      await SilverfinAuthorizer.authorizeFirm(mockFirmId, { solid: true });
+
+      expect(AxiosFactory.createInstance).not.toHaveBeenCalled();
+      expect(mockAxiosInstance.get).not.toHaveBeenCalled();
     });
 
     it("should raise an error when firm id is missing", async () => {
@@ -202,6 +234,56 @@ describe("SilverfinAuthorizer", () => {
       expect(consola.error).not.toHaveBeenCalled();
 
       expect(firmCredentials.storeNewTokenPair).toHaveBeenCalledWith(mockFirmId, mockTokenResponse.data);
+      expect(firmCredentials.storeNewSolidTokenPair).not.toHaveBeenCalled();
+    });
+
+    it("should refresh the solid:publish tokens too when the firm has them", async () => {
+      const mockSolidTokenResponse = {
+        data: { access_token: "new-solid-access", refresh_token: "new-solid-refresh" },
+      };
+      firmCredentials.getTokenPair.mockReturnValue({ accessToken: "stored-access", refreshToken: "stored-refresh" });
+      firmCredentials.getSolidTokenPair.mockReturnValue({ accessToken: "stored-solid-access", refreshToken: "stored-solid-refresh" });
+      mockAxiosInstance.post.mockReset();
+      mockAxiosInstance.post.mockResolvedValueOnce(mockTokenResponse).mockResolvedValueOnce(mockSolidTokenResponse);
+
+      await SilverfinAuthorizer.refreshFirm(mockFirmId);
+
+      expect(mockAxiosInstance.post).toHaveBeenCalledTimes(2);
+      expect(mockAxiosInstance.post).toHaveBeenNthCalledWith(
+        2,
+        "https://api.test.com/f/123/oauth/token",
+        expect.objectContaining({ refresh_token: "stored-solid-refresh", access_token: "stored-solid-access" })
+      );
+      expect(firmCredentials.storeNewTokenPair).toHaveBeenCalledWith(mockFirmId, mockTokenResponse.data);
+      expect(firmCredentials.storeNewSolidTokenPair).toHaveBeenCalledWith(mockFirmId, mockSolidTokenResponse.data);
+    });
+
+    it("should refresh only the solid:publish tokens when the firm has no other tokens", async () => {
+      firmCredentials.getTokenPair.mockReturnValue({ solidAccessToken: "stored-solid-access", solidRefreshToken: "stored-solid-refresh" });
+      firmCredentials.getSolidTokenPair.mockReturnValue({ accessToken: "stored-solid-access", refreshToken: "stored-solid-refresh" });
+
+      await SilverfinAuthorizer.refreshFirm(mockFirmId);
+
+      expect(mockAxiosInstance.post).toHaveBeenCalledTimes(1);
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith("https://api.test.com/f/123/oauth/token", expect.objectContaining({ refresh_token: "stored-solid-refresh" }));
+      expect(firmCredentials.storeNewTokenPair).not.toHaveBeenCalled();
+      expect(firmCredentials.storeNewSolidTokenPair).toHaveBeenCalledWith(mockFirmId, mockTokenResponse.data);
+    });
+
+    it("should fail when the solid:publish refresh fails after the firm refresh succeeds", async () => {
+      firmCredentials.getTokenPair.mockReturnValue({ accessToken: "stored-access", refreshToken: "stored-refresh" });
+      firmCredentials.getSolidTokenPair.mockReturnValue({ accessToken: "stored-solid-access", refreshToken: "stored-solid-refresh" });
+      mockAxiosInstance.post.mockReset();
+      mockAxiosInstance.post.mockResolvedValueOnce(mockTokenResponse).mockRejectedValueOnce({
+        response: { status: 400, statusText: "Bad Request", data: { error_description: "Invalid refresh token" } },
+      });
+
+      await expect(async () => {
+        await SilverfinAuthorizer.refreshFirm(mockFirmId);
+      }).rejects.toThrow("Process.exit called with code 2");
+
+      expect(firmCredentials.storeNewTokenPair).toHaveBeenCalledWith(mockFirmId, mockTokenResponse.data);
+      expect(firmCredentials.storeNewSolidTokenPair).not.toHaveBeenCalled();
     });
 
     it("should raise an error when there are no previous tokens", async () => {
@@ -209,7 +291,13 @@ describe("SilverfinAuthorizer", () => {
 
       await expect(async () => {
         await SilverfinAuthorizer.refreshFirm(mockFirmId);
-      }).rejects.toThrow("Process.exit called with code 1");
+      }).rejects.toThrow("Process.exit called with code 2");
+
+      // The mocked process.exit throws, so this catch's own process.exit(EXIT_AUTH_FAILURE)
+      // fires a second time and is what the rejection above actually observes - asserting only
+      // that message would still pass if the exit above used the wrong code. Check the first
+      // call directly.
+      expect(exitSpy.mock.calls[0][0]).toBe(EXIT_AUTH_FAILURE);
 
       expect(mockAxiosInstance.post).not.toHaveBeenCalled();
       expect(mockAxiosInstance.get).not.toHaveBeenCalled();
@@ -238,7 +326,7 @@ describe("SilverfinAuthorizer", () => {
 
       await expect(async () => {
         await SilverfinAuthorizer.refreshFirm(mockFirmId);
-      }).rejects.toThrow("Process.exit called with code 1");
+      }).rejects.toThrow("Process.exit called with code 2");
 
       expect(consola.error).toHaveBeenCalledWith(
         "Response Status: 401 (Unauthorized)",
@@ -275,7 +363,11 @@ describe("SilverfinAuthorizer", () => {
 
       await expect(async () => {
         await SilverfinAuthorizer.refreshPartner("partner_123");
-      }).rejects.toThrow("Process.exit called with code 1");
+      }).rejects.toThrow("Process.exit called with code 2");
+
+      // Same reasoning as refreshFirm's equivalent test above: the mocked exit throws, gets
+      // caught, and re-exits a second time with the same code - assert the first call directly.
+      expect(exitSpy.mock.calls[0][0]).toBe(EXIT_AUTH_FAILURE);
 
       expect(mockAxiosInstance.post).not.toHaveBeenCalled();
       expect(mockAxiosInstance.get).not.toHaveBeenCalled();
@@ -297,7 +389,7 @@ describe("SilverfinAuthorizer", () => {
 
       await expect(async () => {
         await SilverfinAuthorizer.refreshPartner(mockPartnerId);
-      }).rejects.toThrow("Process.exit called with code 1");
+      }).rejects.toThrow("Process.exit called with code 2");
 
       expect(consola.error).toHaveBeenCalledWith("Response Status: 401 (Unauthorized). An error occurred trying to refresh the partner API key");
 

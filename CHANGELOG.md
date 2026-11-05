@@ -7,6 +7,28 @@ Fix `create-account-template -p <partner-id>` dropping the partner's `mapping_li
 
 Also hardened the same create path: it no longer throws a `TypeError` when a template's `config.json` has no `mapping_list_ranges` key, and a failed create is now reported instead of crashing on an undefined response (`sfApi` returns nothing for a 400/404, but the success message read `response.data` before checking the status).
 
+## [1.62.1] (05/11/2026)
+`config --list-all` no longer lists the configured host as if it were an authorized firm. Dependencies updated.
+
+## [1.62.0] (02/11/2026)
+Added a `--solid` option to `silverfin authorize`. It requests only the `solid:publish` scope, for a token that can only publish Solid templates, and stores that token as `solidAccessToken` and `solidRefreshToken` next to the firm's current token. Your API application must have `solid:publish` in its scopes. `config --refresh-token` renews both tokens, and fails if one of them fails.
+
+## [1.61.0] (29/10/2026)
+Honour a per-firm `autoRenew` flag in the stored credentials and report authentication failures cleanly.
+- A firm with `autoRenew: false` no longer renews its token automatically on a `401`; any other value keeps the current behaviour. `config --refresh-token` still renews on request.
+- Authentication failures now end with a message naming the firm instead of a stack trace, and exit with code `2` instead of `1`.
+- Dependencies updated.
+
+## [1.60.3] (16/10/2026)
+Fix the default `config.json` created by `create-reconciliation` and `get-reconciliation-id`: it used `allow_duplicate_reconciliation` instead of `allow_duplicate_reconciliations`. Existing config files with the old key can have it renamed.
+
+## [1.60.2] (13/10/2026)
+`company-data-copier` now explains a 422 response:
+After the API error it warns that the source company and the destination firm (`-f`) are usually on different stacks, the most common cause of `source_company_id <id> does not exist`.
+
+## [1.60.1] (12/10/2026)
+Add a test asserting that unknown per-firm credential fields survive a store -> save -> load cycle, so fields written by other tools are not silently dropped. No behaviour change. Dependencies updated.
+
 ## [1.60.0] (10/09/2026)
 Added `update-text-properties` command. It uploads custom text properties from a Liquid Test YAML file to a company file at company, period, reconciliation and account levels for the entries referenced in the test scenario. Usage: `silverfin update-text-properties -u <url> -t <test-name>`. The YAML file read is the one referenced by the template's `config.json` `test` key (same as `run-test`); pass `--file <exact-file-name>` to read another file, e.g. a year variant like `*_TY25_liquid_test.yml`. When the test name exists in several templates the command lists them and asks for `--handle` instead of guessing. Also supports `--dry-run` to preview the payload and `--yes` to skip the confirmation prompt.
 
