@@ -897,6 +897,10 @@ describe("Toolkit", () => {
   // ─── newAccountTemplate ───────────────────────────────────────────────────
 
   describe("newAccountTemplate", () => {
+    afterEach(() => {
+      process.exitCode = undefined;
+    });
+
     const mockType = "firm";
     const mockEnvId = "100";
     const mockName = "new_account";
@@ -912,6 +916,16 @@ describe("Toolkit", () => {
       expect(SF.createAccountTemplate).toHaveBeenCalled();
       expect(AccountTemplate.updateTemplateId).toHaveBeenCalled();
       expect(consola.success).toHaveBeenCalled();
+    });
+
+    it("should store the new id under the local folder name, not the name returned by the API", async () => {
+      SF.findAccountTemplateByName.mockResolvedValue(null);
+      AccountTemplate.read.mockResolvedValue(mockTemplate);
+      SF.createAccountTemplate.mockResolvedValue({ status: 201, data: { id: 999, name_nl: "other_name" } });
+
+      await toolkit.newAccountTemplate(mockType, mockEnvId, mockName);
+
+      expect(AccountTemplate.updateTemplateId).toHaveBeenCalledWith(mockType, mockEnvId, mockName, 999);
     });
 
     it("should warn and skip when account template already exists", async () => {
@@ -984,7 +998,7 @@ describe("Toolkit", () => {
       expect(SF.createAccountTemplate).toHaveBeenCalledWith("partner", "2", expect.objectContaining({ mapping_list_ranges: [] }));
     });
 
-    it("should report a failure instead of crashing when the API call returns no response", async () => {
+    it("should report a failure and set exit code 1 when the API call returns no response", async () => {
       SF.findAccountTemplateByName.mockResolvedValue(null);
       AccountTemplate.read.mockResolvedValue(mockTemplate);
       // sfApi returns undefined when apiUtils.responseErrorHandler swallows a 400/404
@@ -995,6 +1009,7 @@ describe("Toolkit", () => {
       expect(errorUtils.errorHandler).not.toHaveBeenCalled();
       expect(AccountTemplate.updateTemplateId).not.toHaveBeenCalled();
       expect(consola.error).toHaveBeenCalled();
+      expect(process.exitCode).toBe(1);
     });
   });
 

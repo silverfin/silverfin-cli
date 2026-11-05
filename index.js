@@ -765,11 +765,11 @@ async function newAccountTemplate(type, envId, name) {
 
     // Store new id
     if (response && response.status == 201 && response.data) {
-      const handle = response.data.name_nl;
-      AccountTemplate.updateTemplateId(type, envId, handle, response.data.id);
-      consola.success(`Account template "${handle}" created on on ${type} ${envId}.`);
+      AccountTemplate.updateTemplateId(type, envId, name, response.data.id);
+      consola.success(`Account template "${name}" created on ${type} ${envId}.`);
     } else {
       consola.error(`Account template creation failed: ${name}`);
+      process.exitCode = 1;
     }
   } catch (error) {
     errorUtils.errorHandler(error);
