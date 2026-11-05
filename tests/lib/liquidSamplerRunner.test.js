@@ -232,7 +232,19 @@ describe("LiquidSamplerRunner - compact diff", () => {
       await new LiquidSamplerRunner("1", { compact: true, jsonOut: jsonPath }).checkStatus("run-1");
 
       expect(fs.existsSync(jsonPath)).toBe(false);
+      expect(process.exitCode).toBe(1);
     });
+  });
+
+  it("doesn't print a diff for a live zip that isn't sampler output", async () => {
+    const zip = new AdmZip();
+    zip.addFile("readme.txt", Buffer.from("x"));
+    axios.get.mockResolvedValue({ data: zip.toBuffer() });
+
+    await new LiquidSamplerRunner("1", { compact: true }).checkStatus("run-1");
+
+    expect(consola.warn).toHaveBeenCalledWith(expect.stringContaining("is it a sampler results.zip?"));
+    expect(logSpy.mock.calls.map((c) => c[0]).join("\n")).not.toContain("SAMPLER_COMPACT_START");
   });
 
   it("does NOT download or print a compact diff by default", async () => {
@@ -888,6 +900,18 @@ describe("LiquidSamplerRunner - keeping and narrowing the extracted output", () 
 
       expect(fs.existsSync(path.join(keepDir, "output", "reconciliation_entries", "1", "after", "view.html"))).toBe(true);
       expect(consola.info).toHaveBeenCalledWith(expect.stringContaining(keepDir));
+    });
+
+    it("leaves an earlier --add-diffs-folder run's diffs/ out of the kept tree", async () => {
+      writeZip();
+      const zip = new AdmZip(fs.readFileSync(zipPath));
+      zip.addFile("diffs/reconciliation_entries/9/before/view.html", Buffer.from("stale"));
+      fs.writeFileSync(zipPath, zip.toBuffer());
+
+      await new LiquidSamplerRunner("1", { compact: true, keepExtracted: keepDir }).printCompactDiffFromZip(zipPath);
+
+      expect(fs.existsSync(path.join(keepDir, "diffs"))).toBe(false);
+      expect(fs.existsSync(path.join(keepDir, "output"))).toBe(true);
     });
 
     it("does not merge into a directory that already has files", async () => {

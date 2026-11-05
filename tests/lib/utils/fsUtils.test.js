@@ -565,6 +565,37 @@ describe("fsUtils", () => {
       expect(fs.readdirSync(dir)).toEqual(["a"]);
     });
 
+    it("should undo a partial move when a later rename fails", () => {
+      const dir = path.join(tempDir, "out");
+      fs.mkdirSync(dir);
+      const realRename = fs.renameSync;
+      let calls = 0;
+      const renameSpy = jest.spyOn(fs, "renameSync").mockImplementation((from, to) => {
+        calls += 1;
+        if (calls === 2) throw new Error("EACCES");
+        return realRename(from, to);
+      });
+      try {
+        expect(() =>
+          fsUtils.writeDirectoryAtomic(dir, [
+            { relPath: "a.html", contents: "a" },
+            { relPath: "b.html", contents: "b" },
+          ]),
+        ).toThrow("EACCES");
+      } finally {
+        renameSpy.mockRestore();
+      }
+      expect(fs.readdirSync(dir)).toEqual([]);
+    });
+
+    it("should clear a staging directory an interrupted fill left behind", () => {
+      const dir = path.join(tempDir, "out");
+      fs.mkdirSync(path.join(dir, ".staging-old"), { recursive: true });
+      expect(fsUtils.isAbsentOrEmptyDir(dir)).toBe(true);
+      fsUtils.writeDirectoryAtomic(dir, [{ relPath: "a.html", contents: "a" }]);
+      expect(fs.readdirSync(dir)).toEqual(["a.html"]);
+    });
+
     it("should refuse a path that leaves the directory", () => {
       const dir = path.join(tempDir, "out");
       expect(() => fsUtils.writeDirectoryAtomic(dir, [{ relPath: path.join("..", "escaped.html"), contents: "x" }])).toThrow(/outside/);
@@ -595,6 +626,13 @@ describe("fsUtils", () => {
   });
 
   describe("followSymlinks", () => {
+    it("should resolve a relative link from its real directory, like the kernel", () => {
+      fs.mkdirSync(path.join(tempDir, "real", "sub"), { recursive: true });
+      fs.symlinkSync(path.join(tempDir, "real", "sub"), path.join(tempDir, "alias"));
+      fs.symlinkSync(path.join("..", "target.json"), path.join(tempDir, "real", "sub", "link.json"));
+      expect(fsUtils.followSymlinks(path.join(tempDir, "alias", "link.json"))).toBe(path.join(fs.realpathSync(tempDir), "real", "target.json"));
+    });
+
     it("should follow a dangling symlink to where a write would land", () => {
       const link = path.join(tempDir, "link.json");
       fs.symlinkSync(path.join(tempDir, "missing.json"), link);
