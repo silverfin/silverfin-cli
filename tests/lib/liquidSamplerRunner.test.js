@@ -191,6 +191,50 @@ describe("LiquidSamplerRunner - compact diff", () => {
     expect(output).toContain("output/reconciliation_entries/1/{before,after}/view.html");
   });
 
+  it("reports a live run that sampled nothing as no changes, not as a bad zip", async () => {
+    const zip = new AdmZip();
+    zip.addFile("sample_entry_ids.yml", Buffer.from(JSON.stringify({ reconciliation_entries: {} })));
+    axios.get.mockResolvedValue({ data: zip.toBuffer() });
+
+    await new LiquidSamplerRunner("1", { compact: true }).checkStatus("run-1");
+
+    const output = logSpy.mock.calls.map((c) => c[0]).join("\n");
+    expect(output).toContain("No changes detected across 0 sampled entries");
+    expect(consola.warn).not.toHaveBeenCalled();
+  });
+
+  describe("with --json", () => {
+    let jsonPath;
+
+    beforeEach(() => {
+      jsonPath = path.join(os.tmpdir(), `sampler-live-json-${process.pid}-${Date.now()}.json`);
+      fs.writeFileSync(jsonPath, "previous run");
+    });
+
+    afterEach(() => {
+      process.exitCode = undefined;
+      fs.rmSync(jsonPath, { force: true });
+    });
+
+    it("exits 1 when the download fails and the requested file can't be written", async () => {
+      axios.get.mockRejectedValue(new Error("timeout of 120000ms exceeded"));
+
+      await new LiquidSamplerRunner("1", { compact: true, jsonOut: jsonPath }).checkStatus("run-1");
+
+      expect(consola.warn).toHaveBeenCalledWith(expect.stringContaining("Could not build compact diff"));
+      expect(process.exitCode).toBe(1);
+      expect(fs.existsSync(jsonPath)).toBe(false);
+    });
+
+    it("removes an earlier run's file even when the run is still in progress", async () => {
+      SF.readSamplerRun.mockResolvedValue({ data: { status: "running" } });
+
+      await new LiquidSamplerRunner("1", { compact: true, jsonOut: jsonPath }).checkStatus("run-1");
+
+      expect(fs.existsSync(jsonPath)).toBe(false);
+    });
+  });
+
   it("does NOT download or print a compact diff by default", async () => {
     await new LiquidSamplerRunner("1", { openReport: false }).checkStatus("run-1");
 
@@ -926,15 +970,43 @@ describe("LiquidSamplerRunner - keeping and narrowing the extracted output", () 
       expect(fs.existsSync(outDir)).toBe(false);
     });
 
-    it("refuses a zip with no sampled entries instead of reporting no changes", () => {
+    it("refuses a zip that isn't sampler output instead of reporting no changes", async () => {
       const zip = new AdmZip();
       zip.addFile("readme.txt", Buffer.from("not sampler output"));
       fs.writeFileSync(zipPath, zip.toBuffer());
 
       new LiquidSamplerRunner("1").extractFlaggedOnly(zipPath, outDir);
-
-      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("no sampled entries"));
+      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("is it a sampler results.zip?"));
       expect(process.exit).toHaveBeenCalledWith(1);
+
+      jest.clearAllMocks();
+      await new LiquidSamplerRunner("1").printCompactDiffFromZip(zipPath);
+      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("is it a sampler results.zip?"));
+      expect(process.exit).toHaveBeenCalledWith(1);
+    });
+
+    it("accepts a real sampler zip that sampled nothing", () => {
+      const zip = new AdmZip();
+      zip.addFile("sample_entry_ids.yml", Buffer.from(JSON.stringify({ reconciliation_entries: {} })));
+      fs.writeFileSync(zipPath, zip.toBuffer());
+
+      new LiquidSamplerRunner("1").addDiffsFolderToZip(zipPath);
+
+      expect(process.exit).not.toHaveBeenCalled();
+      expect(consola.info).toHaveBeenCalledWith(expect.stringContaining("No differing entries found"));
+    });
+
+    it("writes --json through a symlink instead of replacing the link", async () => {
+      writeZip();
+      const target = `${jsonPath}.target`;
+      fs.writeFileSync(target, "previous run");
+      fs.symlinkSync(target, jsonPath);
+
+      await new LiquidSamplerRunner("1", { compact: true, jsonOut: jsonPath }).printCompactDiffFromZip(zipPath);
+
+      expect(fs.lstatSync(jsonPath).isSymbolicLink()).toBe(true);
+      expect(JSON.parse(fs.readFileSync(target, "utf8")).summary.entriesSampled).toBe(3);
+      fs.rmSync(target, { force: true });
     });
   });
 });

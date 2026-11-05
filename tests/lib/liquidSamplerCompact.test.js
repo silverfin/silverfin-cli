@@ -1192,6 +1192,12 @@ describe("liquidSamplerCompact - extractCompact", () => {
   });
 });
 
+describe("liquidSamplerCompact - diffResultsRegister flag spelling", () => {
+  it("shows the raw values when only a flag's spelling changed, instead of an identical count", () => {
+    expect(diffResultsRegister(["1.0", "0.0"], ["1", "0"])).toEqual({ before: '["1.0","0.0"]', after: '["1","0"]' });
+  });
+});
+
 describe("liquidSamplerCompact - formatCompact", () => {
   it("reads a numeric label as a string instead of throwing while sorting", () => {
     const data = extractCompact(

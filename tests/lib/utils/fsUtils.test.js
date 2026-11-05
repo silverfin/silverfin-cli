@@ -555,12 +555,50 @@ describe("fsUtils", () => {
     });
   });
 
+  describe("writeDirectoryAtomic into an existing empty directory", () => {
+    it("should keep the directory itself (it may be a mount point or the cwd)", () => {
+      const dir = path.join(tempDir, "out");
+      fs.mkdirSync(dir);
+      const { ino } = fs.statSync(dir);
+      fsUtils.writeDirectoryAtomic(dir, [{ relPath: path.join("a", "view.html"), contents: "a" }]);
+      expect(fs.statSync(dir).ino).toBe(ino);
+      expect(fs.readdirSync(dir)).toEqual(["a"]);
+    });
+
+    it("should refuse a path that leaves the directory", () => {
+      const dir = path.join(tempDir, "out");
+      expect(() => fsUtils.writeDirectoryAtomic(dir, [{ relPath: path.join("..", "escaped.html"), contents: "x" }])).toThrow(/outside/);
+      expect(fs.readdirSync(tempDir)).toEqual([]);
+    });
+  });
+
   describe("copyDirectory", () => {
+    it("should leave nothing behind when the copy fails", () => {
+      fs.mkdirSync(path.join(tempDir, "src"));
+      const cpSpy = jest.spyOn(fs, "cpSync").mockImplementationOnce(() => {
+        throw new Error("ENOSPC");
+      });
+      try {
+        expect(() => fsUtils.copyDirectory(path.join(tempDir, "src"), path.join(tempDir, "dest"))).toThrow("ENOSPC");
+      } finally {
+        cpSpy.mockRestore();
+      }
+      expect(fs.readdirSync(tempDir)).toEqual(["src"]);
+    });
+
     it("should copy a tree into a destination whose parent does not exist yet", () => {
       fs.mkdirSync(path.join(tempDir, "src", "sub"), { recursive: true });
       fs.writeFileSync(path.join(tempDir, "src", "sub", "a.txt"), "a");
       fsUtils.copyDirectory(path.join(tempDir, "src"), path.join(tempDir, "x", "dest"));
       expect(fs.readFileSync(path.join(tempDir, "x", "dest", "sub", "a.txt"), "utf8")).toBe("a");
+    });
+  });
+
+  describe("followSymlinks", () => {
+    it("should follow a dangling symlink to where a write would land", () => {
+      const link = path.join(tempDir, "link.json");
+      fs.symlinkSync(path.join(tempDir, "missing.json"), link);
+      expect(fsUtils.followSymlinks(link)).toBe(path.join(tempDir, "missing.json"));
     });
   });
 

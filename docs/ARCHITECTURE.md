@@ -89,7 +89,7 @@ with private statics for config preparation, part filtering, locale defaults, fo
 ## `lib/cli/`
 
 ### `utils.js`
-Pre-flight checks shared by commands: `loadDefaultFirmId`, `checkDefaultFirm`, `handleUncaughtErrors`, `promptConfirmation`, `formatOption`, `checkDateFormat`, `checkHandleFormat`, `checkUniqueOption`, `checkRequiredFirmOrPartner`, `getCommandSettings`, `runCommandChecks`, `logCurrentHost`, `checkPartnerSupport`.
+Pre-flight checks shared by commands: `loadDefaultFirmId`, `checkDefaultFirm`, `handleUncaughtErrors`, `promptConfirmation`, `formatOption`, `checkDateFormat`, `checkHandleFormat`, `checkUniqueOption`, `checkRequiredFirmOrPartner`, `getCommandSettings`, `runCommandChecks`, `logCurrentHost`, `checkPartnerSupport`, `checkSamplerOptions`.
 **Contains:** validation that ends in a clear message + `process.exit` on failure. All new option validation goes here so `bin/cli.js` stays declarative.
 
 ### `stats.js`
@@ -128,12 +128,20 @@ Runs liquid tests against the API and renders the result. Public: `runTests`, `r
 ### `exportFileInstanceGenerator.js` — `ExportFileInstanceGenerator`
 `new ExportFileInstanceGenerator(firmId, companyId, periodId, exportFileId)` then `generateAndOpenFile()` — creates an export-file instance, polls it, opens the result.
 
+### `liquidSamplerRunner.js` — `LiquidSamplerRunner`
+`new LiquidSamplerRunner(partnerId, options)` then `run(templateHandles, firmIds)` or `checkStatus(samplerId)` — starts a sampler run, polls it, and with `compact` prints the compact diff. Offline, on a local `results.zip`: `printCompactDiffFromZip`, `addDiffsFolderToZip`, `extractFlaggedOnly`.
+**Contains:** the sampler run lifecycle and its zip handling. What each template type posts is its class's `SAMPLER_ATTRS`.
+
+### `liquidSamplerCompact.js`
+`extractCompact(resultsDir)` reads an extracted `results.zip` into tiers (data, output vanished, scope, visual-only); `formatCompact(data)` renders them as the PR-comment markdown; `rendersDiffer` is the one "did the render change" test.
+**Contains:** pure analysis and rendering; no network, and file reads only from the extracted results.
+
 ---
 
 ## `lib/utils/`
 
 ### `fsUtils.js`
-All filesystem access. Constants `FOLDERS`, `TEMPLATE_TYPES`, `SILVERFIN_URL_PATHS`. Config I/O (`configExists`, `readConfig`, `writeConfig`, `createConfigIfMissing`, `getTemplateId`, `setTemplateId`); creation (`createFolder`, `createTemplateFolders`, `createSharedPartFolders`, `createTemplateFiles`, `createLiquidFile`, `createLiquidTestFiles`); discovery (`getAllTemplatesOfAType`, `findHandleByID`, `identifyTypeAndHandle`, `listExistingFiles`, `listExistingRelatedLiquidFiles`, `listSharedPartsUsedInTemplate`, `findTemplatesWithLiquidTests`, `scanTextParts`, `checkLiquidTestDependencies`); workflows (`getWorkflow`, `getAllWorkflowHandles`).
+All filesystem access. Constants `FOLDERS`, `TEMPLATE_TYPES`, `SILVERFIN_URL_PATHS`. Config I/O (`configExists`, `readConfig`, `writeConfig`, `createConfigIfMissing`, `getTemplateId`, `setTemplateId`); creation (`createFolder`, `createTemplateFolders`, `createSharedPartFolders`, `createTemplateFiles`, `createLiquidFile`, `createLiquidTestFiles`); discovery (`getAllTemplatesOfAType`, `findHandleByID`, `identifyTypeAndHandle`, `listExistingFiles`, `listExistingRelatedLiquidFiles`, `listSharedPartsUsedInTemplate`, `findTemplatesWithLiquidTests`, `scanTextParts`, `checkLiquidTestDependencies`); workflows (`getWorkflow`, `getAllWorkflowHandles`); paths and safe writes (`isAbsentOrEmptyDir`, `isDirectory`, `isSameOrInside`, `isSameFile`, `followSymlinks`, `readFileIfPresent`, `writeFileAtomic`, `writeDirectoryAtomic`, `copyDirectory`).
 **Contains:** every `fs` call in the codebase. If a new method needs to read or write a file, it goes here and is called from elsewhere.
 
 ### `constants.js`
