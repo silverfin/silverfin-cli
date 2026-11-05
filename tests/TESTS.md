@@ -548,7 +548,7 @@ Source: `lib/cli/stats.js`
 | `generateWorkflowOverview` (handle) | should count only the templates belonging to the workflow | Verifies that templates outside the workflow are excluded from the counts. |
 | `generateWorkflowOverview` (no templates) | should report zero without silently matching every template | Verifies that an empty template list does not fall back to the `.*` pattern used by the repository-wide overview. |
 | `generateWorkflowOverview` (no templates) | should explain that no YAML changes can be counted | Verifies that the user is told why the YAML activity counts are empty. |
-| `generateWorkflowOverview` (no templates) | should not run the git scan when there is nothing to match | Verifies that `git whatchanged` is not invoked when the workflow holds no templates. |
+| `generateWorkflowOverview` (no templates) | should not run the git scan when there is nothing to match | Verifies that `git log` is not invoked when the workflow holds no templates. |
 | `generateWorkflowOverview` (regex characters) | should treat a quantifier in a name literally | Verifies that a template name containing `+` or `*` is escaped before being interpolated into the match pattern. |
 | `generateWorkflowOverview` (regex characters) | should not build an invalid regular expression from a name with brackets | Verifies that a name containing brackets does not throw when the pattern is compiled. |
 | `generateWorkflowOverview` (missing templates) | should leave the missing template out of the counts | Verifies that a handle listed in the workflow but not stored in the repository is excluded from the totals. |
