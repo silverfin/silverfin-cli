@@ -8,6 +8,7 @@ const {
   diffResultsRegister,
   diffScope,
   describeVisualChange,
+  rendersDiffer,
   groupVisualOnlyEntries,
   readEntryLabels,
 } = require("../../lib/liquidSamplerCompact");
@@ -225,6 +226,25 @@ describe("liquidSamplerCompact - diffScope", () => {
     const after = { required_keys_missing: ["a", "b", "c", "d", "e"] };
     const [change] = diffScope(before, after);
     expect(change.summary).toMatch(/^\+5 keys \(a, b, c \+2 more, #[0-9a-f]{8}\)$/);
+  });
+});
+
+describe("liquidSamplerCompact - rendersDiffer", () => {
+  const html = (id, text) => Buffer.from(`<div data-object-id="${id}">${text}</div>`);
+
+  it("ignores a difference in per-entry object ids only", () => {
+    expect(rendersDiffer(html(1, "a"), html(1, "a"))).toBe(false);
+    expect(rendersDiffer(html(1, "a"), html(2, "a"))).toBe(false);
+    expect(rendersDiffer(html(1, "a"), html(2, "b"))).toBe(true);
+  });
+
+  it("keeps renders that differ only in invalid UTF-8 bytes apart", () => {
+    expect(rendersDiffer(Buffer.from([0x3c, 0x70, 0x3e, 0xff]), Buffer.from([0x3c, 0x70, 0x3e, 0xfe]))).toBe(true);
+  });
+
+  it("compares a render over 2 MB byte for byte, since it is too large to normalize", () => {
+    const padding = "x".repeat(2 * 1024 * 1024);
+    expect(rendersDiffer(html(1, padding), html(2, padding))).toBe(true);
   });
 });
 
