@@ -291,14 +291,15 @@ describe("FirmCredentials", () => {
       const mockCredentials = {
         defaultFirmIDs: {},
         host: "https://test.getsilverfin.com",
+        partnerCredentials: { 1: { name: "Partner", token: "t" } },
         12345: { accessToken: "a", refreshToken: "b", firmName: "Good Firm" },
       };
 
-      fs.existsSync = jest.fn().mockReturnValueOnce(true).mockReturnValueOnce(true);
-      fs.readFileSync = jest.fn().mockReturnValueOnce(JSON.stringify(mockCredentials));
-
       let testFirmCredentials;
       jest.isolateModules(() => {
+        fs.existsSync.mockReturnValue(true);
+        fs.readFileSync.mockReturnValueOnce(JSON.stringify(mockCredentials));
+
         const module = require("../../../lib/api/firmCredentials");
         testFirmCredentials = module.firmCredentials;
       });
