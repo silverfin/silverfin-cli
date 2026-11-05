@@ -407,6 +407,21 @@ describe("LiquidSamplerRunner - add diffs folder to a local zip (--add-diffs-fol
     expect(consola.success).toHaveBeenCalledWith(expect.stringContaining("1 flagged entry had identical before/after renders"));
   });
 
+  it("skips a flagged entry whose renders differ only in per-entry object ids, like the visual-only tier does", () => {
+    writeZip([
+      ["output/reconciliation_entries/1/before/registers.json", JSON.stringify({ named_results: { a: "before" } })],
+      ["output/reconciliation_entries/1/after/registers.json", JSON.stringify({ named_results: { a: "after" } })],
+      ["output/reconciliation_entries/1/before/view.html", '<div data-object-id="11">same</div>'],
+      ["output/reconciliation_entries/1/after/view.html", '<div data-object-id="12">same</div>'],
+    ]);
+
+    new LiquidSamplerRunner("1").addDiffsFolderToZip(zipPath);
+
+    expect(consola.info).toHaveBeenCalledWith(expect.stringContaining("1 flagged entry had identical before/after renders, ignoring per-entry object ids"));
+    const zip = new AdmZip(fs.readFileSync(zipPath));
+    expect(zip.getEntries().some((e) => e.entryName.startsWith("diffs/"))).toBe(false);
+  });
+
   it("reports and leaves the zip untouched when every flagged entry renders identically", () => {
     writeZip([
       ["output/reconciliation_entries/1/before/registers.json", JSON.stringify({ named_results: { a: "before" } })],
