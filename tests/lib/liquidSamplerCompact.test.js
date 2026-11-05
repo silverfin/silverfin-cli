@@ -242,9 +242,9 @@ describe("liquidSamplerCompact - rendersDiffer", () => {
     expect(rendersDiffer(Buffer.from([0x3c, 0x70, 0x3e, 0xff]), Buffer.from([0x3c, 0x70, 0x3e, 0xfe]))).toBe(true);
   });
 
-  it("compares a render over 2 MB byte for byte, since it is too large to normalize", () => {
+  it("ignores per-entry ids in a render over 2 MB too (only parsing it is too expensive)", () => {
     const padding = "x".repeat(2 * 1024 * 1024);
-    expect(rendersDiffer(html(1, padding), html(2, padding))).toBe(true);
+    expect(rendersDiffer(html(1, padding), html(2, padding))).toBe(false);
   });
 });
 
@@ -759,6 +759,22 @@ describe("liquidSamplerCompact - extractCompact", () => {
     }
   });
 
+  it("treats dropping some keys while others stay as an ordinary change, not vanished output", () => {
+    const before = { a: "1", b: "2", c: "3", keep: "x" };
+    const data = extractCompact(buildResultsDir({ reconciliation_entries: [{ id: "1", label: "partial", before, after: { keep: "x" } }] }));
+    expect(data.collapsedTemplates).toEqual([]);
+    expect(data.templates[0].changes.map((c) => c.key).sort()).toEqual(["a", "b", "c"]);
+  });
+
+  it("doesn't flag two oversized renders the zip says are identical", () => {
+    const dir = buildResultsDir({ reconciliation_entries: [{ id: "1", label: "big", before: { a: "1" }, after: { a: "1" } }] });
+    const same = new Map([
+      ["output/reconciliation_entries/1/before/view.html", "123:99999999"],
+      ["output/reconciliation_entries/1/after/view.html", "123:99999999"],
+    ]);
+    expect(extractCompact(dir, { oversizedEntries: same }).visualOnlyEntries).toEqual([]);
+  });
+
   it("groups >= 3 keys vanishing at once into a single collapsed-template finding", () => {
     const dir = buildResultsDir({
       reconciliation_entries: [
@@ -1227,6 +1243,15 @@ describe("liquidSamplerCompact - formatCompact", () => {
     expect(md).not.toMatch(/(^|[^`])\[x\]\(https:\/\/evil\)/m);
   });
 
+  it("doesn't link a host whose HTML entity Markdown would decode", () => {
+    const data = extractCompact(
+      buildResultsDir({
+        reconciliation_entries: [{ id: "1", label: "a", url: "https://evil.com&sol;.getsilverfin.com/", before: { a: "1" }, after: { a: "2" } }],
+      }),
+    );
+    expect(formatCompact(data)).not.toContain("evil.com");
+  });
+
   it("doesn't link a URL whose Markdown escape would move the host", () => {
     const data = extractCompact(
       buildResultsDir({
@@ -1243,7 +1268,7 @@ describe("liquidSamplerCompact - formatCompact", () => {
         { id: "2", label: "huge", before: { a: "1" }, after: { a: "1" }, viewHtml: { before: "<div>x</div>", after: "<div>x</div>" } },
       ],
     });
-    const data = extractCompact(dir, { oversizedEntries: new Set(["output/reconciliation_entries/2/after/view.html"]) });
+    const data = extractCompact(dir, { oversizedEntries: new Map([["output/reconciliation_entries/2/after/view.html", "1:99999999"]]) });
     const md = formatCompact(data);
     expect(md).toContain("`view.html` missing after the change");
     expect(md).toContain("too large to extract from the zip");

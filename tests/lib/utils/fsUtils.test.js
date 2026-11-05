@@ -588,6 +588,12 @@ describe("fsUtils", () => {
       expect(fs.readdirSync(dir)).toEqual([]);
     });
 
+    it("should refuse a symlinked output directory with a clear reason", () => {
+      fs.mkdirSync(path.join(tempDir, "real"));
+      fs.symlinkSync(path.join(tempDir, "real"), path.join(tempDir, "link"));
+      expect(() => fsUtils.isAbsentOrEmptyDir(path.join(tempDir, "link"))).toThrow(/symbolic link/);
+    });
+
     it("should not treat a user's own .staging-* entry as a leftover", () => {
       const dir = path.join(tempDir, "out");
       fs.mkdirSync(path.join(dir, ".staging-mine"), { recursive: true });
@@ -649,7 +655,14 @@ describe("fsUtils", () => {
     it("should follow a dangling symlink to where a write would land", () => {
       const link = path.join(tempDir, "link.json");
       fs.symlinkSync(path.join(tempDir, "missing.json"), link);
-      expect(fsUtils.followSymlinks(link)).toBe(path.join(tempDir, "missing.json"));
+      expect(fsUtils.followSymlinks(link)).toBe(path.join(fs.realpathSync(tempDir), "missing.json"));
+    });
+
+    it("should resolve `..` inside a dangling link's own target the way the kernel does", () => {
+      fs.mkdirSync(path.join(tempDir, "a", "b"), { recursive: true });
+      fs.symlinkSync(path.join(tempDir, "a", "b"), path.join(tempDir, "linkdir"));
+      fs.symlinkSync(`linkdir${path.sep}..${path.sep}x.json`, path.join(tempDir, "out.json"));
+      expect(fsUtils.followSymlinks(path.join(tempDir, "out.json"))).toBe(path.join(fs.realpathSync(tempDir), "a", "x.json"));
     });
   });
 
