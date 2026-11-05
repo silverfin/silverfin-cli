@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.62.2] (05/11/2026)
+`silverfin stats` no longer fails on newer git versions, which refuse to run the deprecated `git whatchanged` command. The YAML file changes are now read with `git log`, with the same results.
+
 ## [1.62.1] (05/11/2026)
 `config --list-all` no longer lists the configured host as if it were an authorized firm. Dependencies updated.
 
