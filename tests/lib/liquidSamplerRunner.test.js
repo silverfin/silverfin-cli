@@ -762,6 +762,19 @@ describe("LiquidSamplerRunner - keeping and narrowing the extracted output", () 
       expect(fs.existsSync(outDir)).toBe(false);
     });
 
+    it("says no view.html was found, not that nothing differs, when flagged entries have no render", () => {
+      const zip = new AdmZip();
+      zip.addFile("sample_entry_ids.yml", Buffer.from(JSON.stringify({ reconciliation_entries: { 1: { label: "vkt_1", url: null } } })));
+      zip.addFile("output/reconciliation_entries/1/before/registers.json", Buffer.from(JSON.stringify({ named_results: { a: "before" } })));
+      zip.addFile("output/reconciliation_entries/1/after/registers.json", Buffer.from(JSON.stringify({ named_results: { a: "after" } })));
+      fs.writeFileSync(zipPath, zip.toBuffer());
+
+      new LiquidSamplerRunner("1").extractFlaggedOnly(zipPath, outDir);
+
+      expect(consola.info).toHaveBeenCalledWith(expect.stringContaining("No view.html files found for the differing entries"));
+      expect(fs.existsSync(outDir)).toBe(false);
+    });
+
     it("does not create the directory when nothing differs", () => {
       const zip = new AdmZip();
       zip.addFile("sample_entry_ids.yml", Buffer.from(JSON.stringify({ reconciliation_entries: { 1: { label: "vkt_1", url: null } } })));
