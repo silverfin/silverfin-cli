@@ -423,6 +423,306 @@ describe("fsUtils", () => {
     });
   });
 
+  // ─── path helpers ─────────────────────────────────────────────────────────
+
+  describe("isAbsentOrEmptyDir", () => {
+    it("should be true for a missing path or an empty directory", () => {
+      expect(fsUtils.isAbsentOrEmptyDir(path.join(tempDir, "missing"))).toBe(true);
+      fs.mkdirSync(path.join(tempDir, "empty"));
+      expect(fsUtils.isAbsentOrEmptyDir(path.join(tempDir, "empty"))).toBe(true);
+    });
+
+    it("should be false for a directory with files, or a file", () => {
+      fs.mkdirSync(path.join(tempDir, "full"));
+      fs.writeFileSync(path.join(tempDir, "full", "a.txt"), "a");
+      expect(fsUtils.isAbsentOrEmptyDir(path.join(tempDir, "full"))).toBe(false);
+      expect(fsUtils.isAbsentOrEmptyDir(path.join(tempDir, "full", "a.txt"))).toBe(false);
+    });
+
+    it("should throw for a path under a regular file instead of calling it absent", () => {
+      fs.writeFileSync(path.join(tempDir, "results.zip"), "zip");
+      expect(() => fsUtils.isAbsentOrEmptyDir(path.join(tempDir, "results.zip", "out"))).toThrow(/ENOTDIR/);
+    });
+  });
+
+  describe("isDirectory", () => {
+    it("should be true for a directory and false for a file or a missing path", () => {
+      fs.writeFileSync(path.join(tempDir, "a.txt"), "a");
+      expect(fsUtils.isDirectory(tempDir)).toBe(true);
+      expect(fsUtils.isDirectory(path.join(tempDir, "a.txt"))).toBe(false);
+      expect(fsUtils.isDirectory(path.join(tempDir, "missing"))).toBe(false);
+    });
+  });
+
+  describe("isSameOrInside", () => {
+    it("should treat the same path and any descendant as inside", () => {
+      expect(fsUtils.isSameOrInside("/a/b", "/a/b")).toBe(true);
+      expect(fsUtils.isSameOrInside("/a/b/c/d.json", "/a/b")).toBe(true);
+      expect(fsUtils.isSameOrInside("/a/b/..cache", "/a/b")).toBe(true);
+      expect(fsUtils.isSameOrInside("/x", "/")).toBe(true);
+    });
+
+    it("should treat siblings and parents as outside", () => {
+      expect(fsUtils.isSameOrInside("/a/bc", "/a/b")).toBe(false);
+      expect(fsUtils.isSameOrInside("/a", "/a/b")).toBe(false);
+      expect(fsUtils.isSameOrInside("/a/c", "/a/b")).toBe(false);
+    });
+  });
+
+  describe("isSameFile", () => {
+    it("should match equal paths, even when neither exists", () => {
+      expect(fsUtils.isSameFile("out.json", path.join(process.cwd(), "out.json"))).toBe(true);
+    });
+
+    it("should match a hard link to the same file", () => {
+      fs.writeFileSync(path.join(tempDir, "a.zip"), "zip");
+      fs.linkSync(path.join(tempDir, "a.zip"), path.join(tempDir, "b.zip"));
+      expect(fsUtils.isSameFile(path.join(tempDir, "a.zip"), path.join(tempDir, "b.zip"))).toBe(true);
+    });
+
+    it("should not match two different files", () => {
+      fs.writeFileSync(path.join(tempDir, "a.zip"), "zip");
+      fs.writeFileSync(path.join(tempDir, "b.zip"), "zip");
+      expect(fsUtils.isSameFile(path.join(tempDir, "a.zip"), path.join(tempDir, "b.zip"))).toBe(false);
+    });
+  });
+
+  describe("writeFileAtomic", () => {
+    it("should replace the file's contents and leave no temp file behind", () => {
+      const filePath = path.join(tempDir, "out.json");
+      fs.writeFileSync(filePath, "old");
+      fsUtils.writeFileAtomic(filePath, "new");
+      expect(fs.readFileSync(filePath, "utf8")).toBe("new");
+      expect(fs.readdirSync(tempDir)).toEqual(["out.json"]);
+    });
+
+    it("should leave the existing file and no temp file when the write fails", () => {
+      const filePath = path.join(tempDir, "out.json");
+      fs.writeFileSync(filePath, "old");
+      const renameSpy = jest.spyOn(fs, "renameSync").mockImplementation(() => {
+        throw new Error("EXDEV");
+      });
+      try {
+        expect(() => fsUtils.writeFileAtomic(filePath, "new")).toThrow("EXDEV");
+      } finally {
+        renameSpy.mockRestore();
+      }
+      expect(fs.readFileSync(filePath, "utf8")).toBe("old");
+      expect(fs.readdirSync(tempDir)).toEqual(["out.json"]);
+    });
+
+    it("should write through a symlink to its target and keep the file's mode", () => {
+      const target = path.join(tempDir, "results.zip");
+      const link = path.join(tempDir, "link.zip");
+      fs.writeFileSync(target, "old");
+      fs.chmodSync(target, 0o640);
+      fs.symlinkSync(target, link);
+
+      fsUtils.writeFileAtomic(link, "new");
+
+      expect(fs.lstatSync(link).isSymbolicLink()).toBe(true);
+      expect(fs.readFileSync(target, "utf8")).toBe("new");
+      expect(fs.statSync(target).mode & 0o777).toBe(0o640);
+    });
+
+    it("should write straight to a device instead of replacing it", () => {
+      expect(() => fsUtils.writeFileAtomic("/dev/null", "x")).not.toThrow();
+      expect(fs.statSync("/dev/null").isCharacterDevice()).toBe(true);
+    });
+
+    it("should create missing parent directories", () => {
+      const filePath = path.join(tempDir, "nested", "out.json");
+      fsUtils.writeFileAtomic(filePath, "new");
+      expect(fs.readFileSync(filePath, "utf8")).toBe("new");
+    });
+  });
+
+  describe("writeDirectoryAtomic", () => {
+    it("should write every file into an absent or empty directory", () => {
+      const dir = path.join(tempDir, "out");
+      fs.mkdirSync(dir);
+      fsUtils.writeDirectoryAtomic(dir, [{ relPath: path.join("a", "view.html"), contents: "a" }]);
+      expect(fs.readFileSync(path.join(dir, "a", "view.html"), "utf8")).toBe("a");
+      expect(fs.readdirSync(tempDir)).toEqual(["out"]);
+    });
+
+    it("should leave nothing behind when a write fails", () => {
+      const dir = path.join(tempDir, "out");
+      const writeSpy = jest.spyOn(fs, "writeFileSync").mockImplementationOnce(() => {
+        throw new Error("ENOSPC");
+      });
+      try {
+        expect(() => fsUtils.writeDirectoryAtomic(dir, [{ relPath: "a.html", contents: "a" }])).toThrow("ENOSPC");
+      } finally {
+        writeSpy.mockRestore();
+      }
+      expect(fs.readdirSync(tempDir)).toEqual([]);
+    });
+  });
+
+  describe("writeDirectoryAtomic into an existing empty directory", () => {
+    it("should keep the directory itself (it may be a mount point or the cwd)", () => {
+      const dir = path.join(tempDir, "out");
+      fs.mkdirSync(dir);
+      const { ino } = fs.statSync(dir);
+      fsUtils.writeDirectoryAtomic(dir, [{ relPath: path.join("a", "view.html"), contents: "a" }]);
+      expect(fs.statSync(dir).ino).toBe(ino);
+      expect(fs.readdirSync(dir)).toEqual(["a"]);
+    });
+
+    it("should undo a partial move when a later rename fails", () => {
+      const dir = path.join(tempDir, "out");
+      fs.mkdirSync(dir);
+      const realRename = fs.renameSync;
+      let calls = 0;
+      const renameSpy = jest.spyOn(fs, "renameSync").mockImplementation((from, to) => {
+        calls += 1;
+        if (calls === 2) throw new Error("EACCES");
+        return realRename(from, to);
+      });
+      try {
+        expect(() =>
+          fsUtils.writeDirectoryAtomic(dir, [
+            { relPath: "a.html", contents: "a" },
+            { relPath: "b.html", contents: "b" },
+          ])
+        ).toThrow("EACCES");
+      } finally {
+        renameSpy.mockRestore();
+      }
+      expect(fs.readdirSync(dir)).toEqual([]);
+    });
+
+    it("should refuse a symlinked output directory with a clear reason", () => {
+      fs.mkdirSync(path.join(tempDir, "real"));
+      fs.symlinkSync(path.join(tempDir, "real"), path.join(tempDir, "link"));
+      expect(() => fsUtils.isAbsentOrEmptyDir(path.join(tempDir, "link"))).toThrow(/symbolic link/);
+    });
+
+    it("should not treat a user's own .staging-* entry as a leftover", () => {
+      const dir = path.join(tempDir, "out");
+      fs.mkdirSync(path.join(dir, ".staging-mine"), { recursive: true });
+      expect(fsUtils.isAbsentOrEmptyDir(dir)).toBe(false);
+    });
+
+    it("should clear a staging directory an interrupted fill left behind", () => {
+      const dir = path.join(tempDir, "out");
+      fs.mkdirSync(path.join(dir, ".silverfin-staging-Ab12Cd"), { recursive: true });
+      expect(fsUtils.isAbsentOrEmptyDir(dir)).toBe(true);
+      fsUtils.writeDirectoryAtomic(dir, [{ relPath: "a.html", contents: "a" }]);
+      expect(fs.readdirSync(dir)).toEqual(["a.html"]);
+    });
+
+    it("should fill the directory the kernel resolves to, and never overwrite what is there", () => {
+      fs.mkdirSync(path.join(tempDir, "real", "inner"), { recursive: true });
+      fs.mkdirSync(path.join(tempDir, "new"));
+      fs.writeFileSync(path.join(tempDir, "new", "a.html"), "keep me");
+      fs.symlinkSync(path.join(tempDir, "real", "inner"), path.join(tempDir, "link"));
+      // link/../new is real/new to the kernel, not tempDir/new
+      fsUtils.writeDirectoryAtomic(`${tempDir}${path.sep}link${path.sep}..${path.sep}new`, [{ relPath: "a.html", contents: "a" }]);
+      expect(fs.readFileSync(path.join(tempDir, "new", "a.html"), "utf8")).toBe("keep me");
+      expect(fs.readFileSync(path.join(tempDir, "real", "new", "a.html"), "utf8")).toBe("a");
+    });
+
+    it("should refuse to fill a directory that is not empty", () => {
+      const dir = path.join(tempDir, "out");
+      fs.mkdirSync(dir);
+      fs.writeFileSync(path.join(dir, "x.html"), "x");
+      expect(() => fsUtils.writeDirectoryAtomic(dir, [{ relPath: "a.html", contents: "a" }])).toThrow(/not an empty directory/);
+      expect(fs.readdirSync(dir)).toEqual(["x.html"]);
+    });
+
+    it("should refuse a path that leaves the directory", () => {
+      const dir = path.join(tempDir, "out");
+      expect(() => fsUtils.writeDirectoryAtomic(dir, [{ relPath: path.join("..", "escaped.html"), contents: "x" }])).toThrow(/outside/);
+      expect(fs.readdirSync(tempDir)).toEqual([]);
+    });
+  });
+
+  describe("copyDirectory", () => {
+    it("should leave nothing behind when the copy fails", () => {
+      fs.mkdirSync(path.join(tempDir, "src"));
+      const cpSpy = jest.spyOn(fs, "cpSync").mockImplementationOnce(() => {
+        throw new Error("ENOSPC");
+      });
+      try {
+        expect(() => fsUtils.copyDirectory(path.join(tempDir, "src"), path.join(tempDir, "dest"))).toThrow("ENOSPC");
+      } finally {
+        cpSpy.mockRestore();
+      }
+      expect(fs.readdirSync(tempDir)).toEqual(["src"]);
+    });
+
+    it("should copy a tree into a destination whose parent does not exist yet", () => {
+      fs.mkdirSync(path.join(tempDir, "src", "sub"), { recursive: true });
+      fs.writeFileSync(path.join(tempDir, "src", "sub", "a.txt"), "a");
+      fsUtils.copyDirectory(path.join(tempDir, "src"), path.join(tempDir, "x", "dest"));
+      expect(fs.readFileSync(path.join(tempDir, "x", "dest", "sub", "a.txt"), "utf8")).toBe("a");
+    });
+  });
+
+  describe("followSymlinks", () => {
+    it("should resolve a relative link from its real directory, like the kernel", () => {
+      fs.mkdirSync(path.join(tempDir, "real", "sub"), { recursive: true });
+      fs.symlinkSync(path.join(tempDir, "real", "sub"), path.join(tempDir, "alias"));
+      fs.symlinkSync(path.join("..", "target.json"), path.join(tempDir, "real", "sub", "link.json"));
+      expect(fsUtils.followSymlinks(path.join(tempDir, "alias", "link.json"))).toBe(path.join(fs.realpathSync(tempDir), "real", "target.json"));
+    });
+
+    it("should resolve `..` after a symlinked directory the way the kernel does", () => {
+      fs.mkdirSync(path.join(tempDir, "a", "b"), { recursive: true });
+      fs.symlinkSync(path.join(tempDir, "a", "b"), path.join(tempDir, "linkdir"));
+      // Not path.join: it would collapse the `..` before the call
+      expect(fsUtils.followSymlinks(`${tempDir}${path.sep}linkdir${path.sep}..${path.sep}out.json`)).toBe(path.join(fs.realpathSync(tempDir), "a", "out.json"));
+    });
+
+    it("should follow a dangling symlink to where a write would land", () => {
+      const link = path.join(tempDir, "link.json");
+      fs.symlinkSync(path.join(tempDir, "missing.json"), link);
+      expect(fsUtils.followSymlinks(link)).toBe(path.join(fs.realpathSync(tempDir), "missing.json"));
+    });
+
+    it("should resolve `..` inside a dangling link's own target the way the kernel does", () => {
+      fs.mkdirSync(path.join(tempDir, "a", "b"), { recursive: true });
+      fs.symlinkSync(path.join(tempDir, "a", "b"), path.join(tempDir, "linkdir"));
+      fs.symlinkSync(`linkdir${path.sep}..${path.sep}x.json`, path.join(tempDir, "out.json"));
+      expect(fsUtils.followSymlinks(path.join(tempDir, "out.json"))).toBe(path.join(fs.realpathSync(tempDir), "a", "x.json"));
+    });
+  });
+
+  describe("isRegularFileOrAbsent", () => {
+    it("should accept a missing path or a regular file, and refuse a symlink, directory or device", () => {
+      fs.writeFileSync(path.join(tempDir, "a.json"), "a");
+      fs.symlinkSync(path.join(tempDir, "a.json"), path.join(tempDir, "link.json"));
+      expect(fsUtils.isRegularFileOrAbsent(path.join(tempDir, "missing.json"))).toBe(true);
+      expect(fsUtils.isRegularFileOrAbsent(path.join(tempDir, "a.json"))).toBe(true);
+      expect(fsUtils.isRegularFileOrAbsent(path.join(tempDir, "link.json"))).toBe(false);
+      expect(fsUtils.isRegularFileOrAbsent(tempDir)).toBe(false);
+      expect(fsUtils.isRegularFileOrAbsent("/dev/null")).toBe(false);
+    });
+  });
+
+  describe("removeFileThroughSymlinks", () => {
+    it("should remove a regular file and leave a device alone", () => {
+      const filePath = path.join(tempDir, "old.json");
+      fs.writeFileSync(filePath, "old");
+      fsUtils.removeFileThroughSymlinks(filePath);
+      expect(fs.existsSync(filePath)).toBe(false);
+      expect(() => fsUtils.removeFileThroughSymlinks("/dev/null")).not.toThrow();
+      expect(fs.existsSync("/dev/null")).toBe(true);
+    });
+  });
+
+  describe("readFileIfPresent", () => {
+    it("should return the contents of a file, and null for a directory or a missing path", () => {
+      fs.writeFileSync(path.join(tempDir, "a.html"), "a");
+      fs.mkdirSync(path.join(tempDir, "dir.html"));
+      expect(fsUtils.readFileIfPresent(path.join(tempDir, "a.html")).toString()).toBe("a");
+      expect(fsUtils.readFileIfPresent(path.join(tempDir, "dir.html"))).toBeNull();
+      expect(fsUtils.readFileIfPresent(path.join(tempDir, "missing.html"))).toBeNull();
+    });
+  });
+
   // ─── getAllWorkflowHandles ─────────────────────────────────────────────────
 
   describe("getAllWorkflowHandles", () => {

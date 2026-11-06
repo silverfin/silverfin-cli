@@ -521,7 +521,7 @@ program
 program
   .command("run-sampler", { hidden: true})
   .description("Run Liquid Sampler for partner templates (reconciliation texts, account detail templates, and/or shared parts)")
-  .requiredOption("-p, --partner <partner-id>", "Specify the partner to be used")
+  .option("-p, --partner <partner-id>", "Specify the partner to be used (required unless --from-zip is used)")
   .option("-h, --handle <handles...>", "Specify reconciliation text handle(s) - can specify multiple")
   .option("-at, --account-template <names...>", "Specify account detail template name(s) - can specify multiple")
   .option("-s, --shared-part <names...>", "Specify shared part name(s) - can specify multiple")
@@ -532,14 +532,54 @@ program
       "accountTemplate",
       "sharedPart",
       "firmIds",
+      "fromZip",
+    ])
+  )
+  .addOption(
+    new Option("--from-zip <path>", "Build the compact diff from an already-downloaded results.zip - no sampler run, no network call").conflicts([
+      "handle",
+      "accountTemplate",
+      "sharedPart",
+      "firmIds",
+      "id",
     ])
   )
   .option("--no-open", "Do not download/open the report locally; only print its URL (default in CI)")
-  .option("--compact", "Download the result and print a compact named_results diff (grouped by template) to stdout - review-friendly and safe in CI")
+  .option("--compact", "Download the result and print a compact diff (named_results/results, dependencies, vanished renders, visual-only changes) grouped by template - review-friendly and safe in CI")
+  .option(
+    "--add-diffs-folder",
+    "With --from-zip: add a diffs/ folder to the zip containing before/after pairs for the entries the compact diff flagged (data/scope/vanished-output/visual-only changes) whose renders actually differ, instead of every sampled entry"
+  )
+  .option(
+    "--extract-flagged-only <dir>",
+    "With --from-zip: write the flagged entries' before/after view.html into <dir> (which must not exist yet, or be empty) as loose files - the same selection --add-diffs-folder embeds in the zip, for a consumer that wants only those without unpacking a ~150 MB archive"
+  )
+  .option("--keep-extracted <dir>", "With --compact or --from-zip: keep the extracted results in <dir> (which must not exist yet, or be empty) instead of deleting them, so the file paths the diff cites can still be opened afterwards")
+  .option("--json <path>", "With --compact or --from-zip: also write the compact diff's underlying data to <path> as JSON, so a tool can read it directly instead of parsing the rendered markdown")
   .action(async (options) => {
     // Commander sets options.open = false when --no-open is passed.
     // In CI, never open regardless of the flag.
-    const runnerOptions = { openReport: options.open && !process.env.CI, compact: options.compact || false };
+    const runnerOptions = {
+      openReport: options.open && !process.env.CI,
+      compact: options.compact || false,
+      keepExtracted: options.keepExtracted,
+      jsonOut: options.json,
+    };
+
+    cliUtils.checkSamplerOptions(options);
+
+    // A local zip needs no partner API access at all - it's pure offline
+    // re-analysis of a result someone already has on disk.
+    if (options.fromZip) {
+      const runner = new LiquidSamplerRunner(options.partner, runnerOptions);
+      await runner.printCompactDiffFromZip(options.fromZip);
+      // Stop after a failed step, as a hard exit used to (process.exit would cut off the diff's output)
+      if (options.addDiffsFolder && runner.addDiffsFolderToZip(options.fromZip) === false) return;
+      if (options.extractFlaggedOnly) {
+        runner.extractFlaggedOnly(options.fromZip, options.extractFlaggedOnly);
+      }
+      return;
+    }
 
     // If an existing sampler ID is provided, fetch and display results
     if (options.id) {

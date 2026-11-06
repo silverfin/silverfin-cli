@@ -2,10 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.62.3] (06/11/2026)
+## [1.63.1] (06/11/2026)
 Fix `create-account-template -p <partner-id>` dropping the partner's `mapping_list_ranges`. The create payload was always filtered down to `firm` ranges, so a template created on a partner arrived with no mapping list association at all — only its base `account_range`. The follow-up `update-account-template` then had to *add* the range instead of updating it, which the API rejects with `422 Not allowed to add range for mapping list <id>`.
 
 Also hardened the same create path: it no longer throws a `TypeError` when a template's `config.json` has no `mapping_list_ranges` key, and a create that fails with a 400/404 is now reported and exits with code `1` instead of crashing on an undefined response (`sfApi` returns nothing for a 400/404, but the success message read `response.data` before checking the status). A 422 or 403 still stops the process inside the API layer. The new template ID is now stored in the local folder the template was read from, rather than the folder named after the `name_nl` the API returns. `create-export-file` gets the same two fixes.
+
+## [1.63.0] (06/11/2026)
+`silverfin run-sampler` now waits up to 2 hours (was 1) for a live run and rides out up to two failed status polls in a row, and its `--compact` diff also covers the `results` register, adds output-vanished, scope and visual-only tiers, and shortens long values and oversized diffs to fit a PR comment.
+New flag `--from-zip` (no `--partner` needed) rebuilds the diff from a downloaded `results.zip`, `--add-diffs-folder` (rewrites that zip in place) and `--extract-flagged-only <dir>` save the flagged entries' before/after `view.html`, and `--keep-extracted` and `--json` save the extracted files or diff data from that or a live `--compact` run, exiting 1 when a requested output can't be written.
+The sampler also sends `auto_hide_formula`, `reconciliation_type`, `handle` and `name_*`, and dependencies are updated.
 
 ## [1.62.2] (05/11/2026)
 `silverfin stats` no longer fails on newer git versions, which refuse to run the deprecated `git whatchanged` command. The YAML file changes are now read with `git log`, with the same results.
