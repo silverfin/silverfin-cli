@@ -506,11 +506,13 @@ async function newExportFile(type, envId, name) {
     if (!template) return;
     template.version_comment = "Created through the Silverfin CLI";
     const response = await SF.createExportFile(type, envId, template);
-    const handle = response.data.name_nl;
     // Store new id
-    if (response && response.status == 201) {
-      ExportFile.updateTemplateId(type, envId, handle, response.data.id);
-      consola.success(`Export file "${handle}" created on ${type} ${envId}`);
+    if (response && response.status == 201 && response.data) {
+      ExportFile.updateTemplateId(type, envId, name, response.data.id);
+      consola.success(`Export file "${name}" created on ${type} ${envId}`);
+    } else {
+      consola.error(`Export file creation failed: ${name}`);
+      process.exitCode = 1;
     }
   } catch (error) {
     errorUtils.errorHandler(error);
@@ -756,17 +758,20 @@ async function newAccountTemplate(type, envId, name) {
     template.version_comment = "Created through the Silverfin CLI";
 
     // Only keep the mapping_list_ranges that belong to this firm or partner for the request
-    template.mapping_list_ranges = template.mapping_list_ranges.filter((range) => {
-      return range.type === "firm" && range.env_id === envId;
-    });
+    template.mapping_list_ranges =
+      template.mapping_list_ranges?.filter((range) => {
+        return range.type === type && range.env_id === envId;
+      }) || [];
 
     const response = await SF.createAccountTemplate(type, envId, template);
-    const handle = response.data.name_nl;
 
     // Store new id
-    if (response && response.status == 201) {
-      AccountTemplate.updateTemplateId(type, envId, handle, response.data.id);
-      consola.success(`Account template "${handle}" created on on ${type} ${envId}.`);
+    if (response && response.status == 201 && response.data) {
+      AccountTemplate.updateTemplateId(type, envId, name, response.data.id);
+      consola.success(`Account template "${name}" created on ${type} ${envId}.`);
+    } else {
+      consola.error(`Account template creation failed: ${name}`);
+      process.exitCode = 1;
     }
   } catch (error) {
     errorUtils.errorHandler(error);

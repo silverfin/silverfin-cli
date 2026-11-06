@@ -190,6 +190,8 @@ Source: `index.js` → `lib/templates/exportFile.js`
 | Function | Test | Description |
 |---|---|---|
 | `newExportFile` | should create export file and store new id on success | Verifies that the API is called, the returned ID is written to `config.json`, and a success message is logged. |
+| `newExportFile` | should store the new id under the local folder name, not the name returned by the API | Verifies that the ID is saved to the folder the export file was read from, even if the API returns a different `name_nl`. |
+| `newExportFile` | should report a failure and set exit code 1 when the API call returns no response | Verifies that an undefined response (sfApi's 400/404 path) logs an error instead of crashing, and sets `process.exitCode` to `1`. |
 | `newExportFile` | should skip creation when export file already exists remotely | Verifies that when the remote look-up finds an existing export file the create API is not called and a warning is logged. |
 
 ---
@@ -1076,7 +1078,12 @@ Source: `index.js` (toolkit)
 | `publishAccountTemplateByName` | should update account template when config and id exist | Verifies the update flow completes and returns `true`. |
 | `publishAccountTemplateByName` | should return false when config does not exist | Verifies that `false` is returned when there is no local config. |
 | `newAccountTemplate` | should create account template and store new id on success | Verifies the full creation flow completes and the new ID is stored. |
+| `newAccountTemplate` | should store the new id under the local folder name, not the name returned by the API | Verifies that the ID is saved to the folder the template was read from, even if the API returns a different `name_nl`. |
 | `newAccountTemplate` | should warn and skip when account template already exists | Verifies that a warning is logged and the create API is not called when the name already exists remotely. |
+| `newAccountTemplate` | should keep this partner's mapping list ranges when creating on a partner | Verifies that creating on a partner sends that partner's `mapping_list_ranges` in the payload, dropping other partners' and firms' ranges. |
+| `newAccountTemplate` | should keep only this firm's mapping list ranges when creating on a firm | Verifies that creating on a firm still sends only that firm's `mapping_list_ranges`. |
+| `newAccountTemplate` | should send empty mapping list ranges when the config has no mapping_list_ranges key | Verifies that a config without the key sends `[]` rather than throwing a `TypeError`. |
+| `newAccountTemplate` | should report a failure and set exit code 1 when the API call returns no response | Verifies that an undefined response (sfApi's 400/404 path) logs an error, does not store an ID, and sets `process.exitCode` to `1`. |
 | `fetchSharedPartById` | should save and log success when template is found | Verifies that `SharedPart.save` is called with the API data and a success message is logged. |
 | `fetchSharedPartById` | should log error and exit when template not found | Verifies that an error is logged and the process exits when `readSharedPartById` returns `null`. |
 | `fetchAllSharedParts` | should fetch each shared part when list returned | Verifies that `readSharedPartById` is called for each shared part in the paginated list. |
