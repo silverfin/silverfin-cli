@@ -546,6 +546,7 @@ Source: `lib/cli/stats.js`
 | `generateWorkflowOverview` (handle) | should not skip the workflow it was asked for | Verifies that the batch "Skipping workflow" wording is not used when a single handle was requested. |
 | `generateWorkflowOverview` (handle) | should produce a CSV named after the workflow handle | Verifies that the statistics are written to `stats/<handle>_stats.csv`. |
 | `generateWorkflowOverview` (handle) | should count only the templates belonging to the workflow | Verifies that templates outside the workflow are excluded from the counts. |
+| `generateWorkflowOverview` (handle) | should count added and modified liquid test files from git log | Verifies that the git scan runs `git log --no-merges --name-status`, and that an added and a modified liquid test file are counted as one created and one updated YAML file. |
 | `generateWorkflowOverview` (no templates) | should report zero without silently matching every template | Verifies that an empty template list does not fall back to the `.*` pattern used by the repository-wide overview. |
 | `generateWorkflowOverview` (no templates) | should explain that no YAML changes can be counted | Verifies that the user is told why the YAML activity counts are empty. |
 | `generateWorkflowOverview` (no templates) | should not run the git scan when there is nothing to match | Verifies that `git log` is not invoked when the workflow holds no templates. |

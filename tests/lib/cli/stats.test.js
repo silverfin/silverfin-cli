@@ -225,6 +225,22 @@ describe("cli/stats", () => {
       expect(values[9]).toBe("1");
       expect(values[12]).toBe("2");
     });
+
+    it("should count added and modified liquid test files from git log", async () => {
+      writeTemplate("reconciliation_texts", "reconciliation_text_1", { unitTests: 2 });
+      writeTemplate("account_templates", "account_1");
+      writeTemplate("export_files", "export_1");
+      writeWorkflow("workflow_valid", VALID_WORKFLOW);
+      const file = "reconciliation_texts/reconciliation_text_1/tests/reconciliation_text_1_liquid_test.yml";
+      execSyncSpy.mockReturnValue(Buffer.from(`M\t${file}\n\nA\t${file}\n`));
+
+      await stats.generateWorkflowOverview("2024-01-01", "workflow_valid");
+
+      expect(execSyncSpy).toHaveBeenCalledWith(expect.stringMatching(/^git log .*--no-merges --name-status/));
+      const values = fs.readFileSync(path.join(tempDir, "stats", "workflow_valid_stats.csv"), "utf-8").trim().split("\r\n")[1].split(";");
+      expect(values[3]).toBe("1"); // created
+      expect(values[4]).toBe("1"); // updated
+    });
   });
 
   // ─── empty template lists ──────────────────────────────────────────────────
