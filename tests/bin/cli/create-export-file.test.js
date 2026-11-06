@@ -61,6 +61,39 @@ describe("create-export-file", () => {
       expect(config.id["2000"]).toBe(99002);
     });
 
+    it("should store the new id under the local name when the response omits name_nl", async () => {
+      const fixturesPath = path.join(__dirname, "../../../fixtures/market-repo");
+      await fsPromises.cp(fixturesPath, tempDir, { recursive: true });
+
+      SF.findExportFileByName.mockResolvedValue(null);
+      SF.createExportFile.mockResolvedValue({
+        status: 201,
+        data: { id: 99002, name_en: "English name" },
+      });
+
+      await toolkit.newExportFile("firm", "2000", "export_1");
+
+      expect(consola.success).toHaveBeenCalledWith(expect.stringContaining('"export_1" created'));
+      const configPath = path.join(tempDir, "export_files", "export_1", "config.json");
+      const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
+      expect(config.id["2000"]).toBe(99002);
+    });
+
+    it("should report failure and set a non-zero exit code when creation is rejected", async () => {
+      const fixturesPath = path.join(__dirname, "../../../fixtures/market-repo");
+      await fsPromises.cp(fixturesPath, tempDir, { recursive: true });
+      const originalExitCode = process.exitCode;
+
+      SF.findExportFileByName.mockResolvedValue(null);
+      SF.createExportFile.mockResolvedValue(undefined);
+
+      await toolkit.newExportFile("firm", "2000", "export_1");
+
+      expect(consola.error).toHaveBeenCalledWith('Export file "export_1" creation failed on firm 2000');
+      expect(process.exitCode).toBe(1);
+      process.exitCode = originalExitCode;
+    });
+
     it("should skip creation when export file already exists remotely", async () => {
       const fixturesPath = path.join(__dirname, "../../../fixtures/market-repo");
       await fsPromises.cp(fixturesPath, tempDir, { recursive: true });

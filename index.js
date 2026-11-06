@@ -513,11 +513,13 @@ async function newExportFile(type, envId, name) {
     if (!template) return;
     template.version_comment = "Created through the Silverfin CLI";
     const response = await SF.createExportFile(type, envId, template);
-    const handle = response.data.name_nl;
-    // Store new id
-    if (response && response.status == 201) {
-      ExportFile.updateTemplateId(type, envId, handle, response.data.id);
-      consola.success(`Export file "${handle}" created on ${type} ${envId}`);
+    // Store new id under the local name, not response.data.name_nl: a firm with Dutch disabled omits it (#232)
+    if (isSuccessfulResponse(response)) {
+      ExportFile.updateTemplateId(type, envId, name, response.data.id);
+      consola.success(`Export file "${name}" created on ${type} ${envId}`);
+    } else {
+      consola.error(`Export file "${name}" creation failed on ${type} ${envId}`);
+      process.exitCode = 1;
     }
   } catch (error) {
     errorUtils.errorHandler(error);
@@ -768,12 +770,13 @@ async function newAccountTemplate(type, envId, name) {
     });
 
     const response = await SF.createAccountTemplate(type, envId, template);
-    const handle = response.data.name_nl;
-
-    // Store new id
-    if (response && response.status == 201) {
-      AccountTemplate.updateTemplateId(type, envId, handle, response.data.id);
-      consola.success(`Account template "${handle}" created on on ${type} ${envId}.`);
+    // Store new id under the local name, not response.data.name_nl: a firm with Dutch disabled omits it (#232)
+    if (isSuccessfulResponse(response)) {
+      AccountTemplate.updateTemplateId(type, envId, name, response.data.id);
+      consola.success(`Account template "${name}" created on on ${type} ${envId}.`);
+    } else {
+      consola.error(`Account template "${name}" creation failed on ${type} ${envId}`);
+      process.exitCode = 1;
     }
   } catch (error) {
     errorUtils.errorHandler(error);
