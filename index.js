@@ -8,6 +8,13 @@ const { ExportFile } = require("./lib/templates/exportFile");
 const { AccountTemplate } = require("./lib/templates/accountTemplate");
 const { consola } = require("consola");
 
+// Whether a create/update was accepted. Judge on the HTTP status, never on a field of
+// the body: a firm with Dutch disabled saves the change but leaves `name_nl` out of
+// the response (#232). The API error handlers return undefined for a handled 400/404.
+function isSuccessfulResponse(response) {
+  return Boolean(response?.status >= 200 && response.status < 300);
+}
+
 async function fetchReconciliationById(type, envId, id) {
   try {
     const template = await SF.readReconciliationTextById(type, envId, id);
@@ -411,8 +418,8 @@ async function publishExportFileByName(
 
     const response = await SF.updateExportFile(type, envId, templateId, template);
 
-    if (response && response.data && response.data.name_nl) {
-      consola.success(`Export file updated: ${response.data.name_nl}`);
+    if (isSuccessfulResponse(response)) {
+      consola.success(`Export file updated: ${name}`);
       return true;
     } else {
       if (defer) {
@@ -470,8 +477,8 @@ async function publishExportFileById(type, envId, exportFileId, message = "Updat
 
     const response = await SF.updateExportFile(type, envId, exportFileId, template);
 
-    if (response && response.data && response.data.name_nl) {
-      consola.success(`Export file updated: ${response.data.name_nl} (ID: ${exportFileId})`);
+    if (isSuccessfulResponse(response)) {
+      consola.success(`Export file updated: ${matchingHandle} (ID: ${exportFileId})`);
       return true;
     } else {
       consola.error(`Export file update failed for ID: ${exportFileId} in ${type} ${envId}`);
@@ -653,8 +660,8 @@ async function publishAccountTemplateByName(
 
     const response = await SF.updateAccountTemplate(type, envId, templateId, template);
 
-    if (response && response.data && response.data.name_nl) {
-      consola.success(`Account template updated: ${response.data.name_nl}`);
+    if (isSuccessfulResponse(response)) {
+      consola.success(`Account template updated: ${name}`);
       return true;
     } else {
       if (defer) {
@@ -718,8 +725,8 @@ async function publishAccountTemplateById(type, envId, accountTemplateId, messag
 
     const response = await SF.updateAccountTemplate(type, envId, accountTemplateId, template);
 
-    if (response && response.data && response.data.name_nl) {
-      consola.success(`Account template updated: ${response.data.name_nl} (ID: ${accountTemplateId})`);
+    if (isSuccessfulResponse(response)) {
+      consola.success(`Account template updated: ${matchingHandle} (ID: ${accountTemplateId})`);
       return true;
     } else {
       consola.error(`Account template update failed for ID: ${accountTemplateId} in ${type} ${envId}`);

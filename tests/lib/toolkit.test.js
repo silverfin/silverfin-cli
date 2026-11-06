@@ -161,6 +161,7 @@ describe("Toolkit", () => {
       fsUtils.findHandleByID.mockReturnValue(mockHandle);
       ExportFile.read.mockResolvedValue(mockTemplate);
       const mockResponse = {
+        status: 201,
         data: {
           name_nl: "Test Export File",
         },
@@ -225,6 +226,7 @@ describe("Toolkit", () => {
       ExportFile.read.mockResolvedValue(mockTemplate);
 
       const mockResponse = {
+        status: 201,
         data: {
           name_nl: "Test Export File",
         },
@@ -260,6 +262,7 @@ describe("Toolkit", () => {
       fsUtils.findHandleByID.mockReturnValue(mockHandle);
       AccountTemplate.read.mockResolvedValue(mockTemplate);
       const mockResponse = {
+        status: 201,
         data: {
           name_nl: "Test Account Template",
         },
@@ -299,6 +302,7 @@ describe("Toolkit", () => {
       });
 
       const mockResponse = {
+        status: 201,
         data: {
           name_nl: "Test Account Template",
         },
@@ -353,6 +357,7 @@ describe("Toolkit", () => {
       AccountTemplate.read.mockResolvedValue(mockTemplate);
 
       const mockResponse = {
+        status: 201,
         data: {
           name_nl: "Test Account Template",
         },
@@ -766,7 +771,7 @@ describe("Toolkit", () => {
       fsUtils.readConfig.mockReturnValue({ id: { 100: 2201 }, partner_id: {} });
       fsUtils.getTemplateId.mockReturnValue(2201);
       ExportFile.read.mockResolvedValue(mockTemplate);
-      SF.updateExportFile.mockResolvedValue({ data: { name_nl: mockName } });
+      SF.updateExportFile.mockResolvedValue({ status: 201, data: { name_nl: mockName } });
 
       const result = await toolkit.publishExportFileByName(mockType, mockEnvId, mockName);
 
@@ -877,7 +882,7 @@ describe("Toolkit", () => {
       fsUtils.readConfig.mockReturnValue({ id: { 100: 1101 }, partner_id: {} });
       fsUtils.getTemplateId.mockReturnValue(1101);
       AccountTemplate.read.mockResolvedValue(mockTemplate);
-      SF.updateAccountTemplate.mockResolvedValue({ data: { name_nl: mockName } });
+      SF.updateAccountTemplate.mockResolvedValue({ status: 201, data: { name_nl: mockName } });
 
       const result = await toolkit.publishAccountTemplateByName(mockType, mockEnvId, mockName);
 
@@ -1124,7 +1129,7 @@ describe("Toolkit", () => {
       fsUtils.readConfig.mockReturnValue({ id: { 100: 2201 }, partner_id: {} });
       fsUtils.getTemplateId.mockReturnValue(2201);
       ExportFile.read.mockResolvedValue({ name_nl: "export_1", text: "liquid" });
-      SF.updateExportFile.mockResolvedValue({ data: { name_nl: "export_1" } });
+      SF.updateExportFile.mockResolvedValue({ status: 201, data: { name_nl: "export_1" } });
 
       await toolkit.publishAllExportFiles("firm", "100");
 
@@ -1183,7 +1188,7 @@ describe("Toolkit", () => {
       fsUtils.readConfig.mockReturnValue({ id: { 100: 1101 }, partner_id: {} });
       fsUtils.getTemplateId.mockReturnValue(1101);
       AccountTemplate.read.mockResolvedValue({ name_nl: "account_1", text: "liquid", mapping_list_ranges: [] });
-      SF.updateAccountTemplate.mockResolvedValue({ data: { name_nl: "account_1" } });
+      SF.updateAccountTemplate.mockResolvedValue({ status: 201, data: { name_nl: "account_1" } });
 
       await toolkit.publishAllAccountTemplates("firm", "100");
 
