@@ -2,10 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.62.2] (05/11/2026)
+## [1.62.3] (06/11/2026)
 Fix `create-account-template -p <partner-id>` dropping the partner's `mapping_list_ranges`. The create payload was always filtered down to `firm` ranges, so a template created on a partner arrived with no mapping list association at all — only its base `account_range`. The follow-up `update-account-template` then had to *add* the range instead of updating it, which the API rejects with `422 Not allowed to add range for mapping list <id>`.
 
-Also hardened the same create path: it no longer throws a `TypeError` when a template's `config.json` has no `mapping_list_ranges` key, and a failed create is now reported and exits with code `1` instead of crashing on an undefined response (`sfApi` returns nothing for a 400/404, but the success message read `response.data` before checking the status). The new template ID is now stored in the local folder the template was read from, rather than the folder named after the `name_nl` the API returns.
+Also hardened the same create path: it no longer throws a `TypeError` when a template's `config.json` has no `mapping_list_ranges` key, and a create that fails with a 400/404 is now reported and exits with code `1` instead of crashing on an undefined response (`sfApi` returns nothing for a 400/404, but the success message read `response.data` before checking the status). A 422 or 403 still stops the process inside the API layer. The new template ID is now stored in the local folder the template was read from, rather than the folder named after the `name_nl` the API returns. `create-export-file` gets the same two fixes.
+
+## [1.62.2] (05/11/2026)
+`silverfin stats` no longer fails on newer git versions, which refuse to run the deprecated `git whatchanged` command. The YAML file changes are now read with `git log`, with the same results.
 
 ## [1.62.1] (05/11/2026)
 `config --list-all` no longer lists the configured host as if it were an authorized firm. Dependencies updated.
