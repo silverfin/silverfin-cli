@@ -190,6 +190,8 @@ Source: `index.js` → `lib/templates/exportFile.js`
 | Function | Test | Description |
 |---|---|---|
 | `newExportFile` | should create export file and store new id on success | Verifies that the API is called, the returned ID is written to `config.json`, and a success message is logged. |
+| `newExportFile` | should store the new id under the local folder name, not the name returned by the API | Verifies that the ID is saved to the folder the export file was read from, even if the API returns a different `name_nl`. |
+| `newExportFile` | should report a failure and set exit code 1 when the API call returns no response | Verifies that an undefined response (sfApi's 400/404 path) logs an error instead of crashing, and sets `process.exitCode` to `1`. |
 | `newExportFile` | should skip creation when export file already exists remotely | Verifies that when the remote look-up finds an existing export file the create API is not called and a warning is logged. |
 
 ---

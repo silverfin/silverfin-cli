@@ -506,11 +506,13 @@ async function newExportFile(type, envId, name) {
     if (!template) return;
     template.version_comment = "Created through the Silverfin CLI";
     const response = await SF.createExportFile(type, envId, template);
-    const handle = response.data.name_nl;
     // Store new id
-    if (response && response.status == 201) {
-      ExportFile.updateTemplateId(type, envId, handle, response.data.id);
-      consola.success(`Export file "${handle}" created on ${type} ${envId}`);
+    if (response && response.status == 201 && response.data) {
+      ExportFile.updateTemplateId(type, envId, name, response.data.id);
+      consola.success(`Export file "${name}" created on ${type} ${envId}`);
+    } else {
+      consola.error(`Export file creation failed: ${name}`);
+      process.exitCode = 1;
     }
   } catch (error) {
     errorUtils.errorHandler(error);
