@@ -61,6 +61,50 @@ describe("create-account-template", () => {
       expect(config.id["2000"]).toBe(99003);
     });
 
+    it("should store the new id under the local name when the response omits name_nl", async () => {
+      const fixturesPath = path.join(__dirname, "../../../fixtures/market-repo");
+      await fsPromises.cp(fixturesPath, tempDir, { recursive: true });
+
+      SF.findAccountTemplateByName.mockResolvedValue(null);
+      SF.createAccountTemplate.mockResolvedValue({
+        status: 201,
+        data: { id: 99003, name_en: "English name" },
+      });
+
+      await toolkit.newAccountTemplate("firm", "2000", "account_1");
+
+      expect(consola.success).toHaveBeenCalledWith(expect.stringContaining('"account_1" created'));
+      const configPath = path.join(tempDir, "account_templates", "account_1", "config.json");
+      const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
+      expect(config.id["2000"]).toBe(99003);
+    });
+
+    it("should look the template up with the local config's names", async () => {
+      const fixturesPath = path.join(__dirname, "../../../fixtures/market-repo");
+      await fsPromises.cp(fixturesPath, tempDir, { recursive: true });
+
+      SF.findAccountTemplateByName.mockResolvedValue({ id: 1, name_en: "x" });
+
+      await toolkit.newAccountTemplate("firm", "2000", "account_1");
+
+      expect(SF.findAccountTemplateByName).toHaveBeenCalledWith("firm", "2000", "account_1", 1, expect.objectContaining({ name_nl: "account_1" }));
+    });
+
+    it("should report failure and set a non-zero exit code when creation is rejected", async () => {
+      const fixturesPath = path.join(__dirname, "../../../fixtures/market-repo");
+      await fsPromises.cp(fixturesPath, tempDir, { recursive: true });
+      const originalExitCode = process.exitCode;
+
+      SF.findAccountTemplateByName.mockResolvedValue(null);
+      SF.createAccountTemplate.mockResolvedValue(undefined);
+
+      await toolkit.newAccountTemplate("firm", "2000", "account_1");
+
+      expect(consola.error).toHaveBeenCalledWith('Account template "account_1" creation failed on firm 2000');
+      expect(process.exitCode).toBe(1);
+      process.exitCode = originalExitCode;
+    });
+
     it("should skip creation when account template already exists remotely", async () => {
       const fixturesPath = path.join(__dirname, "../../../fixtures/market-repo");
       await fsPromises.cp(fixturesPath, tempDir, { recursive: true });

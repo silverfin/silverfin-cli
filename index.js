@@ -8,6 +8,21 @@ const { ExportFile } = require("./lib/templates/exportFile");
 const { AccountTemplate } = require("./lib/templates/accountTemplate");
 const { consola } = require("consola");
 
+// Whether a create/update was accepted. Judge on the HTTP status, never on a field of
+// the body: a firm with Dutch disabled saves the change but leaves `name_nl` out of
+// the response (#232). The API error handlers return undefined for a handled 400/404.
+function isSuccessfulResponse(response) {
+  return Boolean(response?.status >= 200 && response.status < 300);
+}
+
+// The name_* fields of a local account template or export file config, so a lookup by
+// name can still match on a firm that omits name_nl (#232). Empty when there is no local config.
+function localTemplateNames(templateType, name) {
+  if (!fsUtils.configExists(templateType, name)) return {};
+  const config = fsUtils.readConfig(templateType, name);
+  return Object.fromEntries(Object.entries(config).filter(([key]) => key.startsWith("name_")));
+}
+
 async function fetchReconciliationById(type, envId, id) {
   try {
     const template = await SF.readReconciliationTextById(type, envId, id);
@@ -282,7 +297,7 @@ async function newAllReconciliations(type, envId) {
 
 async function fetchExportFileByName(type, envId, name) {
   try {
-    const template = await SF.findExportFileByName(type, envId, name);
+    const template = await SF.findExportFileByName(type, envId, name, 1, localTemplateNames("exportFile", name));
 
     if (!template) {
       consola.error(`Export file "${name}" wasn't found in ${type} ${envId}`);
@@ -411,8 +426,8 @@ async function publishExportFileByName(
 
     const response = await SF.updateExportFile(type, envId, templateId, template);
 
-    if (response && response.data && response.data.name_nl) {
-      consola.success(`Export file updated: ${response.data.name_nl}`);
+    if (isSuccessfulResponse(response)) {
+      consola.success(`Export file updated: ${name}`);
       return true;
     } else {
       if (defer) {
@@ -470,8 +485,8 @@ async function publishExportFileById(type, envId, exportFileId, message = "Updat
 
     const response = await SF.updateExportFile(type, envId, exportFileId, template);
 
-    if (response && response.data && response.data.name_nl) {
-      consola.success(`Export file updated: ${response.data.name_nl} (ID: ${exportFileId})`);
+    if (isSuccessfulResponse(response)) {
+      consola.success(`Export file updated: ${matchingHandle} (ID: ${exportFileId})`);
       return true;
     } else {
       consola.error(`Export file update failed for ID: ${exportFileId} in ${type} ${envId}`);
@@ -497,7 +512,7 @@ async function publishAllExportFiles(type, envId, message = "updated through the
 
 async function newExportFile(type, envId, name) {
   try {
-    const existingTemplate = await SF.findExportFileByName(type, envId, name);
+    const existingTemplate = await SF.findExportFileByName(type, envId, name, 1, localTemplateNames("exportFile", name));
     if (existingTemplate) {
       consola.warn(`Export file "${name}" already exists on ${type} ${envId}. Skipping its creation`);
       return;
@@ -506,11 +521,13 @@ async function newExportFile(type, envId, name) {
     if (!template) return;
     template.version_comment = "Created through the Silverfin CLI";
     const response = await SF.createExportFile(type, envId, template);
-    const handle = response.data.name_nl;
-    // Store new id
-    if (response && response.status == 201) {
-      ExportFile.updateTemplateId(type, envId, handle, response.data.id);
-      consola.success(`Export file "${handle}" created on ${type} ${envId}`);
+    // Store new id under the local name, not response.data.name_nl: a firm with Dutch disabled omits it (#232)
+    if (isSuccessfulResponse(response)) {
+      ExportFile.updateTemplateId(type, envId, name, response.data.id);
+      consola.success(`Export file "${name}" created on ${type} ${envId}`);
+    } else {
+      consola.error(`Export file "${name}" creation failed on ${type} ${envId}`);
+      process.exitCode = 1;
     }
   } catch (error) {
     errorUtils.errorHandler(error);
@@ -526,7 +543,7 @@ async function newAllExportFiles(type, envId) {
 
 async function fetchAccountTemplateByName(type, envId, name) {
   try {
-    const template = await SF.findAccountTemplateByName(type, envId, name);
+    const template = await SF.findAccountTemplateByName(type, envId, name, 1, localTemplateNames("accountTemplate", name));
 
     if (!template) {
       consola.error(`Account template "${name}" wasn't found in ${type} ${envId}`);
@@ -653,8 +670,8 @@ async function publishAccountTemplateByName(
 
     const response = await SF.updateAccountTemplate(type, envId, templateId, template);
 
-    if (response && response.data && response.data.name_nl) {
-      consola.success(`Account template updated: ${response.data.name_nl}`);
+    if (isSuccessfulResponse(response)) {
+      consola.success(`Account template updated: ${name}`);
       return true;
     } else {
       if (defer) {
@@ -718,8 +735,8 @@ async function publishAccountTemplateById(type, envId, accountTemplateId, messag
 
     const response = await SF.updateAccountTemplate(type, envId, accountTemplateId, template);
 
-    if (response && response.data && response.data.name_nl) {
-      consola.success(`Account template updated: ${response.data.name_nl} (ID: ${accountTemplateId})`);
+    if (isSuccessfulResponse(response)) {
+      consola.success(`Account template updated: ${matchingHandle} (ID: ${accountTemplateId})`);
       return true;
     } else {
       consola.error(`Account template update failed for ID: ${accountTemplateId} in ${type} ${envId}`);
@@ -745,7 +762,7 @@ async function publishAllAccountTemplates(type, envId, message = "updated throug
 
 async function newAccountTemplate(type, envId, name) {
   try {
-    const existingTemplate = await SF.findAccountTemplateByName(type, envId, name);
+    const existingTemplate = await SF.findAccountTemplateByName(type, envId, name, 1, localTemplateNames("accountTemplate", name));
 
     if (existingTemplate) {
       consola.warn(`Account template "${name}" already exists on ${type} ${envId}. Skipping its creation`);
@@ -761,12 +778,13 @@ async function newAccountTemplate(type, envId, name) {
     });
 
     const response = await SF.createAccountTemplate(type, envId, template);
-    const handle = response.data.name_nl;
-
-    // Store new id
-    if (response && response.status == 201) {
-      AccountTemplate.updateTemplateId(type, envId, handle, response.data.id);
-      consola.success(`Account template "${handle}" created on on ${type} ${envId}.`);
+    // Store new id under the local name, not response.data.name_nl: a firm with Dutch disabled omits it (#232)
+    if (isSuccessfulResponse(response)) {
+      AccountTemplate.updateTemplateId(type, envId, name, response.data.id);
+      consola.success(`Account template "${name}" created on on ${type} ${envId}.`);
+    } else {
+      consola.error(`Account template "${name}" creation failed on ${type} ${envId}`);
+      process.exitCode = 1;
     }
   } catch (error) {
     errorUtils.errorHandler(error);
@@ -1275,13 +1293,13 @@ async function getTemplateId(type, envId, templateType, handle) {
       templateText = await SF.findReconciliationTextByHandle(type, envId, handle);
       break;
     case "exportFile":
-      templateText = await SF.findExportFileByName(type, envId, handle);
+      templateText = await SF.findExportFileByName(type, envId, handle, 1, localTemplateNames("exportFile", handle));
       break;
     case "sharedPart":
       templateText = await SF.findSharedPartByName(type, envId, handle);
       break;
     case "accountTemplate":
-      templateText = await SF.findAccountTemplateByName(type, envId, handle);
+      templateText = await SF.findAccountTemplateByName(type, envId, handle, 1, localTemplateNames("accountTemplate", handle));
       break;
   }
 

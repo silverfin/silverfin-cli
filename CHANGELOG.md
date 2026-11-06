@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.62.3] (06/11/2026)
+Account template and export file commands now work on a firm with Dutch disabled. Such a firm saves the template but leaves `name_nl` out of its responses, which the CLI relied on:
+- `update-account-template` and `update-export-file` reported `update failed` for an update that was saved. Success is now judged on the HTTP status.
+- `create-account-template` and `create-export-file` stored the new id under an undefined name. It is now stored in the local template's `config.json`. A rejected create now logs `creation failed` and exits with code `1`.
+- `get-account-template-id -n`, `get-export-file-id -n` and the "already exists" check on create said the template wasn't found. A template without `name_nl` is now matched on the locale names in its local `config.json` (`name_en`, `name_fr`, …): every one the firm returns must agree.
+
+Importing such a template still skips it with the existing "NL must be enabled" warning.
+
 ## [1.62.2] (05/11/2026)
 `silverfin stats` no longer fails on newer git versions, which refuse to run the deprecated `git whatchanged` command. The YAML file changes are now read with `git log`, with the same results.
 

@@ -180,6 +180,9 @@ Source: `index.js` → `lib/templates/accountTemplate.js`
 | Function | Test | Description |
 |---|---|---|
 | `newAccountTemplate` | should create account template and store new id on success | Verifies that the API is called with the template payload, the response ID is persisted in `config.json`, and a success message is logged. |
+| `newAccountTemplate` | should store the new id under the local name when the response omits name_nl | Verifies that on a firm with Dutch disabled (no `name_nl` in the 201 response) the new ID is written to the local template's `config.json` and the success message names it (#232). |
+| `newAccountTemplate` | should look the template up with the local config's names | Verifies that the "already exists" lookup passes the local `config.json` name fields, so it can match on a firm that omits `name_nl` (#232). |
+| `newAccountTemplate` | should report failure and set a non-zero exit code when creation is rejected | Verifies that a create returning no response logs `creation failed` and sets `process.exitCode` to 1. |
 | `newAccountTemplate` | should skip creation when account template already exists remotely | Verifies that when the remote look-up returns an existing template the create API is not called and a warning is logged. |
 
 ---
@@ -190,6 +193,9 @@ Source: `index.js` → `lib/templates/exportFile.js`
 | Function | Test | Description |
 |---|---|---|
 | `newExportFile` | should create export file and store new id on success | Verifies that the API is called, the returned ID is written to `config.json`, and a success message is logged. |
+| `newExportFile` | should store the new id under the local name when the response omits name_nl | Verifies that the new ID is written to the local export file's `config.json` and named in the success message when the 201 response has no `name_nl` (#232). |
+| `newExportFile` | should look the template up with the local config's names | Verifies that the "already exists" lookup passes the local `config.json` name fields, so it can match on a firm that omits `name_nl` (#232). |
+| `newExportFile` | should report failure and set a non-zero exit code when creation is rejected | Verifies that a create returning no response logs `creation failed` and sets `process.exitCode` to 1. |
 | `newExportFile` | should skip creation when export file already exists remotely | Verifies that when the remote look-up finds an existing export file the create API is not called and a warning is logged. |
 
 ---
@@ -311,9 +317,12 @@ Source: `index.js` → `lib/templates/accountTemplate.js`
 | Function | Test | Description |
 |---|---|---|
 | `publishAccountTemplateByName` | should update account template when config and id exist | Verifies that the update API is called with the correct ID from `config.json` and a success message is logged. |
+| `publishAccountTemplateByName` | should report success when the firm has Dutch disabled and omits name_nl | Verifies that a 201 response without `name_nl` returns `true` and logs success with the local name instead of "update failed" (#232). |
+| `publishAccountTemplateByName` | should report failure when the update request returns no response | Verifies that `false` is returned and "update failed" is logged when the API wrapper returns nothing (a handled 400/404). |
 | `publishAccountTemplateByName` | should return false when config does not exist | Verifies that the update API is not called and `false` is returned when there is no local config file. |
 | `publishAccountTemplateByName` | should return false when config has no matching firm id | Verifies that the update API is not called and `false` is returned when the config has no entry for the requested firm. |
 | `publishAccountTemplateById` | should update account template when matching local template found by id | Verifies that when a local template is matched by its remote ID the update API is called and a success message is logged. |
+| `publishAccountTemplateById` | should report success by id when the firm has Dutch disabled and omits name_nl | Verifies that a 201 response without `name_nl` returns `true` and logs success with the local name and ID (#232). |
 | `publishAccountTemplateById` | should return false when no local account template has the given id | Verifies that when no local template matches the given ID an error is logged and `false` is returned. |
 
 ---
@@ -324,9 +333,11 @@ Source: `index.js` → `lib/templates/exportFile.js`
 | Function | Test | Description |
 |---|---|---|
 | `publishExportFileByName` | should update export file when config and id exist | Verifies the update API is called with the correct ID and a success message is logged. |
+| `publishExportFileByName` | should report success when the response omits name_nl | Verifies that success is judged on the HTTP status: a 201 without `name_nl` returns `true` and logs the local name (#232). |
 | `publishExportFileByName` | should return false when config does not exist | Verifies the update API is not called and `false` is returned when no local config is present. |
 | `publishExportFileByName` | should return false when config has no matching firm id | Verifies the update API is not called and `false` is returned when the config has no entry for the firm. |
 | `publishExportFileById` | should update export file when matching local file found by id | Verifies that the update API is called and a success message is logged when a local file is matched by its remote ID. |
+| `publishExportFileById` | should report success by id when the response omits name_nl | Verifies that a 201 without `name_nl` returns `true` and logs the local name and ID (#232). |
 | `publishExportFileById` | should return false when no local export file has the given id | Verifies that when no local template matches the given ID an error is logged and `false` is returned. |
 
 ---
@@ -446,12 +457,20 @@ Source: `lib/api/sfApi.js`
 | `updateExportFile` | should POST to update export file and return response | Verifies that a POST to `export_files/:id` returns the updated export file. |
 | `findExportFileByName` | should find export file by name_nl | Verifies that the matching export file is returned when its `name_nl` is found in the list. |
 | `findExportFileByName` | should return null when list is empty | Verifies that `null` is returned when the list API returns an empty array. |
+| `findExportFileByName` | should not match an entry without name_nl when there are no local names to compare | Verifies that without local config names an entry lacking `name_nl` is never matched, so a lookup cannot pick another template that shares an English or French name. |
+| `findExportFileByName` | should not match a locale name when the export file has a different name_nl | Verifies that an entry carrying a `name_nl` is matched on it only, so the fallback cannot pick the wrong template on a firm with Dutch enabled. |
+| `findExportFileByName` | should match the local config's locale names when the firm omits name_nl | Verifies that an entry without `name_nl` matches when its locale names equal those in the local config, even if they differ from the Dutch name searched for (#232). |
+| `findExportFileByName` | should not match when a locale name both sides carry differs from the local config | Verifies that one differing shared locale name rules the entry out, to avoid matching a different template. |
 | `createAccountTemplate` | should POST to account_templates and return response | Verifies that a POST to `account_templates` returns the created account template. |
 | `readAccountTemplates` | should GET account_templates list and return data | Verifies that a GET to `account_templates` returns an array. |
 | `readAccountTemplateById` | should GET account template by id and return data | Verifies that a GET to `account_templates/:id` returns the expected account template object. |
 | `updateAccountTemplate` | should POST to update account template and return response | Verifies that a POST to `account_templates/:id` returns the updated account template. |
 | `findAccountTemplateByName` | should find account template by name_nl | Verifies that the matching account template is returned when its `name_nl` is found in the list. |
 | `findAccountTemplateByName` | should return null when list is empty | Verifies that `null` is returned when the list API returns an empty array. |
+| `findAccountTemplateByName` | should not match an entry without name_nl when there are no local names to compare | Verifies that without local config names an entry lacking `name_nl` is never matched, so a lookup cannot pick another template that shares an English or French name. |
+| `findAccountTemplateByName` | should not match a locale name when the account template has a different name_nl | Verifies that an entry carrying a `name_nl` is matched on it only, so the fallback cannot pick the wrong template on a firm with Dutch enabled. |
+| `findAccountTemplateByName` | should match the local config's locale names when the firm omits name_nl | Verifies that an entry without `name_nl` matches when its locale names equal those in the local config, even if they differ from the Dutch name searched for (#232). |
+| `findAccountTemplateByName` | should not match when a locale name both sides carry differs from the local config | Verifies that one differing shared locale name rules the entry out, to avoid matching a different template. |
 | `runCompanyDataCopier` | should POST to the firm-scoped company_data_copier/run route with the attributes and return the response | Verifies that the Data Copier attributes are POSTed to the relative `company_data_copier/run` path on the firm-scoped `/api/v4/f/:id` baseURL (not an absolute public-v3 URL) and the response is returned. |
 | `runCompanyDataCopier` | should delegate to the error handler on failure | Verifies that a non-2xx, non-422 response is routed through `responseErrorHandler`. |
 | `runCompanyDataCopier` | should return the 422 response instead of exiting so the caller can explain it | Verifies that a 422 bypasses `responseErrorHandler` (which exits) and the error response is returned to the caller. |
@@ -886,6 +905,11 @@ Source: `lib/utils/templateUtils.js`
 | `missingNameNL` | should return false when template has name_nl | Verifies that `false` is returned when `name_nl` is present and non-empty. |
 | `missingNameNL` | should return true and warn when name_nl is missing but name_en is present | Verifies that `true` is returned and a warning is logged when `name_nl` is null. |
 | `missingNameNL` | should return true and warn when all names are missing | Verifies that `true` is returned and a warning is logged when both `name_nl` and `name_en` are empty. |
+| `matchesTemplateName` | should match on name_nl when the entry has one | Verifies that an entry carrying `name_nl` matches when it equals the searched name. |
+| `matchesTemplateName` | should not fall back to locale names when the entry has a different name_nl | Verifies that locale names are ignored once the entry has a `name_nl`. |
+| `matchesTemplateName` | should match an entry without name_nl when every shared locale name agrees with the local config | Verifies the Dutch-disabled firm case (#232): the entry matches on the locale names it shares with the local config. |
+| `matchesTemplateName` | should not match an entry without name_nl when one shared locale name differs | Verifies that one differing shared locale name rules the entry out. |
+| `matchesTemplateName` | should not match an entry without name_nl when there are no local names to compare | Verifies that an entry without `name_nl` never matches when no local config names are given. |
 | `missingNameNL` | should return true and warn when template is empty object | Verifies that `true` is returned and a warning is logged when the template object has no name fields at all. |
 
 ---

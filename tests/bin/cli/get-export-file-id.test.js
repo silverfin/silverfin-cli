@@ -50,7 +50,7 @@ describe("get-export-file-id", () => {
       const result = await toolkit.getTemplateId("firm", "2000", "exportFile", "export_1");
 
       expect(result).toBe(true);
-      expect(SF.findExportFileByName).toHaveBeenCalledWith("firm", "2000", "export_1");
+      expect(SF.findExportFileByName).toHaveBeenCalledWith("firm", "2000", "export_1", 1, expect.objectContaining({ name_en: "Export File 1" }));
       expect(consola.success).toHaveBeenCalledWith(expect.stringContaining("export_1"));
 
       const configPath = path.join(tempDir, "export_files", "export_1", "config.json");
