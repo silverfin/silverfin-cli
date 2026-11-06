@@ -14,6 +14,9 @@ jest.mock("../../../lib/utils/errorUtils", () => ({
 // Mock prompt-sync so no interactive prompts run in tests
 jest.mock("prompt-sync", () => () => jest.fn());
 
+const fs = require("fs");
+const os = require("os");
+const path = require("path");
 const { consola } = require("consola");
 const { firmCredentials } = require("../../../lib/api/firmCredentials");
 const errorUtils = require("../../../lib/utils/errorUtils");
@@ -302,6 +305,84 @@ describe("cli/utils", () => {
       firmCredentials.getHost.mockReturnValue("https://staging.getsilverfin.com");
       cliUtils.logCurrentHost();
       expect(consola.info).toHaveBeenCalledWith(expect.stringContaining("staging.getsilverfin.com"));
+    });
+  });
+
+  describe("checkSamplerOptions", () => {
+    let tempDir;
+
+    beforeEach(() => {
+      tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "sf-cli-sampler-"));
+    });
+
+    afterEach(() => {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    });
+
+    const expectRejected = (options, message) => {
+      cliUtils.checkSamplerOptions(options);
+      expect(consola.error).toHaveBeenCalledTimes(1);
+      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining(message));
+      expect(mockExit).toHaveBeenCalledWith(1);
+    };
+
+    it("should accept a plain run and fresh output paths", () => {
+      expect(cliUtils.checkSamplerOptions({ partner: "1", handle: ["a"] })).toBe(true);
+      const options = { fromZip: "r.zip", keepExtracted: path.join(tempDir, "kept"), extractFlaggedOnly: path.join(tempDir, "flagged"), json: path.join(tempDir, "d.json") };
+      expect(cliUtils.checkSamplerOptions(options)).toBe(true);
+      expect(mockExit).not.toHaveBeenCalled();
+    });
+
+    it("should require a partner unless --from-zip is used", () => {
+      expectRejected({ handle: ["a"] }, "You need to specify a partner using -p or --partner");
+      jest.clearAllMocks();
+      expect(cliUtils.checkSamplerOptions({ fromZip: "r.zip" })).toBe(true);
+    });
+
+    it("should reject --add-diffs-folder and --extract-flagged-only without --from-zip", () => {
+      expectRejected({ addDiffsFolder: true }, "--add-diffs-folder requires --from-zip");
+      jest.clearAllMocks();
+      expectRejected({ extractFlaggedOnly: "out" }, "--extract-flagged-only requires --from-zip");
+    });
+
+    it("should reject --keep-extracted and --json without --compact or --from-zip", () => {
+      expectRejected({ keepExtracted: "out" }, "--keep-extracted requires --compact or --from-zip");
+      jest.clearAllMocks();
+      expectRejected({ json: "d.json" }, "--json requires --compact or --from-zip");
+    });
+
+    it("should reject nested output directories", () => {
+      expectRejected({ fromZip: "r.zip", keepExtracted: tempDir, extractFlaggedOnly: path.join(tempDir, "sub") }, "separate, non-nested directories");
+    });
+
+    it("should reject --json inside an output directory", () => {
+      expectRejected({ partner: "1", compact: true, keepExtracted: tempDir, json: path.join(tempDir, "d.json") }, "--json must not point inside --keep-extracted");
+    });
+
+    it("should reject --json pointing at the --from-zip archive", () => {
+      expectRejected({ fromZip: "r.zip", json: "./r.zip" }, "--json must not point at the --from-zip archive");
+    });
+
+    it("should reject --json pointing at a symlink or a device", () => {
+      fs.writeFileSync(path.join(tempDir, "real.json"), "x");
+      fs.symlinkSync(path.join(tempDir, "real.json"), path.join(tempDir, "link.json"));
+      expectRejected({ partner: "1", compact: true, json: path.join(tempDir, "link.json") }, "must be a regular file path");
+      jest.clearAllMocks();
+      expectRejected({ partner: "1", compact: true, json: "/dev/stdout" }, "must be a regular file path");
+    });
+
+    it("should reject --json pointing at a directory", () => {
+      expectRejected({ partner: "1", compact: true, json: tempDir }, "is a directory");
+    });
+
+    it("should reject an output directory that already has files", () => {
+      fs.writeFileSync(path.join(tempDir, "old.html"), "x");
+      expectRejected({ partner: "1", compact: true, keepExtracted: tempDir }, "already exists and is not an empty directory");
+    });
+
+    it("should reject an output directory it cannot inspect", () => {
+      fs.writeFileSync(path.join(tempDir, "results.zip"), "zip");
+      expectRejected({ partner: "1", compact: true, keepExtracted: path.join(tempDir, "results.zip", "out") }, "--keep-extracted: cannot use");
     });
   });
 });
