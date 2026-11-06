@@ -125,7 +125,7 @@ describe("Batch update error summaries", () => {
         name_nl: "ok_export",
         text: "x",
       });
-      SF.updateExportFile.mockResolvedValue({ data: { name_nl: "ok_export" } });
+      SF.updateExportFile.mockResolvedValue({ status: 201, data: { name_nl: "ok_export" } });
 
       await toolkit.publishAllExportFiles(mockType, mockEnvId, mockMessage);
 
@@ -170,7 +170,7 @@ describe("Batch update error summaries", () => {
         text: "x",
         mapping_list_ranges: [],
       });
-      SF.updateAccountTemplate.mockResolvedValue({ data: { name_nl: "ok_at" } });
+      SF.updateAccountTemplate.mockResolvedValue({ status: 201, data: { name_nl: "ok_at" } });
 
       await toolkit.publishAllAccountTemplates(mockType, mockEnvId, mockMessage);
 
