@@ -15,6 +15,14 @@ function isSuccessfulResponse(response) {
   return Boolean(response?.status >= 200 && response.status < 300);
 }
 
+// The name_* fields of a local account template or export file config, so a lookup by
+// name can still match on a firm that omits name_nl (#232). Empty when there is no local config.
+function localTemplateNames(templateType, name) {
+  if (!fsUtils.configExists(templateType, name)) return {};
+  const config = fsUtils.readConfig(templateType, name);
+  return Object.fromEntries(Object.entries(config).filter(([key]) => key.startsWith("name_")));
+}
+
 async function fetchReconciliationById(type, envId, id) {
   try {
     const template = await SF.readReconciliationTextById(type, envId, id);
@@ -289,7 +297,7 @@ async function newAllReconciliations(type, envId) {
 
 async function fetchExportFileByName(type, envId, name) {
   try {
-    const template = await SF.findExportFileByName(type, envId, name);
+    const template = await SF.findExportFileByName(type, envId, name, 1, localTemplateNames("exportFile", name));
 
     if (!template) {
       consola.error(`Export file "${name}" wasn't found in ${type} ${envId}`);
@@ -504,7 +512,7 @@ async function publishAllExportFiles(type, envId, message = "updated through the
 
 async function newExportFile(type, envId, name) {
   try {
-    const existingTemplate = await SF.findExportFileByName(type, envId, name);
+    const existingTemplate = await SF.findExportFileByName(type, envId, name, 1, localTemplateNames("exportFile", name));
     if (existingTemplate) {
       consola.warn(`Export file "${name}" already exists on ${type} ${envId}. Skipping its creation`);
       return;
@@ -535,7 +543,7 @@ async function newAllExportFiles(type, envId) {
 
 async function fetchAccountTemplateByName(type, envId, name) {
   try {
-    const template = await SF.findAccountTemplateByName(type, envId, name);
+    const template = await SF.findAccountTemplateByName(type, envId, name, 1, localTemplateNames("accountTemplate", name));
 
     if (!template) {
       consola.error(`Account template "${name}" wasn't found in ${type} ${envId}`);
@@ -754,7 +762,7 @@ async function publishAllAccountTemplates(type, envId, message = "updated throug
 
 async function newAccountTemplate(type, envId, name) {
   try {
-    const existingTemplate = await SF.findAccountTemplateByName(type, envId, name);
+    const existingTemplate = await SF.findAccountTemplateByName(type, envId, name, 1, localTemplateNames("accountTemplate", name));
 
     if (existingTemplate) {
       consola.warn(`Account template "${name}" already exists on ${type} ${envId}. Skipping its creation`);
@@ -1285,13 +1293,13 @@ async function getTemplateId(type, envId, templateType, handle) {
       templateText = await SF.findReconciliationTextByHandle(type, envId, handle);
       break;
     case "exportFile":
-      templateText = await SF.findExportFileByName(type, envId, handle);
+      templateText = await SF.findExportFileByName(type, envId, handle, 1, localTemplateNames("exportFile", handle));
       break;
     case "sharedPart":
       templateText = await SF.findSharedPartByName(type, envId, handle);
       break;
     case "accountTemplate":
-      templateText = await SF.findAccountTemplateByName(type, envId, handle);
+      templateText = await SF.findAccountTemplateByName(type, envId, handle, 1, localTemplateNames("accountTemplate", handle));
       break;
   }
 

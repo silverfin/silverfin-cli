@@ -71,7 +71,7 @@ describe("import-account-template", () => {
 
       await toolkit.fetchAccountTemplateByName("firm", "1001", "account_1");
 
-      expect(SF.findAccountTemplateByName).toHaveBeenCalledWith("firm", "1001", "account_1");
+      expect(SF.findAccountTemplateByName).toHaveBeenCalledWith("firm", "1001", "account_1", 1, expect.any(Object));
       expect(consola.success).toHaveBeenCalledWith(expect.stringContaining("account_1"));
     });
 

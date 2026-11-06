@@ -336,6 +336,46 @@ describe("sfApi", () => {
 
       expect(result).toBeNull();
     });
+
+    it("should not match an entry without name_nl when there are no local names to compare", async () => {
+      axiosMock.onGet("export_files").replyOnce(200, [{ id: 54294, name_en: "ZZ CLI 232 throwaway" }]);
+      axiosMock.onGet("export_files").replyOnce(200, []);
+
+      const result = await SF.findExportFileByName("firm", 100, "ZZ CLI 232 throwaway");
+
+      expect(result).toBeNull();
+    });
+
+    it("should not match a locale name when the export file has a different name_nl", async () => {
+      axiosMock.onGet("export_files").replyOnce(200, [{ id: 1, name_nl: "dutch_name", name_en: "wanted" }]);
+      axiosMock.onGet("export_files").replyOnce(200, []);
+
+      const result = await SF.findExportFileByName("firm", 100, "wanted");
+
+      expect(result).toBeNull();
+    });
+
+    it("should match the local config's locale names when the firm omits name_nl", async () => {
+      const remote = { id: 7, name_en: "Debtors - ageing balance", name_fr: "Débiteurs" };
+      const localNames = { name_nl: "Debiteuren - ouderdomsanalyse", name_en: "Debtors - ageing balance", name_fr: "Débiteurs" };
+      axiosMock.onGet("export_files").replyOnce(200, [remote]);
+      axiosMock.onGet(`export_files/${remote.id}`).reply(200, remote);
+
+      const result = await SF.findExportFileByName("firm", 100, "Debiteuren - ouderdomsanalyse", 1, localNames);
+
+      expect(result).toEqual(remote);
+    });
+
+    it("should not match when a locale name both sides carry differs from the local config", async () => {
+      const remote = { id: 7, name_en: "Debtors - ageing balance", name_fr: "Autre modèle" };
+      const localNames = { name_nl: "Debiteuren - ouderdomsanalyse", name_en: "Debtors - ageing balance", name_fr: "Débiteurs" };
+      axiosMock.onGet("export_files").replyOnce(200, [remote]);
+      axiosMock.onGet("export_files").replyOnce(200, []);
+
+      const result = await SF.findExportFileByName("firm", 100, "Debiteuren - ouderdomsanalyse", 1, localNames);
+
+      expect(result).toBeNull();
+    });
   });
 
   // ─── Account Templates ────────────────────────────────────────────────────
@@ -395,6 +435,46 @@ describe("sfApi", () => {
       axiosMock.onGet("account_templates").reply(200, []);
 
       const result = await SF.findAccountTemplateByName("firm", 100, "nonexistent");
+
+      expect(result).toBeNull();
+    });
+
+    it("should not match an entry without name_nl when there are no local names to compare", async () => {
+      axiosMock.onGet("account_templates").replyOnce(200, [{ id: 54294, name_en: "ZZ CLI 232 throwaway" }]);
+      axiosMock.onGet("account_templates").replyOnce(200, []);
+
+      const result = await SF.findAccountTemplateByName("firm", 100, "ZZ CLI 232 throwaway");
+
+      expect(result).toBeNull();
+    });
+
+    it("should not match a locale name when the account template has a different name_nl", async () => {
+      axiosMock.onGet("account_templates").replyOnce(200, [{ id: 1, name_nl: "dutch_name", name_en: "wanted" }]);
+      axiosMock.onGet("account_templates").replyOnce(200, []);
+
+      const result = await SF.findAccountTemplateByName("firm", 100, "wanted");
+
+      expect(result).toBeNull();
+    });
+
+    it("should match the local config's locale names when the firm omits name_nl", async () => {
+      const remote = { id: 7, name_en: "Debtors - ageing balance", name_fr: "Débiteurs" };
+      const localNames = { name_nl: "Debiteuren - ouderdomsanalyse", name_en: "Debtors - ageing balance", name_fr: "Débiteurs" };
+      axiosMock.onGet("account_templates").replyOnce(200, [remote]);
+      axiosMock.onGet(`account_templates/${remote.id}`).reply(200, remote);
+
+      const result = await SF.findAccountTemplateByName("firm", 100, "Debiteuren - ouderdomsanalyse", 1, localNames);
+
+      expect(result).toEqual(remote);
+    });
+
+    it("should not match when a locale name both sides carry differs from the local config", async () => {
+      const remote = { id: 7, name_en: "Debtors - ageing balance", name_fr: "Autre modèle" };
+      const localNames = { name_nl: "Debiteuren - ouderdomsanalyse", name_en: "Debtors - ageing balance", name_fr: "Débiteurs" };
+      axiosMock.onGet("account_templates").replyOnce(200, [remote]);
+      axiosMock.onGet("account_templates").replyOnce(200, []);
+
+      const result = await SF.findAccountTemplateByName("firm", 100, "Debiteuren - ouderdomsanalyse", 1, localNames);
 
       expect(result).toBeNull();
     });

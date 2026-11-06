@@ -79,6 +79,17 @@ describe("create-export-file", () => {
       expect(config.id["2000"]).toBe(99002);
     });
 
+    it("should look the template up with the local config's names", async () => {
+      const fixturesPath = path.join(__dirname, "../../../fixtures/market-repo");
+      await fsPromises.cp(fixturesPath, tempDir, { recursive: true });
+
+      SF.findExportFileByName.mockResolvedValue({ id: 1, name_en: "x" });
+
+      await toolkit.newExportFile("firm", "2000", "export_1");
+
+      expect(SF.findExportFileByName).toHaveBeenCalledWith("firm", "2000", "export_1", 1, expect.objectContaining({ name_nl: "export_1" }));
+    });
+
     it("should report failure and set a non-zero exit code when creation is rejected", async () => {
       const fixturesPath = path.join(__dirname, "../../../fixtures/market-repo");
       await fsPromises.cp(fixturesPath, tempDir, { recursive: true });
