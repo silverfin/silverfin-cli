@@ -82,7 +82,7 @@ describe("import-export-file", () => {
 
       await toolkit.fetchExportFileByName("firm", "1001", "export_1");
 
-      expect(SF.findExportFileByName).toHaveBeenCalledWith("firm", "1001", "export_1");
+      expect(SF.findExportFileByName).toHaveBeenCalledWith("firm", "1001", "export_1", 1, expect.any(Object));
       expect(consola.success).toHaveBeenCalledWith(expect.stringContaining("export_1"));
     });
 

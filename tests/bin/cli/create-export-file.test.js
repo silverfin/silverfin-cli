@@ -80,6 +80,17 @@ describe("create-export-file", () => {
       expect(fs.existsSync(path.join(tempDir, "export_files", "renamed_by_api"))).toBe(false);
     });
 
+    it("should look the template up with the local config's names", async () => {
+      const fixturesPath = path.join(__dirname, "../../../fixtures/market-repo");
+      await fsPromises.cp(fixturesPath, tempDir, { recursive: true });
+
+      SF.findExportFileByName.mockResolvedValue({ id: 1, name_en: "x" });
+
+      await toolkit.newExportFile("firm", "2000", "export_1");
+
+      expect(SF.findExportFileByName).toHaveBeenCalledWith("firm", "2000", "export_1", 1, expect.objectContaining({ name_nl: "export_1" }));
+    });
+
     it("should report a failure and set exit code 1 when the API call returns no response", async () => {
       const fixturesPath = path.join(__dirname, "../../../fixtures/market-repo");
       await fsPromises.cp(fixturesPath, tempDir, { recursive: true });

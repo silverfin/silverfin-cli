@@ -50,7 +50,7 @@ describe("get-account-template-id", () => {
       const result = await toolkit.getTemplateId("firm", "2000", "accountTemplate", "account_1");
 
       expect(result).toBe(true);
-      expect(SF.findAccountTemplateByName).toHaveBeenCalledWith("firm", "2000", "account_1");
+      expect(SF.findAccountTemplateByName).toHaveBeenCalledWith("firm", "2000", "account_1", 1, expect.objectContaining({ name_en: "Account Template 1" }));
       expect(consola.success).toHaveBeenCalledWith(expect.stringContaining("account_1"));
 
       const configPath = path.join(tempDir, "account_templates", "account_1", "config.json");

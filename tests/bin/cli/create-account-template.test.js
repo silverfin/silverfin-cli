@@ -79,6 +79,17 @@ describe("create-account-template", () => {
       expect(config.id["2000"]).toBe(99003);
     });
 
+    it("should look the template up with the local config's names", async () => {
+      const fixturesPath = path.join(__dirname, "../../../fixtures/market-repo");
+      await fsPromises.cp(fixturesPath, tempDir, { recursive: true });
+
+      SF.findAccountTemplateByName.mockResolvedValue({ id: 1, name_en: "x" });
+
+      await toolkit.newAccountTemplate("firm", "2000", "account_1");
+
+      expect(SF.findAccountTemplateByName).toHaveBeenCalledWith("firm", "2000", "account_1", 1, expect.objectContaining({ name_nl: "account_1" }));
+    });
+
     it("should report failure and set a non-zero exit code when creation is rejected", async () => {
       const fixturesPath = path.join(__dirname, "../../../fixtures/market-repo");
       await fsPromises.cp(fixturesPath, tempDir, { recursive: true });
