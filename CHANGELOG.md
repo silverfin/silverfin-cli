@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.63.2] (26/11/2026)
+Account template and export file commands now work on a firm with Dutch disabled. Such a firm saves the template but leaves `name_nl` out of its responses, which the CLI relied on:
+- `update-account-template` and `update-export-file` reported `update failed` for an update that was saved. Success is now judged on the HTTP status.
+- `get-account-template-id -n`, `get-export-file-id -n` and the "already exists" check on create said the template wasn't found. A template without `name_nl` is now matched on the locale names in its local `config.json` (`name_en`, `name_fr`, …): every one the firm returns must agree.
+
+Importing such a template still skips it with the existing "NL must be enabled" warning.
+
 ## [1.63.1] (06/11/2026)
 Fix `create-account-template -p <partner-id>` dropping the partner's `mapping_list_ranges`. The create payload was always filtered down to `firm` ranges, so a template created on a partner arrived with no mapping list association at all — only its base `account_range`. The follow-up `update-account-template` then had to *add* the range instead of updating it, which the API rejects with `422 Not allowed to add range for mapping list <id>`.
 
