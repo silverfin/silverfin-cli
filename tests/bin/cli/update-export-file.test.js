@@ -45,6 +45,7 @@ describe("update-export-file", () => {
       await fsPromises.cp(fixturesPath, tempDir, { recursive: true });
 
       SF.updateExportFile.mockResolvedValue({
+        status: 201,
         data: { name_nl: "export_1" },
       });
 
@@ -52,6 +53,19 @@ describe("update-export-file", () => {
 
       expect(SF.updateExportFile).toHaveBeenCalledWith("firm", "1001", 2201, expect.any(Object));
       expect(consola.success).toHaveBeenCalledWith(expect.stringContaining("export_1"));
+    });
+
+    it("should report success when the response omits name_nl", async () => {
+      const fixturesPath = path.join(__dirname, "../../../fixtures/market-repo");
+      await fsPromises.cp(fixturesPath, tempDir, { recursive: true });
+
+      SF.updateExportFile.mockResolvedValue({ status: 201, data: { id: 2201 } });
+
+      const result = await toolkit.publishExportFileByName("firm", "1001", "export_1");
+
+      expect(result).toBe(true);
+      expect(consola.success).toHaveBeenCalledWith("Export file updated: export_1");
+      expect(consola.error).not.toHaveBeenCalled();
     });
 
     it("should return false when config does not exist", async () => {
@@ -76,6 +90,7 @@ describe("update-export-file", () => {
       await fsPromises.cp(fixturesPath, tempDir, { recursive: true });
 
       SF.updateExportFile.mockResolvedValue({
+        status: 201,
         data: { name_nl: "export_1" },
       });
 
@@ -83,6 +98,18 @@ describe("update-export-file", () => {
 
       expect(SF.updateExportFile).toHaveBeenCalledWith("firm", "1001", 2201, expect.any(Object));
       expect(consola.success).toHaveBeenCalledWith(expect.stringContaining("export_1"));
+    });
+
+    it("should report success by id when the response omits name_nl", async () => {
+      const fixturesPath = path.join(__dirname, "../../../fixtures/market-repo");
+      await fsPromises.cp(fixturesPath, tempDir, { recursive: true });
+
+      SF.updateExportFile.mockResolvedValue({ status: 201, data: { id: 2201 } });
+
+      const result = await toolkit.publishExportFileById("firm", "1001", 2201);
+
+      expect(result).toBe(true);
+      expect(consola.success).toHaveBeenCalledWith("Export file updated: export_1 (ID: 2201)");
     });
 
     it("should return false when no local export file has the given id", async () => {

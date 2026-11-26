@@ -275,4 +275,29 @@ describe("templateUtils", () => {
       expect(consola.warn).toHaveBeenCalled();
     });
   });
+
+  describe("matchesTemplateName", () => {
+    const { matchesTemplateName } = templateUtils;
+    const localNames = { name_nl: "Debiteuren", name_en: "Debtors", name_fr: "Débiteurs", name_de: "" };
+
+    it("should match on name_nl when the entry has one", () => {
+      expect(matchesTemplateName({ name_nl: "Debiteuren", name_en: "Other" }, "Debiteuren", localNames)).toBe(true);
+    });
+
+    it("should not fall back to locale names when the entry has a different name_nl", () => {
+      expect(matchesTemplateName({ name_nl: "Crediteuren", name_en: "Debtors" }, "Debiteuren", localNames)).toBe(false);
+    });
+
+    it("should match an entry without name_nl when every shared locale name agrees with the local config", () => {
+      expect(matchesTemplateName({ name_en: "Debtors", name_fr: "Débiteurs" }, "Debiteuren", localNames)).toBe(true);
+    });
+
+    it("should not match an entry without name_nl when one shared locale name differs", () => {
+      expect(matchesTemplateName({ name_en: "Debtors", name_fr: "Autre" }, "Debiteuren", localNames)).toBe(false);
+    });
+
+    it("should not match an entry without name_nl when there are no local names to compare", () => {
+      expect(matchesTemplateName({ name_en: "Debiteuren" }, "Debiteuren", {})).toBe(false);
+    });
+  });
 });
