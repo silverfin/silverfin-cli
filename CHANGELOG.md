@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.63.4] (27/11/2026)
+Clearer error messages when updating templates.
+- "ID is missing" now names the `config.json` field the folder must match: `handle` for reconciliations, `name` for shared parts, `name_nl` for account templates and export files. It used to say `name_nl` for every type.
+- Account templates and export files now print the `get-…-id` hint for a single update too, not only in the `--all` summary.
+- A `403` names the firm or partner it was returned for.
+- An `--all` update now lists a template it skipped (for example a folder name that does not match `name_nl`) in its summary, and exits with code `1`.
+
 ## [1.63.3] (27/11/2026)
 A server error (`5xx`) from the Silverfin API, or a request that gets no answer (`ENOTFOUND`, `ECONNRESET`, a timeout, a VPN or proxy in the way), is no longer reported as a CLI bug. Instead of a stack trace and "Please open an issue", the CLI prints the HTTP status or network error code, the firm or partner, and a hint to retry or check the connection, then exits with code `1`. The stack trace is still shown with `--verbose`.
 

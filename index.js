@@ -154,7 +154,11 @@ async function publishReconciliationByHandle(
     consola.debug(`Updating reconciliation ${handle}...`);
 
     const template = await ReconciliationText.read(handle);
-    if (!template) return;
+    if (!template) {
+      // read() has already warned why; record it so an --all summary lists the skip
+      if (defer) deferredErrors.push({ kind: "skipped", handle });
+      return false;
+    }
 
     // Add API-only required fields
     template.version_comment = message;
@@ -400,7 +404,11 @@ async function publishExportFileByName(
     consola.debug(`Updating export file ${name}...`);
 
     const template = await ExportFile.read(name);
-    if (!template) return;
+    if (!template) {
+      // read() has already warned why (e.g. folder name not matching name_nl); record it so an --all summary lists the skip
+      if (defer) deferredErrors.push({ kind: "skipped", name });
+      return false;
+    }
 
     // Add API-only required fields
     template.version_comment = message;
@@ -638,7 +646,11 @@ async function publishAccountTemplateByName(
     consola.debug(`Updating account template ${name}...`);
 
     const template = await AccountTemplate.read(name);
-    if (!template) return;
+    if (!template) {
+      // read() has already warned why (e.g. folder name not matching name_nl); record it so an --all summary lists the skip
+      if (defer) deferredErrors.push({ kind: "skipped", name });
+      return false;
+    }
 
     // Add API-only required fields
     template.version_comment = message;
@@ -897,7 +909,11 @@ async function publishSharedPartByName(
     consola.debug(`Updating shared part ${name}...`);
 
     const template = await SharedPart.read(name);
-    if (!template) return;
+    if (!template) {
+      // read() has already warned why; record it so an --all summary lists the skip
+      if (defer) deferredErrors.push({ kind: "skipped", name });
+      return false;
+    }
 
     // Add API-only required fields
     template.version_comment = message;

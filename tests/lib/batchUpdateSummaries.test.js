@@ -79,6 +79,19 @@ describe("Batch update error summaries", () => {
       expect(consola.log).toHaveBeenCalledWith(expect.stringContaining("get-shared-part-id --all"));
     });
 
+    it("printAccountTemplateBatchErrorSummary lists a skipped template without the missing-id hint", () => {
+      errorUtils.printAccountTemplateBatchErrorSummary([{ kind: "skipped", name: "at1" }]);
+      expect(consola.error).toHaveBeenCalledWith("Account template update finished with 1 error(s):");
+      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("Account template at1: skipped"));
+      const hintLogged = consola.log.mock.calls.some((c) => String(c[0]).includes("get-account-template-id"));
+      expect(hintLogged).toBe(false);
+    });
+
+    it("printReconciliationBatchErrorSummary names the handle field for missing_id", () => {
+      errorUtils.printReconciliationBatchErrorSummary([{ kind: "missing_id", handle: "h1" }]);
+      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("matches the handle in config.json"));
+    });
+
     it("printAccountTemplateBatchErrorSummary prints missing_id hint once for two rows", () => {
       errorUtils.printAccountTemplateBatchErrorSummary([
         { kind: "missing_id", name: "at1" },
@@ -227,6 +240,24 @@ describe("Batch update error summaries", () => {
       await toolkit.publishAccountTemplateByName(mockType, mockEnvId, "at1", mockMessage, deferred);
 
       expect(deferred).toEqual([{ kind: "update_failed", name: "at1" }]);
+    });
+
+    // read() returns false when it skips a template, e.g. a folder name not matching name_nl
+    it.each([
+      ["publishReconciliationByHandle", () => ReconciliationText, { kind: "skipped", handle: "t1" }],
+      ["publishExportFileByName", () => ExportFile, { kind: "skipped", name: "t1" }],
+      ["publishAccountTemplateByName", () => AccountTemplate, { kind: "skipped", name: "t1" }],
+      ["publishSharedPartByName", () => SharedPart, { kind: "skipped", name: "t1" }],
+    ])("%s records a template that read() skipped", async (fn, templateClass, expected) => {
+      const deferred = [];
+      fsUtils.configExists.mockReturnValue(true);
+      fsUtils.readConfig.mockReturnValue({ id: { [mockEnvId]: "1" } });
+      templateClass().read.mockResolvedValue(false);
+
+      const result = await toolkit[fn](mockType, mockEnvId, "t1", mockMessage, deferred);
+
+      expect(result).toBe(false);
+      expect(deferred).toEqual([expected]);
     });
   });
 });

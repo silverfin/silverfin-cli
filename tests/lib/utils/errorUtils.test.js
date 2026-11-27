@@ -35,6 +35,22 @@ describe("utils/errorUtils", () => {
     });
   });
 
+  // ─── missing template IDs ──────────────────────────────────────────────────
+
+  describe("missing template IDs", () => {
+    it.each([
+      ["missingReconciliationId", "handle", "silverfin get-reconciliation-id --handle tpl"],
+      ["missingSharedPartId", "name", "silverfin get-shared-part-id --shared-part tpl"],
+      ["missingExportFileId", "name_nl", 'silverfin get-export-file-id --name "tpl"'],
+      ["missingAccountTemplateId", "name_nl", 'silverfin get-account-template-id --name "tpl"'],
+    ])("%s names the %s field and prints the get-…-id hint", (fn, identifier, command) => {
+      expect(errorUtils[fn]("tpl")).toBe(false);
+      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining(`tpl: ID is missing`));
+      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining(`folder name matches the ${identifier} in config.json`));
+      expect(consola.log).toHaveBeenCalledWith(expect.stringContaining(command));
+    });
+  });
+
   // ─── invalidHandleFormat ───────────────────────────────────────────────────
 
   describe("invalidHandleFormat", () => {

@@ -186,6 +186,20 @@ describe("apiUtils", () => {
       expect(mockExit).toHaveBeenCalledWith(1);
     });
 
+    it.each([
+      ["firm", { headers: { "X-Firm-ID": "12345" } }, "for firm 12345"],
+      ["partner", { params: { partner_id: "77" } }, "for partner 77"],
+    ])("should name the %s a 403 was returned for", async (_label, requestConfig, expected) => {
+      const error = {
+        config: requestConfig,
+        response: { status: 403, statusText: "Forbidden", config: requestConfig, data: {} },
+      };
+
+      await expect(apiUtils.responseErrorHandler(error)).rejects.toMatchObject({ response: { status: 403 } });
+
+      expect(consola.consola.error).toHaveBeenCalledWith(`Error (403): Forbidden access ${expected}. Terminating process`);
+    });
+
     it("should rethrow error when there is no response property (unhandled error)", async () => {
       const error = new Error("Network error");
 
