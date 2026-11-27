@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.63.3] (27/11/2026)
+A server error (`5xx`) from the Silverfin API, or a request that gets no answer (`ENOTFOUND`, `ECONNRESET`, a timeout, a VPN or proxy in the way), is no longer reported as a CLI bug. Instead of a stack trace and "Please open an issue", the CLI prints the HTTP status or network error code, the firm or partner, and a hint to retry or check the connection, then exits with code `1`. The stack trace is still shown with `--verbose`.
+
 ## [1.63.1] (06/11/2026)
 Fix `create-account-template -p <partner-id>` dropping the partner's `mapping_list_ranges`. The create payload was always filtered down to `firm` ranges, so a template created on a partner arrived with no mapping list association at all — only its base `account_range`. The follow-up `update-account-template` then had to *add* the range instead of updating it, which the API rejects with `422 Not allowed to add range for mapping list <id>`.
 

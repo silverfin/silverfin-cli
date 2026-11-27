@@ -128,5 +128,88 @@ describe("utils/errorUtils", () => {
       expect(printed).toContain("Please open an issue");
       expect(exitSpy).toHaveBeenCalledWith(1);
     });
+
+    it("reports a 5xx with its status and firm, without asking for a bug report", () => {
+      errorUtils.errorHandler(serverError(503, "Service Unavailable", { headers: { "X-Firm-ID": 542 } }));
+      expect(consola.error).toHaveBeenCalledWith("The Silverfin API returned a server error 503 (Service Unavailable) for firm 542.");
+      expect(stderrSpy.mock.calls.flat().join("\n")).not.toContain("Please open an issue");
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+  });
+
+  // ─── apiUnavailable ────────────────────────────────────────────────────────
+
+  function axiosError(message, extra = {}) {
+    const error = new Error(message);
+    error.isAxiosError = true;
+    return Object.assign(error, extra);
+  }
+
+  function serverError(status, statusText, config = {}) {
+    return axiosError(`Request failed with status code ${status}`, { config, response: { status, statusText } });
+  }
+
+  describe("apiUnavailable", () => {
+    let exitSpy;
+    let stderrSpy;
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+      exitSpy = jest.spyOn(process, "exit").mockImplementation(() => {});
+      stderrSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      exitSpy.mockRestore();
+      stderrSpy.mockRestore();
+    });
+
+    it("names the partner of a partner request", () => {
+      errorUtils.apiUnavailable(serverError(502, "Bad Gateway", { params: { partner_id: 7, api_key: "secret" } }));
+      expect(consola.error).toHaveBeenCalledWith(expect.stringContaining("502 (Bad Gateway) for partner 7"));
+    });
+
+    it("suggests retrying a 5xx", () => {
+      errorUtils.apiUnavailable(serverError(500, "Internal Server Error"));
+      expect(consola.log).toHaveBeenCalledWith(expect.stringContaining("run the command again"));
+    });
+
+    it.each(["ENOTFOUND", "ECONNRESET", "ECONNABORTED", "ERR_NETWORK"])("reports the network error code %p and points at the connection", (code) => {
+      errorUtils.apiUnavailable(axiosError("network down", { code, config: { headers: { "X-Firm-ID": 542 } } }));
+      expect(consola.error).toHaveBeenCalledWith(`The Silverfin API could not be reached for firm 542: ${code}.`);
+      expect(consola.log).toHaveBeenCalledWith(expect.stringContaining("VPN or proxy"));
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+
+    it("keeps the stack trace for --verbose, and never the error itself (it holds the token)", () => {
+      const error = serverError(503, "Service Unavailable", { headers: { Authorization: "Bearer secret" } });
+      errorUtils.apiUnavailable(error);
+      expect(consola.debug).toHaveBeenCalledWith(error.stack);
+      const logged = JSON.stringify([consola.error.mock.calls, consola.log.mock.calls, consola.debug.mock.calls]);
+      expect(logged).not.toContain("secret");
+    });
+
+    it("prints no stack trace without --verbose", () => {
+      errorUtils.apiUnavailable(serverError(503, "Service Unavailable"));
+      expect(stderrSpy).not.toHaveBeenCalled();
+    });
+
+    it("leaves an unhandled 4xx alone, so it is still reported as a bug", () => {
+      expect(errorUtils.apiUnavailable(serverError(409, "Conflict"))).toBe(false);
+      expect(exitSpy).not.toHaveBeenCalled();
+    });
+
+    it("leaves an error that is not from axios alone", () => {
+      const error = new Error("socket hang up");
+      error.code = "ECONNRESET";
+      expect(errorUtils.apiUnavailable(error)).toBe(false);
+      expect(exitSpy).not.toHaveBeenCalled();
+    });
+
+    it("is checked by uncaughtErrors, which the unhandledRejection handler calls", () => {
+      errorUtils.uncaughtErrors(axiosError("getaddrinfo ENOTFOUND live.getsilverfin.com", { code: "ENOTFOUND" }));
+      expect(consola.error).toHaveBeenCalledWith("The Silverfin API could not be reached: ENOTFOUND.");
+      expect(stderrSpy.mock.calls.flat().join("\n")).not.toContain("Please open an issue");
+    });
   });
 });
