@@ -205,13 +205,39 @@ describe("sfApi", () => {
       expect(result.data).toEqual(reconciliationSingle);
     });
 
-    it("should call responseErrorHandler on 422 error", async () => {
-      axiosMock.onPost(`reconciliations/${reconciliationSingle.id}`).reply(422, { errors: ["Validation failed"] });
+    it("should return the 422 response instead of exiting so the caller can name the template", async () => {
+      axiosMock.onPost(`reconciliations/${reconciliationSingle.id}`).reply(422, { name_nl: ["can't be blank"] });
       const apiUtils = require("../../../lib/utils/apiUtils");
 
-      await SF.updateReconciliationText("firm", 100, reconciliationSingle.id, {});
+      const result = await SF.updateReconciliationText("firm", 100, reconciliationSingle.id, {});
 
-      expect(apiUtils.responseErrorHandler).toHaveBeenCalled();
+      expect(apiUtils.responseErrorHandler).not.toHaveBeenCalled();
+      expect(result.status).toBe(422);
+      expect(result.data).toEqual({ name_nl: ["can't be blank"] });
+    });
+
+    it("should still return undefined for a 404, as responseErrorHandler does", async () => {
+      axiosMock.onPost(`reconciliations/${reconciliationSingle.id}`).reply(404, { error: "not found" });
+
+      const result = await SF.updateReconciliationText("firm", 100, reconciliationSingle.id, {});
+
+      expect(result).toBeUndefined();
+    });
+  });
+
+  describe.each([
+    ["updateSharedPart", "shared_parts/5"],
+    ["updateExportFile", "export_files/5"],
+    ["updateAccountTemplate", "account_templates/5"],
+  ])("%s on 422", (method, url) => {
+    it("should return the 422 response instead of exiting", async () => {
+      axiosMock.onPost(url).reply(422, { name_nl: ["can't be blank"] });
+      const apiUtils = require("../../../lib/utils/apiUtils");
+
+      const result = await SF[method]("firm", 100, 5, {});
+
+      expect(apiUtils.responseErrorHandler).not.toHaveBeenCalled();
+      expect(result.status).toBe(422);
     });
   });
 

@@ -435,7 +435,9 @@ Source: `lib/api/sfApi.js`
 | `findReconciliationTextByHandle` | should return null when list is empty (not found) | Verifies that when the list is empty `null` is returned. |
 | `findReconciliationTextByHandle` | should skip partner templates (marketplace_template_id is not null) | Verifies that templates with a non-null `marketplace_template_id` are not returned even when the handle matches. |
 | `updateReconciliationText` | should POST to update reconciliation and return response | Verifies that a POST to `reconciliations/:id` returns the updated reconciliation. |
-| `updateReconciliationText` | should call responseErrorHandler on 422 error | Verifies that a 422 response invokes `responseErrorHandler`. |
+| `updateReconciliationText` | should return the 422 response instead of exiting so the caller can name the template | Verifies that a 422 bypasses `responseErrorHandler` (which exits) and the error response, with its field errors, is returned. |
+| `updateReconciliationText` | should still return undefined for a 404, as responseErrorHandler does | Verifies that a non-422 failure keeps the `responseErrorHandler` behaviour. |
+| `updateSharedPart` / `updateExportFile` / `updateAccountTemplate` | should return the 422 response instead of exiting | Verifies that the other three update calls return a 422 response rather than exiting. |
 | `readSharedParts` | should GET shared_parts list and return response | Verifies that a GET to `shared_parts` returns the full list response. |
 | `readSharedPartById` | should GET shared part by id and return response | Verifies that a GET to `shared_parts/:id` returns the expected shared part object. |
 | `findSharedPartByName` | should find shared part by name | Verifies that the matching shared part is returned when its name is found in the list. |
@@ -707,6 +709,9 @@ Source: `lib/utils/apiUtils.js`
 | `responseErrorHandler` | should log debug and NOT call process.exit for 401 response (rethrows after logging) | Verifies that a 401 logs a debug message and rethrows without exiting the process. |
 | `responseErrorHandler` | should log error and call process.exit for 403 response (then rethrows since exit is mocked) | Verifies that a 403 logs an error, calls `process.exit(1)`, and then rethrows. |
 | `responseErrorHandler` | should rethrow error when there is no response property (unhandled error) | Verifies that errors without an HTTP response (e.g. network errors) are rethrown without exiting. |
+| `validationErrorHandler` | should return the 422 response without logging an error or exiting | Verifies that a 422 is returned to the caller unlogged and the process keeps running. |
+| `validationErrorHandler` | should hand any other status to responseErrorHandler | Verifies that a 404 is logged and returns `undefined`, as `responseErrorHandler` does. |
+| `validationErrorHandler` | should rethrow a network error | Verifies that an error without an HTTP response is rethrown. |
 | `checkAuthorizePartners` | should call firmCredentials.getPartnerCredentials and return its result | Verifies that `checkAuthorizePartners` delegates to `firmCredentials.getPartnerCredentials` and returns its result. |
 
 ---

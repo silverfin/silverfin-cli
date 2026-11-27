@@ -166,6 +166,14 @@ async function publishReconciliationByHandle(
 
     const response = await SF.updateReconciliationText(type, envId, templateId, template);
 
+    if (response?.status === 422) {
+      if (defer) {
+        deferredErrors.push({ kind: "validation_failed", handle, errors: errorUtils.validationErrorLines(response.data) });
+        return false;
+      }
+      return errorUtils.templateUpdateRejected(`Reconciliation ${handle}`, response.data);
+    }
+
     if (response && response.data && response.data.handle) {
       consola.success(`Reconciliation updated: ${response.data.handle}`);
       return true;
@@ -225,6 +233,10 @@ async function publishReconciliationById(type, envId, reconciliationId, message 
     }
 
     const response = await SF.updateReconciliationText(type, envId, reconciliationId, template);
+
+    if (response?.status === 422) {
+      return errorUtils.templateUpdateRejected(`Reconciliation ${matchingHandle} (ID: ${reconciliationId})`, response.data);
+    }
 
     if (response && response.data && response.data.handle) {
       consola.success(`Reconciliation updated: ${response.data.handle} (ID: ${reconciliationId})`);
@@ -411,6 +423,14 @@ async function publishExportFileByName(
 
     const response = await SF.updateExportFile(type, envId, templateId, template);
 
+    if (response?.status === 422) {
+      if (defer) {
+        deferredErrors.push({ kind: "validation_failed", name, errors: errorUtils.validationErrorLines(response.data) });
+        return false;
+      }
+      return errorUtils.templateUpdateRejected(`Export file ${name}`, response.data);
+    }
+
     if (response && response.data && response.data.name_nl) {
       consola.success(`Export file updated: ${response.data.name_nl}`);
       return true;
@@ -469,6 +489,10 @@ async function publishExportFileById(type, envId, exportFileId, message = "Updat
     }
 
     const response = await SF.updateExportFile(type, envId, exportFileId, template);
+
+    if (response?.status === 422) {
+      return errorUtils.templateUpdateRejected(`Export file ${matchingHandle} (ID: ${exportFileId})`, response.data);
+    }
 
     if (response && response.data && response.data.name_nl) {
       consola.success(`Export file updated: ${response.data.name_nl} (ID: ${exportFileId})`);
@@ -655,6 +679,14 @@ async function publishAccountTemplateByName(
 
     const response = await SF.updateAccountTemplate(type, envId, templateId, template);
 
+    if (response?.status === 422) {
+      if (defer) {
+        deferredErrors.push({ kind: "validation_failed", name, errors: errorUtils.validationErrorLines(response.data) });
+        return false;
+      }
+      return errorUtils.templateUpdateRejected(`Account template ${name}`, response.data);
+    }
+
     if (response && response.data && response.data.name_nl) {
       consola.success(`Account template updated: ${response.data.name_nl}`);
       return true;
@@ -719,6 +751,10 @@ async function publishAccountTemplateById(type, envId, accountTemplateId, messag
     }
 
     const response = await SF.updateAccountTemplate(type, envId, accountTemplateId, template);
+
+    if (response?.status === 422) {
+      return errorUtils.templateUpdateRejected(`Account template ${matchingHandle} (ID: ${accountTemplateId})`, response.data);
+    }
 
     if (response && response.data && response.data.name_nl) {
       consola.success(`Account template updated: ${response.data.name_nl} (ID: ${accountTemplateId})`);
@@ -908,6 +944,14 @@ async function publishSharedPartByName(
 
     const response = await SF.updateSharedPart(type, envId, templateId, template);
 
+    if (response?.status === 422) {
+      if (defer) {
+        deferredErrors.push({ kind: "validation_failed", name, errors: errorUtils.validationErrorLines(response.data) });
+        return false;
+      }
+      return errorUtils.templateUpdateRejected(`Shared part ${name}`, response.data);
+    }
+
     if (response && response.data && response.data.name) {
       consola.success(`Shared part updated: ${response.data.name}`);
       return true;
@@ -966,6 +1010,10 @@ async function publishSharedPartById(type, envId, sharedPartId, message = "Updat
     }
 
     const response = await SF.updateSharedPart(type, envId, sharedPartId, template);
+
+    if (response?.status === 422) {
+      return errorUtils.templateUpdateRejected(`Shared part ${matchingHandle} (ID: ${sharedPartId})`, response.data);
+    }
 
     if (response && response.data && response.data.name) {
       consola.success(`Shared part updated: ${response.data.name} (ID: ${sharedPartId})`);

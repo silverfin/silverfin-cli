@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.63.2] (27/11/2026)
+A template update rejected by the API with a `422` no longer stops the CLI. The message now names the template and lists each field error on its own line (e.g. `name_nl: can't be blank`) instead of printing the raw JSON response. In an `--all` run the remaining templates are still updated and the `422` is reported in the error summary at the end. The command still exits with code `1`. Applies to `update-reconciliation`, `update-shared-part`, `update-export-file` and `update-account-template`.
+
 ## [1.63.1] (06/11/2026)
 Fix `create-account-template -p <partner-id>` dropping the partner's `mapping_list_ranges`. The create payload was always filtered down to `firm` ranges, so a template created on a partner arrived with no mapping list association at all — only its base `account_range`. The follow-up `update-account-template` then had to *add* the range instead of updating it, which the API rejects with `422 Not allowed to add range for mapping list <id>`.
 
