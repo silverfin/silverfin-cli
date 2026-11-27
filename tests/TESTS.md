@@ -706,6 +706,7 @@ Source: `lib/utils/apiUtils.js`
 | `responseErrorHandler` | should log error and call process.exit(1) for 422 response (then rethrows since exit is mocked) | Verifies that a 422 logs an error, calls `process.exit(1)`, and then rethrows. |
 | `responseErrorHandler` | should log debug and NOT call process.exit for 401 response (rethrows after logging) | Verifies that a 401 logs a debug message and rethrows without exiting the process. |
 | `responseErrorHandler` | should log error and call process.exit for 403 response (then rethrows since exit is mocked) | Verifies that a 403 logs an error, calls `process.exit(1)`, and then rethrows. |
+| `responseErrorHandler` | should name the %s a 403 was returned for | Verifies that the 403 message names the firm (`X-Firm-ID` header) or partner (`partner_id` param) of the request. |
 | `responseErrorHandler` | should rethrow error when there is no response property (unhandled error) | Verifies that errors without an HTTP response (e.g. network errors) are rethrown without exiting. |
 | `checkAuthorizePartners` | should call firmCredentials.getPartnerCredentials and return its result | Verifies that `checkAuthorizePartners` delegates to `firmCredentials.getPartnerCredentials` and returns its result. |
 
@@ -740,6 +741,7 @@ Source: `lib/utils/errorUtils.js`
 | `missingHandle` | should suggest the command which lists the handles available | Verifies that the caller's command is printed as the next step. |
 | `missingHandle` | should ask for a valid handle when no command is suggested | Verifies that the user is still told what to do when the caller offers no command. |
 | `missingHandle` | should return false | Verifies that the caller decides what happens next. |
+| `missing*Id` | %s names the %s field and prints the get-…-id hint | Verifies that each template type points at the field its folder is named after (`handle`, `name` or `name_nl`), prints its own `get-…-id` command, and returns `false`. |
 | `invalidHandleFormat` | should name the handle and the label | Verifies that the rejected handle appears in the message. |
 | `invalidHandleFormat` | should say what a handle cannot contain | Verifies that the message explains why the handle cannot be used as a file name. |
 | `invalidHandleFormat` | should suggest the command which lists the handles available | Verifies that the caller's command is printed as the next step. |
