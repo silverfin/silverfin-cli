@@ -747,6 +747,15 @@ Source: `lib/utils/errorUtils.js`
 | `invalidHandleFormat` | should return false | Verifies that the caller decides what happens next. |
 | `noWorkflowsStored` | should point at the workflows folder fsUtils reads from | Verifies that the folder named in the message comes from `lib/utils/constants.js`, so it cannot drift from the folder `fsUtils` reads. |
 | `unparsableWorkflow` | should point at the workflow file inside that folder | Verifies that the file path offered to the user is built from the same shared constant. |
+| `errorHandler` | reports a 5xx with its status and firm, without asking for a bug report | Verifies that a server error reaching the funnel names the status and firm, exits 1 and prints no "Please open an issue". |
+| `apiUnavailable` | names the partner of a partner request | Verifies that a partner request is attributed to its `partner_id`. |
+| `apiUnavailable` | suggests retrying a 5xx | Verifies that the next step for a server error is to run the command again. |
+| `apiUnavailable` | reports the network error code %p and points at the connection | Verifies that `ENOTFOUND`, `ECONNRESET`, `ECONNABORTED` and `ERR_NETWORK` are named with the firm and a hint to check the connection, VPN or proxy, exiting 1. |
+| `apiUnavailable` | keeps the stack trace for --verbose, and never the error itself | Verifies that only `error.stack` goes to debug output, so the access token in the request config is never logged. |
+| `apiUnavailable` | prints no stack trace without --verbose | Verifies that nothing is written to stderr outside consola. |
+| `apiUnavailable` | leaves an unhandled 4xx alone | Verifies that a 409 is still reported as a CLI bug. |
+| `apiUnavailable` | leaves an error that is not from axios alone | Verifies that a non-axios `ECONNRESET` is not mistaken for an API failure. |
+| `apiUnavailable` | is checked by uncaughtErrors | Verifies that an unhandled rejection reaching `uncaughtErrors` directly gets the same short message. |
 
 ---
 

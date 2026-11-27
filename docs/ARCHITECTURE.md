@@ -153,7 +153,7 @@ Template-type vocabulary and name validation: `TEMPLATES_NAME_ATTRIBUTE`, `TEMPL
 **Contains:** the mapping between API type names and internal type keys. New template types are registered here first.
 
 ### `errorUtils.js`
-`uncaughtErrors`, `errorHandler`, `missingConfig`, `missing<Type>Id`, and `print<Type>BatchErrorSummary` for each of the four template types. Command line input: `missingHandle`, `invalidHandleFormat`. Workflow failures: `invalidWorkflowHandle`, `missingWorkflow`, `unparsableWorkflow`, `invalidWorkflow`, `noWorkflowsStored`, `workflowStatisticsNotSaved`, `workflowTemplatesMissing`, `printWorkflowBatchErrorSummary`. Statistics: `statisticsNotWritten`.
+`uncaughtErrors`, `errorHandler`, `apiUnavailable` (a 5xx or a request with no response, checked first by `uncaughtErrors`), `missingConfig`, `missing<Type>Id`, and `print<Type>BatchErrorSummary` for each of the four template types. Command line input: `missingHandle`, `invalidHandleFormat`. Workflow failures: `invalidWorkflowHandle`, `missingWorkflow`, `unparsableWorkflow`, `invalidWorkflow`, `noWorkflowsStored`, `workflowStatisticsNotSaved`, `workflowTemplatesMissing`, `printWorkflowBatchErrorSummary`. Statistics: `statisticsNotWritten`.
 **Contains:** every user-facing error message. New failure modes get a named function here rather than an inline `console.error`.
 
 ### `apiUtils.js`
