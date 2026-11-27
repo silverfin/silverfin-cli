@@ -194,6 +194,47 @@ describe("apiUtils", () => {
     });
   });
 
+  // ─── validationErrorHandler ───────────────────────────────────────────────
+
+  describe("validationErrorHandler", () => {
+    it("should return the 422 response without logging an error or exiting", async () => {
+      const error = {
+        response: {
+          status: 422,
+          statusText: "Unprocessable Entity",
+          config: { method: "POST", url: "/api/test" },
+          data: { name_nl: ["can't be blank"] },
+        },
+      };
+
+      const result = await apiUtils.validationErrorHandler(error);
+
+      expect(result).toBe(error.response);
+      expect(consola.error).not.toHaveBeenCalled();
+      expect(mockExit).not.toHaveBeenCalled();
+    });
+
+    it("should hand any other status to responseErrorHandler", async () => {
+      const error = {
+        response: {
+          status: 404,
+          statusText: "Not Found",
+          config: { method: "POST", url: "/api/test" },
+          data: { error: "not found" },
+        },
+      };
+
+      const result = await apiUtils.validationErrorHandler(error);
+
+      expect(result).toBeUndefined();
+      expect(consola.error).toHaveBeenCalled();
+    });
+
+    it("should rethrow a network error", async () => {
+      await expect(apiUtils.validationErrorHandler(new Error("Network error"))).rejects.toThrow("Network error");
+    });
+  });
+
   // ─── batchResponseErrorHandler ────────────────────────────────────────────
 
   describe("batchResponseErrorHandler", () => {

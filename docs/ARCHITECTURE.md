@@ -153,11 +153,11 @@ Template-type vocabulary and name validation: `TEMPLATES_NAME_ATTRIBUTE`, `TEMPL
 **Contains:** the mapping between API type names and internal type keys. New template types are registered here first.
 
 ### `errorUtils.js`
-`uncaughtErrors`, `errorHandler`, `missingConfig`, `missing<Type>Id`, and `print<Type>BatchErrorSummary` for each of the four template types. Command line input: `missingHandle`, `invalidHandleFormat`. Workflow failures: `invalidWorkflowHandle`, `missingWorkflow`, `unparsableWorkflow`, `invalidWorkflow`, `noWorkflowsStored`, `workflowStatisticsNotSaved`, `workflowTemplatesMissing`, `printWorkflowBatchErrorSummary`. Statistics: `statisticsNotWritten`.
+`uncaughtErrors`, `errorHandler`, `missingConfig`, `missing<Type>Id`, and `print<Type>BatchErrorSummary` for each of the four template types. Rejected updates (422): `validationErrorLines`, `templateUpdateRejected`. Command line input: `missingHandle`, `invalidHandleFormat`. Workflow failures: `invalidWorkflowHandle`, `missingWorkflow`, `unparsableWorkflow`, `invalidWorkflow`, `noWorkflowsStored`, `workflowStatisticsNotSaved`, `workflowTemplatesMissing`, `printWorkflowBatchErrorSummary`. Statistics: `statisticsNotWritten`.
 **Contains:** every user-facing error message. New failure modes get a named function here rather than an inline `console.error`.
 
 ### `apiUtils.js`
-`checkAuthorizePartners`, `checkRequiredEnvVariables`, `responseSuccessHandler`, `responseErrorHandler` — the axios interceptor callbacks.
+`checkAuthorizePartners`, `checkRequiredEnvVariables`, `responseSuccessHandler`, `responseErrorHandler` — the axios interceptor callbacks. `batchResponseErrorHandler` logs and returns any HTTP failure; `validationErrorHandler` returns a 422 unlogged, for the template update calls, and sends everything else to `responseErrorHandler`.
 
 ### `liquidTestUtils.js`
 Pure helpers for generating a liquid test: `createBaseLiquidTest`, `extractURL`, `generateFileName`, `exportYAML`, `processCustom`, `getCompanyDependencies`, `searchForResultsFromDependenciesInLiquid`, `searchForCustomsFromDependenciesInLiquid`, `lookForSharedPartsInLiquid`, `lookForAccountsIDs`.

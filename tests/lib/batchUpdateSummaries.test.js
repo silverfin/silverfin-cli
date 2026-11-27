@@ -90,7 +90,40 @@ describe("Batch update error summaries", () => {
     });
   });
 
+  describe("errorUtils.validationErrorLines", () => {
+    it.each([
+      [{ name_nl: ["can't be blank"], handle: ["is taken", "is invalid"] }, ["name_nl: can't be blank", "handle: is taken", "handle: is invalid"]],
+      [{ errors: ["Validation failed"] }, ["Validation failed"]],
+      [{ error: "Not allowed to add range for mapping list 12" }, ["Not allowed to add range for mapping list 12"]],
+      [{ errors: { name_nl: ["can't be blank"] } }, ["name_nl: can't be blank"]],
+      ["plain text", ["plain text"]],
+      [{}, ["no details were returned"]],
+      [undefined, ["no details were returned"]],
+    ])("formats %j", (data, expected) => {
+      expect(errorUtils.validationErrorLines(data)).toEqual(expected);
+    });
+  });
+
   describe("publishAllReconciliations", () => {
+    it("carries on past a 422 and lists its field errors in the summary", async () => {
+      fsUtils.getAllTemplatesOfAType.mockReturnValue(["invalid", "after"]);
+      fsUtils.configExists.mockReturnValue(true);
+      fsUtils.readConfig.mockReturnValue({ id: { [mockEnvId]: "999" } });
+      ReconciliationText.read.mockResolvedValue({ handle: "x", text: "x", text_parts: [] });
+      SF.updateReconciliationText
+        .mockResolvedValueOnce({ status: 422, data: { name_nl: ["can't be blank"] } })
+        .mockResolvedValueOnce({ status: 201, data: { handle: "after" } });
+
+      await toolkit.publishAllReconciliations(mockType, mockEnvId, mockMessage);
+
+      expect(SF.updateReconciliationText).toHaveBeenCalledTimes(2);
+      expect(consola.success).toHaveBeenCalledWith("Reconciliation updated: after");
+      expect(consola.error).toHaveBeenCalledWith("Reconciliation update finished with 1 error(s):");
+      expect(consola.error).toHaveBeenCalledWith("Reconciliation invalid: update rejected by the API (422):");
+      expect(consola.error).toHaveBeenCalledWith("  - name_nl: can't be blank");
+      expect(process.exitCode).toBe(1);
+    });
+
     it("defers missing-id errors to summary and sets exitCode", async () => {
       fsUtils.getAllTemplatesOfAType.mockReturnValue(["good", "bad"]);
       fsUtils.configExists.mockReturnValue(true);
@@ -176,6 +209,37 @@ describe("Batch update error summaries", () => {
 
       expect(consola.success).toHaveBeenCalledWith("Account template updated: ok_at");
       expect(consola.error).toHaveBeenCalledWith("Account template update finished with 1 error(s):");
+      expect(process.exitCode).toBe(1);
+    });
+  });
+
+  describe("single template update rejected with a 422", () => {
+    it("publishSharedPartByName names the template, lists the errors and sets exitCode", async () => {
+      fsUtils.configExists.mockReturnValue(true);
+      fsUtils.readConfig.mockReturnValue({ id: { [mockEnvId]: "1" } });
+      SharedPart.read.mockResolvedValue({ name: "sp_invalid", text: "x" });
+      // name_nl is truthy in the 422 body: must not be read as a success
+      SF.updateSharedPart.mockResolvedValue({ status: 422, data: { name: ["can't be blank"] } });
+
+      const result = await toolkit.publishSharedPartByName(mockType, mockEnvId, "sp_invalid", mockMessage);
+
+      expect(result).toBe(false);
+      expect(consola.success).not.toHaveBeenCalled();
+      expect(consola.error).toHaveBeenCalledWith("Shared part sp_invalid: update rejected by the API (422):");
+      expect(consola.error).toHaveBeenCalledWith("  - name: can't be blank");
+      expect(process.exitCode).toBe(1);
+    });
+
+    it("publishExportFileById names the template by its local folder", async () => {
+      fsUtils.findHandleByID.mockReturnValue("exp_invalid");
+      ExportFile.read.mockResolvedValue({ name_nl: "exp_invalid", text: "x" });
+      SF.updateExportFile.mockResolvedValue({ status: 422, data: { name_nl: ["can't be blank"] } });
+
+      const result = await toolkit.publishExportFileById(mockType, mockEnvId, "42", mockMessage);
+
+      expect(result).toBe(false);
+      expect(consola.success).not.toHaveBeenCalled();
+      expect(consola.error).toHaveBeenCalledWith("Export file exp_invalid (ID: 42): update rejected by the API (422):");
       expect(process.exitCode).toBe(1);
     });
   });
